@@ -1,40 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <title>Carte avec Pivot d'Irrigation</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte Pivot d'Irrigation</title>
+    <style>
+        #map {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
 </head>
 <body>
-    <div id="map" style="height: 600px;"></div>
+    <h1>Carte avec Pivot d'Irrigation</h1>
+    <div id="map"></div>
+
+    <!-- Intégration de Leaflet.js -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
     <script>
-        var map = L.map('map').setView([48.8566, 2.3522], 13);  // Position initiale de la carte (par exemple Paris)
+        // Fonction pour obtenir un paramètre de l'URL
+        function getUrlParameter(name) {
+            var url = new URL(window.location.href);
+            return url.searchParams.get(name);
+        }
+
+        // Récupérer les coordonnées depuis l'URL
+        var originLat = parseFloat(getUrlParameter('originLat'));
+        var originLon = parseFloat(getUrlParameter('originLon'));
+        var trackerLat = parseFloat(getUrlParameter('trackerLat'));
+        var trackerLon = parseFloat(getUrlParameter('trackerLon'));
+
+        // Initialiser la carte OpenStreetMap via Leaflet.js
+        var map = L.map('map').setView([originLat, originLon], 13);
 
         // Ajouter le fond de carte OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        // Ajouter les marqueurs
-        L.marker([48.8566, 2.3522]).addTo(map) // Point d'origine du pivot
-            .bindPopup("Point d'origine du pivot")
-            .openPopup();
-
-        L.marker([48.8600, 2.3530]).addTo(map) // Point du tracker GPS
-            .bindPopup("Point du tracker GPS")
-            .openPopup();
-
-        // Dessiner une ligne entre les deux points
-        L.polyline([
-            [48.8566, 2.3522],  // Point d'origine
-            [48.8600, 2.3530]   // Point du tracker
-        ]).addTo(map);
-
-        // Ajouter un cercle autour du pivot (zone d'irrigation)
-        L.circle([48.8566, 2.3522], {
-            color: 'darkblue',
-            fillColor: '#5f9ea0',
-            fillOpacity: 0.5,
-            radius: 500  // Rayon de 500m
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
+
+        // Fonction pour ajouter les points et éléments
+        function addPivotAndTracker() {
+            // Ajouter le marqueur pour le point d'origine
+            var originMarker = L.marker([originLat, originLon]).addTo(map);
+            originMarker.bindPopup("Point d'origine");
+
+            // Ajouter le marqueur pour le tracker GPS
+            var trackerMarker = L.marker([trackerLat, trackerLon]).addTo(map);
+            trackerMarker.bindPopup("Tracker GPS");
+
+            // Ajouter une ligne entre les deux points
+            var latlngs = [
+                [originLat, originLon],
+                [trackerLat, trackerLon]
+            ];
+            var polyline = L.polyline(latlngs, {color: 'blue'}).addTo(map);
+
+            // Ajouter un cercle autour du point d'origine pour représenter le pivot d'irrigation
+            var circle = L.circle([originLat, originLon], {radius: 500, color: 'green', fillColor: '#32CD32', fillOpacity: 0.5}).addTo(map);
+            circle.bindPopup("Zone du Pivot");
+        }
+
+        // Appeler la fonction pour ajouter les éléments à la carte
+        addPivotAndTracker();
     </script>
 </body>
 </html>
