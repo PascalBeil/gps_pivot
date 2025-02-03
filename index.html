@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte GPS Pivot</title>
+
+    <!-- Importation de Leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        #map { width: 100%; height: 700px; }
+
+        /* Panneau météo repositionné et bien visible */
+        #infoPanel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="infoPanel">
+        <b>Date et Heure :</b> <span id="dateTime"></span><br>
+        <b>Météo :</b> <span id="weather">Chargement...</span><br>
+        <b>Humidité :</b> <span id="humidity">...</span> %<br>
+        <b>Risque de pluie :</b> <span id="precipitation">...</span> mm
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // Récupération des paramètres URL
+            const originLat = parseFloat(urlParams.get("originLat"));
+            const originLon = parseFloat(urlParams.get("originLon"));
+            const trackerLat = parseFloat(urlParams.get("trackerLat"));
+            const trackerLon = parseFloat(urlParams.get("trackerLon"));
+
+            // Vérification des coordonnées
+            if (isNaN(originLat) || isNaN(originLon) || isNaN(trackerLat) || isNaN(trackerLon)) {
+                alert("Mauvaises coordonnées !");
+                return;
+            }
+
+            // Affichage de la date et l'heure
+            function updateDateTime() {
+                const now = new Date();
+                document.getElementById("dateTime").textContent = now.toLocaleString();
+            }
+            updateDateTime();
+            setInterval(updateDateTime, 60000); // Mise à jour toutes les minutes
+
+            // Création de la carte centrée sur le point d'origine
+            const map = L.map('map').setView([originLat, originLon], 17);
+
+            // Utilisation d'une carte satellite réaliste (ESRI)
+            L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+                attribution: '© Esri, Maxar, Earthstar Geographics',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Ajout des marqueurs
+            L.marker([originLat, originLon]).addTo(map).bindPopup("Point d'origine").openPopup();
+            L.marker([trackerLat, trackerLon]).addTo(map).bindPopup("Tracker GPS");
+
+            // Ligne entre les deux points
+            L.polyline([[originLat, originLon], [trackerLat, trackerLon]], { color: 'blue', weight: 3 }).addTo(map);
+
+            // Calcul du vecteur directeur entre les deux points
+            const dx = trackerLon - originLon;
+            const dy = trackerLat - originLat;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const unitDx = dx / length;
+            const unitDy = dy / length;
+
+            // Largeur et hauteur du rectangle (ajustable)
+            const rectWidth = 0.0005;  // Petite épaisseur
+            const rectHeight = length; // Longueur alignée avec la ligne
+
+            // Coordonnées des coins du rectangle orienté
+            const rectCoords = [
+                [originLat - unitDx * rectWidth, originLon + unitDy * rectWidth],
+                [originLat + unitDx * rectWidth, originLon - unitDy * rectWidth],
+                [trackerLat + unitDx * rectWidth, trackerLon - unitDy * rectWidth],
+                [trackerLat - unitDx * rectWidth, trackerLon + unitDy * rectWidth]
+            ];
+
+            // Ajout du rectangle orienté
+            L.polygon(rectCoords, {
+                color: 'yellow',
+                fillColor: 'rgba(255, 255, 0, 0.3)', // Jaune clair avec transparence
+                fillOpacity: 0.4,
+                weight: 2
+            }).addTo(map);
+
+            // Récupération des données météo via Open-Meteo
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLon}&current=temperature_2m,weathercode,relative_humidity_2m,precipitation&timezone=auto`)
+            .then(response => response.json())
+            .then(data => {
+                const temp = data.current.temperature_2m;
+                const weatherCode = data.current.weathercode;
+                const humidity = data.current.relative_humidity_2m;
+                const precipitation = data.current.precipitation || 0;
+
+                // Traduction des codes météo Open-Meteo
+                const weatherDescriptions = {
+                    0: "Ciel clair", 1: "Principalement clair", 2: "Partiellement nuageux", 3: "Couvert",
+                    45: "Brouillard", 48: "Brouillard givrant",
+                    51: "Bruine légère", 53: "Bruine modérée", 55: "Bruine dense",
+                    61: "Pluie légère", 63: "Pluie modérée", 65: "Pluie forte",
+                    71: "Neige légère", 73: "Neige modérée", 75: "Neige forte",
+                    95: "Orage léger", 96: "Orage avec grêle", 99: "Orage violent"
+                };
+
+                const weatherText = weatherDescriptions[weatherCode] || "Inconnu";
+                document.getElementById("weather").textContent = `${temp}°C - ${weatherText}`;
+                document.getElementById("humidity").textContent = humidity;
+                document.getElementById("precipitation").textContent = precipitation;
+            })
+            .catch(error => {
+                console.error("Erreur météo :", error);
+                document.getElementById("weather").textContent = "Indisponible";
+                document.getElementById("humidity").textContent = "N/A";
+                document.getElementById("precipitation").textContent = "N/A";
+            });
+        });
+    </script>
+</body>
+</html>
