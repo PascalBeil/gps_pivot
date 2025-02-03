@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte GPS avec Pivot d'Irrigation</title>
+    <!-- Inclusion de la bibliothèque Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        /* Assurez-vous que la carte occupe toute la taille de la fenêtre */
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Div qui contiendra la carte -->
+    <div id="map"></div>
+
+    <script>
+        // Fonction pour récupérer un paramètre de l'URL et le convertir en float
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return parseFloat(urlParams.get(name));
+        }
+
+        // Récupérer les coordonnées depuis l'URL
+        var originLat = getUrlParameter('originLat');  // Latitude du point d'origine
+        var originLon = getUrlParameter('originLon');  // Longitude du point d'origine
+        var trackerLat = getUrlParameter('trackerLat');  // Latitude du tracker GPS
+        var trackerLon = getUrlParameter('trackerLon');  // Longitude du tracker GPS
+
+        // Afficher dans la console les valeurs récupérées
+        console.log("originLat:", originLat);
+        console.log("originLon:", originLon);
+        console.log("trackerLat:", trackerLat);
+        console.log("trackerLon:", trackerLon);
+
+        // Vérifier si les coordonnées sont présentes et valides
+        if (isNaN(originLat) || isNaN(originLon) || isNaN(trackerLat) || isNaN(trackerLon)) {
+            alert("Erreur : coordonnées invalides dans l'URL.");
+            throw new Error("Erreur : coordonnées invalides.");
+        }
+
+        // Initialiser la carte centrée sur le point d'origine
+        var map = L.map('map').setView([originLat, originLon], 13);  // Centrer la carte sur l'origine
+
+        // Charger les tuiles OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marqueur pour le point d'origine
+        var originMarker = L.marker([originLat, originLon]).addTo(map);
+        originMarker.bindPopup("Point d'origine");
+
+        // Marqueur pour le tracker GPS
+        var trackerMarker = L.marker([trackerLat, trackerLon]).addTo(map);
+        trackerMarker.bindPopup("Tracker GPS");
+
+        // Tracer une ligne entre les deux points
+        var latlngs = [
+            [originLat, originLon],
+            [trackerLat, trackerLon]
+        ];
+        var polyline = L.polyline(latlngs, {color: 'blue'}).addTo(map);
+
+        // Ajouter un cercle représentant la zone du pivot d'irrigation autour du point d'origine
+        var circle = L.circle([originLat, originLon], {
+            color: 'green',
+            fillColor: 'lightgreen',
+            fillOpacity: 0.5,
+            radius: 500  // Rayon de 500 mètres pour représenter le pivot
+        }).addTo(map);
+
+        // Ajuster le zoom de la carte pour que les deux points et la ligne soient visibles
+        map.fitBounds(polyline.getBounds());
+    </script>
+</body>
+</html>
