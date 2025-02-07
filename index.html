@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte GPS Pivot</title>
+
+    <!-- Importation de Leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js">        let sectorAngle = 360;
+
+        function adjustSector(angle) {
+            sectorAngle = angle;
+            updateSector();
+        }
+
+        function updateSector() {
+            map.eachLayer(layer => {
+                if (layer instanceof L.Polygon) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            const numPoints = 100;
+            const angleStep = (sectorAngle * Math.PI) / (180 * numPoints);
+            let sectorCoords = [];
+
+            for (let i = 0; i <= numPoints; i++) {
+                let theta = (-sectorAngle / 2 + (i * sectorAngle) / numPoints) * (Math.PI / 180);
+                let latOffset = (pivotLength / 6378137) * Math.cos(theta);
+                let lonOffset = (pivotLength / 6378137) * Math.sin(theta) / Math.cos(originLat * Math.PI / 180);
+                sectorCoords.push([originLat + latOffset * (180 / Math.PI), originLon + lonOffset * (180 / Math.PI)]);
+            }
+
+            sectorCoords.unshift([originLat, originLon]);
+            sectorCoords.push([originLat, originLon]);
+
+            L.polygon(sectorCoords, {
+                color: 'yellow',
+                fillColor: 'rgba(255, 255, 0, 0.3)',
+                fillOpacity: 0.4,
+            }).addTo(map);
+        }
+
+        updateSector();
+    </script>
+
+    <style>
+        #map { width: 660px; height: 440px; }
+
+        /* Panneau météo repositionné et bien visible */
+        #infoPanel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: Arial, sans-serif;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+            .leaflet-control-zoom {
+            position: absolute !important;
+            left: 10px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="infoPanel">
+        <b>📅 Date et Heure :</b> <span id="dateTime"></span><br>
+        <b>🌡️ Météo :</b> <span id="weather">Chargement...</span><br>
+        <b>💧 Humidité :</b> <span id="humidity">...</span> %<br>
+        <b>🌧️ Risque de pluie :</b> <span id="precipitation">...</span> %
+    </div>
+
+    <div>
+        <button onclick="adjustSector(90)">90°</button>
+        <button onclick="adjustSector(180)">180°</button>
+        <button onclick="adjustSector(270)">270°</button>
+        <button onclick="adjustSector(360)">360°</button>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // Récupération des paramètres URL
+            const originLat = parseFloat(urlParams.get("originLat"));
+            const originLon = parseFloat(urlParams.get("originLon"));
+            const trackerLat = parseFloat(urlParams.get("trackerLat"));
+            const trackerLon = parseFloat(urlParams.get("trackerLon"));
+
+            if (isNaN(originLat) || isNaN(originLon) || isNaN(trackerLat) || isNaN(trackerLon)) {
+                alert("Mauvaises coordonnées !");
+                return;
+            }
+
+            function updateDateTime() {
+                const now = new Date();
+                document.getElementById("dateTime").textContent = now.toLocaleString();
+            }
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+
+            const map = L.map('map').setView([originLat, originLon], 17);
+
+            L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+                attribution: '© Esri, Maxar, Earthstar Geographics',
+                maxZoom: 19
+            }).addTo(map);
+
+            L.marker([originLat, originLon]).addTo(map).bindPopup("Point d'origine").openPopup();
+            L.marker([trackerLat, trackerLon]).addTo(map).bindPopup("Tracker GPS");
+
+            L.polyline([[originLat, originLon], [trackerLat, trackerLon]], { color: 'blue', weight: 3 }).addTo(map);
+
+            function distance(lat1, lon1, lat2, lon2) {
+                const R = 6371e3;
+                const φ1 = lat1 * Math.PI / 180;
+                const φ2 = lat2 * Math.PI / 180;
+                const Δφ = (lat2 - lat1) * Math.PI / 180;
+                const Δλ = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                          Math.cos(φ1) * Math.cos(φ2) *
+                          Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+            const pivotLength = distance(originLat, originLon, trackerLat, trackerLon);
+
+            L.circle([originLat, originLon], {
+                color: 'yellow',
+                fillColor: 'rgba(255, 255, 0, 0.3)',
+                fillOpacity: 0.4,
+                radius: pivotLength // Le rayon est maintenant égal à la longueur du pivot
+            }).addTo(map);
+
+            // Récupération des données météo corrigée
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLon}&current=temperature_2m,relative_humidity_2m,precipitation_probability&timezone=auto`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.current) {
+                    document.getElementById("weather").textContent = data.current.temperature_2m + "°C";
+                    document.getElementById("humidity").textContent = data.current.relative_humidity_2m;
+                    document.getElementById("precipitation").textContent = data.current.precipitation_probability || "0";
+                }
+            })
+            .catch(error => {
+                console.error("Erreur météo :", error);
+                document.getElementById("weather").textContent = "N/A";
+                document.getElementById("humidity").textContent = "N/A";
+                document.getElementById("precipitation").textContent = "N/A";
+            });
+        });
+    </script>
+</body>
+</html>
