@@ -64,7 +64,7 @@
 
         // Lignes entre les points
         const lineFixedToLastTower = L.polyline([[latFixed, lonFixed], [latLastTower, lonLastTower]], {color: 'blue'}).addTo(map);
-        const lineFixedToZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'black', weight: 4, dashArray: '5,5'}).addTo(map);
+        const lineFixedToZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'black', weight: 6, dashArray: '5,5'}).addTo(map);
 
         // Fonction pour calculer les points de l'arc de cercle
         function createArc(center, start, end, steps = 100) {
