@@ -20,6 +20,9 @@
             width: 250px;
             font-family: Arial, sans-serif;
         }
+        #infoPanel p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -152,7 +155,14 @@
                 const response = await fetch('https://wttr.in/Paris?format=%C+%t+%h+%P');
                 const weatherData = await response.text();
                 const [condition, temp, humidity, precip] = weatherData.split(' ');
-                document.getElementById('weather').textContent = `Météo : ${condition}, Température : ${temp}°C, Humidité : ${humidity}%, Risque de pluie : ${precip}%`;
+
+                // Mettre à jour le panneau d'affichage avec les infos météo
+                document.getElementById('weather').innerHTML = `
+                    Condition : ${condition}<br>
+                    Température : ${temp}°C<br>
+                    Humidité : ${humidity}%<br>
+                    Risque de pluie : ${precip}%<br>
+                `;
             } catch (error) {
                 document.getElementById('weather').textContent = "Erreur lors de la récupération des données météo.";
             }
