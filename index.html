@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte Pivot avec Météo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; }
+        #weather { margin-top: 20px; font-size: 16px; }
+        .button-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        button {
+            margin: 5px;
+        }
+        .status-indicator {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Affichage de la carte -->
+    <div id="map"></div>
+
+    <!-- Légende météo -->
+    <div id="weather"></div>
+
+    <!-- Affichage du sens de marche et de l'état du pivot -->
+    <div id="status" class="status-indicator">
+        Sens de marche : <span id="marchingDirection">Indéfini</span><br>
+        État du pivot : <span id="pivotStatus">Normal</span>
+    </div>
+
+    <!-- Boutons pour ajuster l'orientation -->
+    <div class="button-container">
+        <button id="btnOrientationMinus">Orientation -</button>
+        <button id="btnOrientationPlus">Orientation +</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Variables internes
+        let orientationOffset = 0;
+
+        // Fonction pour obtenir les données météo sans clé API
+        function getWeather(lat, lon) {
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const weatherDescription = data.weather[0].description;
+                    const temperature = data.main.temp;
+                    const rain = data.rain ? data.rain["1h"] : 0;
+                    const rainRisk = rain > 0 ? `${Math.min(rain * 100, 100)}%` : '0%';
+                    const weatherInfo = `Temps: ${weatherDescription}, Température: ${temperature}°C, Risque de pluie: ${rainRisk}`;
+
+                    const weatherElement = document.getElementById('weather');
+                    weatherElement.innerHTML = weatherInfo;
+                })
+                .catch(error => console.error('Erreur météo:', error));
+        }
+
+        // Fonction pour dessiner l'arc du pivot (gestion du pivotflex)
+        function drawPivotArc(lat0, lon0, lat1, lon1, orientation, angle) {
+            let radius = 100;
+
+            // Correction si l'angle dépasse 360° (pivotflex)
+            let fullCircles = Math.floor(angle / 360); // Nombre de cercles complets
+            let remainingAngle = angle % 360; // Angle restant après les cercles complets
+
+            // Dessiner les cercles complets
+            for (let i = 0; i < fullCircles; i++) {
+                L.circle([lat0, lon0], {
+                    color: 'blue',
+                    fillColor: 'blue',
+                    fillOpacity: 0.3,
+                    radius: radius,
+                }).addTo(map);
+            }
+
+            // Dessiner l'arc partiel si nécessaire
+            if (remainingAngle > 0) {
+                let startAngle = orientation;
+                let endAngle = startAngle + remainingAngle;
+
+                let startRad = startAngle * (Math.PI / 180);
+                let endRad = endAngle * (Math.PI / 180);
+
+                // Tracer l'arc partiel
+                L.circle([lat0, lon0], {
+                    color: 'blue',
+                    fillColor: 'blue',
+                    fillOpacity: 0.3,
+                    radius: radius,
+                    startAngle: startRad,
+                    endAngle: endRad,
+                }).addTo(map);
+            }
+
+            // Ajouter les points et la ligne qui relie les deux points
+            const latLngs = [[lat0, lon0], [lat1, lon1]];
+            const lineColor = pivotStatus === 'normal' ? 'blue' : 'red';  // Changer la couleur de la ligne selon l'état du pivot
+            L.polyline(latLngs, { color: lineColor }).addTo(map);
+
+            L.marker([lat0, lon0]).addTo(map).bindPopup('Point d\'origine');
+            L.marker([lat1, lon1]).addTo(map).bindPopup('Point mobile');
+        }
+
+        // Initialisation de la carte avec Leaflet
+        var map = L.map('map').setView([45.1234, 2.3456], 13);
+
+        // Ajouter la couche de la carte (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Fonction pour récupérer les paramètres de l'URL
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                lat0: parseFloat(urlParams.get('lat0') || 45.1234),
+                lon0: parseFloat(urlParams.get('lon0') || 2.3456),
+                lat1: parseFloat(urlParams.get('lat1') || 45.2234),
+                lon1: parseFloat(urlParams.get('lon1') || 2.4456),
+                orientation: parseFloat(urlParams.get('orientation') || 0),
+                angle: parseFloat(urlParams.get('angle') || 360),
+                pivotStatus: urlParams.get('pivotStatus') || 'normal', // État du pivot (via URL)
+                marchingDirection: urlParams.get('marchingDirection') || 'horaire' // Sens de marche (via URL)
+            };
+        }
+
+        // Fonction qui sera appelée au chargement de la page
+        window.onload = function() {
+            const { lat0, lon0, lat1, lon1, orientation, angle, pivotStatus, marchingDirection } = getUrlParams();
+
+            // Mise à jour du texte de l'état et de la direction
+            document.getElementById('marchingDirection').innerText = marchingDirection.charAt(0).toUpperCase() + marchingDirection.slice(1);
+            document.getElementById('pivotStatus').innerText = pivotStatus.charAt(0).toUpperCase() + pivotStatus.slice(1);  // "normal", "en panne", etc.
+
+            // Appel à la fonction pour dessiner l'arc du pivot
+            drawPivotArc(lat0, lon0, lat1, lon1, orientation, angle);
+
+            // Appel à la fonction pour obtenir et afficher la météo
+            getWeather(lat0, lon0);
+        };
+
+        // Fonction pour ajuster l'orientation par les boutons
+        function adjustOrientation(increment) {
+            orientationOffset = (orientationOffset + increment + 360) % 360;
+            window.onload();
+        }
+
+        // Attacher les événements des boutons d'orientation
+        document.getElementById('btnOrientationMinus').addEventListener('click', function() {
+            adjustOrientation(-1);
+        });
+
+        document.getElementById('btnOrientationPlus').addEventListener('click', function() {
+            adjustOrientation(1);
+        });
+    </script>
+
+</body>
+</html>
