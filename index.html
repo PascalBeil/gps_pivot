@@ -6,6 +6,10 @@
     <title>Carte Satellite Pivot Irrigation</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js">        document.getElementById('currentAngle').textContent = `Angle actuel : ${currentAngle}°`;
+            // Tracer les lignes reliant les points
+        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'blue', weight: 4}).addTo(map);
+        L.polyline([[latZero, lonZero], [latLastTower, lonLastTower]], {color: 'blue', weight: 4}).addTo(map);
+        L.polyline([[latFixed, lonFixed], [latLastTower, lonLastTower]], {color: 'blue', weight: 2, dashArray: '5, 5'}).addTo(map);
     </script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <style>
