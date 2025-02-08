@@ -3,91 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte Pivot Irrigation</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <title>Carte Satellite Pivot Irrigation</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <style>
-        #map { width: 100%; height: 100vh; }
-        #weatherPanel { position: absolute; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.7); padding: 10px; border-radius: 8px; }
-        .line { color: blue; weight: 2; }
-        .dashedLine { color: black; weight: 4; dashArray: '5,5'; }
-        .arc { color: yellow; weight: 4; }
+        #map { height: 100vh; }
+        #infoPanel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            width: 250px;
+            font-family: Arial, sans-serif;
+        }
+        #infoPanel p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
+    <div id="map"></div>
+    <div id="infoPanel">
+        <h4>Météo et Infos</h4>
+        <p id="weather">Chargement...</p>
+        <p id="pivotState"></p>
+        <p id="movementDirection"></p>
+        <p id="currentAngle"></p>
+    </div>
 
-<div id="map"></div>
-<div id="weatherPanel">
-    <h4>Météo</h4>
-    <p>Température : <span id="temp">Chargement...</span></p>
-    <p>Hygrométrie : <span id="humidity">Chargement...</span></p>
-    <p>Risque de pluie : <span id="rainChance">Chargement...</span></p>
-    <p>État du pivot : <span id="pivotState">Inconnu</span></p>
-    <p>Sens de marche : <span id="pivotDirection">Inconnu</span></p>
-    <p>Angle actuel : <span id="currentAngle">0°</span></p>
-</div>
+    <script>
+        // Récupérer les paramètres de l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const latFixed = parseFloat(urlParams.get('latFixed'));
+        const lonFixed = parseFloat(urlParams.get('lonFixed'));
+        const latLastTower = parseFloat(urlParams.get('latLastTower'));
+        const lonLastTower = parseFloat(urlParams.get('lonLastTower'));
+        const latZero = parseFloat(urlParams.get('latZero'));
+        const lonZero = parseFloat(urlParams.get('lonZero'));
+        const pivotDirection = parseInt(urlParams.get('pivotDirection'));
+        const pivotState = parseInt(urlParams.get('pivotState'));
+        const maxAngle = parseFloat(urlParams.get('maxAngle'));
+        const currentAngle = parseFloat(urlParams.get('currentAngle'));
 
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-geometryutil/leaflet.geometryutil.js"></script>
-<script>
-    // Récupérer les paramètres de l'URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const latFixed = parseFloat(urlParams.get('latFixed'));
-    const lonFixed = parseFloat(urlParams.get('lonFixed'));
-    const latLastTower = parseFloat(urlParams.get('latLastTower'));
-    const lonLastTower = parseFloat(urlParams.get('lonLastTower'));
-    const latZero = parseFloat(urlParams.get('latZero'));
-    const lonZero = parseFloat(urlParams.get('lonZero'));
-    const pivotDirection = parseInt(urlParams.get('pivotDirection'));
-    const pivotState = parseInt(urlParams.get('pivotState'));
-    const maxAngle = parseInt(urlParams.get('maxAngle'));
-    const currentAngle = parseInt(urlParams.get('currentAngle'));
+        // Initialisation de la carte avec OpenStreetMap
+        const map = L.map('map').setView([latFixed, lonFixed], 13);
 
-    // Initialisation de la carte avec OpenStreetMap (carte satellite gratuite)
-    const map = L.map('map').setView([latFixed, lonFixed], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);  // Carte satellite gratuite
+        // Utilisation de la couche satellite gratuite d'Esri
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
 
-    // Tracer les points
-    L.marker([latFixed, lonFixed]).addTo(map).bindPopup('Point Fixe');
-    L.marker([latZero, lonZero]).addTo(map).bindPopup('Point Zéro');
-    L.marker([latLastTower, lonLastTower]).addTo(map).bindPopup('Dernière Tour');
+        // Marqueurs pour les points
+        const fixedPoint = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe");
+        const lastTowerPoint = L.marker([latLastTower, lonLastTower]).addTo(map).bindPopup("Dernière Tour");
+        const zeroPoint = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro");
 
-    // Fonction pour dessiner un arc de cercle entre le point zéro et la dernière tour
-    function drawArc(map, lat1, lon1, lat2, lon2) {
-        const latLng1 = L.latLng(lat1, lon1);
-        const latLng2 = L.latLng(lat2, lon2);
+        // Lignes entre les points
+        const lineFixedToLastTower = L.polyline([[latFixed, lonFixed], [latLastTower, lonLastTower]], {color: 'blue'}).addTo(map);
+        const lineFixedToZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'blue', weight: 6}).addTo(map);
 
-        // Utiliser GeometryUtil pour dessiner un arc
-        L.GeometryUtil.geodesic(map, latLng1, latLng2, {color: 'yellow', weight: 3}).addTo(map);
-    }
+        // Fonction pour calculer les points de l'arc de cercle
+        function createArc(center, start, end, steps = 100) {
+            const latlngs = [];
+            const R = 6371; // Rayon de la Terre en km
+            const centerLat = center[0];
+            const centerLon = center[1];
+            const startLat = start[0];
+            const startLon = start[1];
+            const endLat = end[0];
+            const endLon = end[1];
 
-    // Tracer l'arc entre le point Zéro et la Dernière Tour
-    drawArc(map, latZero, lonZero, latLastTower, lonLastTower);
+            for (let i = 0; i <= steps; i++) {
+                const fraction = i / steps;
+                const lat = centerLat + (endLat - centerLat) * fraction;
+                const lon = centerLon + (endLon - centerLon) * fraction;
+                latlngs.push([lat, lon]);
+            }
 
-    // Tracer la ligne en pointillés entre le Point Fixe et le Point Zéro
-    L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'blue', weight: 4}).addTo(map);
+            return latlngs;
+        }
 
-    // Tracer la ligne solide entre le Point Fixe et la Dernière Tour
-    L.polyline([[latFixed, lonFixed], [latLastTower, lonLastTower]], {color: 'black', weight: 4, dashArray: '5,5'}).addTo(map);
+        // Calcul de l'arc entre "Point Zéro" et "Dernière Tour"
+        const arcLatLngs = createArc([latFixed, lonFixed], [latZero, lonZero], [latLastTower, lonLastTower]);
 
-    // Panneau météo (données fictives ici, pas d'API pour météo dans ce code)
-    document.getElementById('temp').textContent = '18°C';
-    document.getElementById('humidity').textContent = '80%';
-    document.getElementById('rainChance').textContent = '20%';
+        // Tracer l'arc de cercle en jaune clair
+        const arc = L.polyline(arcLatLngs, {
+            color: '#FFFF99',  // Jaune clair
+            weight: 2,
+            opacity: 0.5,
+            fillOpacity: 0.2
+        }).addTo(map);
 
-    // État du pivot et direction
-    let pivotStateText = "Inconnu";
-    if (pivotState === 1) pivotStateText = "En marche";
-    if (pivotState === 2) pivotStateText = "En défaut";
-    document.getElementById('pivotState').textContent = pivotStateText;
+        // Fonction pour dessiner l'angle (zone en jaune clair entre "Point Zéro" et "Dernière Tour")
+        function drawAngle(latFixed, lonFixed, latZero, lonZero, latLastTower, lonLastTower) {
+            const angleArea = L.polygon([
+                [latFixed, lonFixed], // Point Fixe
+                [latZero, lonZero],   // Point Zéro
+                [latLastTower, lonLastTower]  // Dernière Tour
+            ], {
+                color: 'yellow',
+                weight: 2,
+                fillColor: '#FFFF99', // Jaune clair
+                fillOpacity: 0.4
+            }).addTo(map);
+        }
 
-    let pivotDirectionText = "Inconnu";
-    if (pivotDirection === 1) pivotDirectionText = "Avant";
-    if (pivotDirection === 2) pivotDirectionText = "Arrière";
-    document.getElementById('pivotDirection').textContent = pivotDirectionText;
+        // Dessiner l'angle en jaune clair
+        drawAngle(latFixed, lonFixed, latZero, lonZero, latLastTower, lonLastTower);
 
-    // Angle actuel
-    document.getElementById('currentAngle').textContent = `${currentAngle}°`;
-</script>
+        // Affichage des informations
+        function updateInfoPanel() {
+            let pivotStateText = "";
+            switch (pivotState) {
+                case 1:
+                    pivotStateText = "En marche";
+                    break;
+                case 2:
+                    pivotStateText = "En défaut";
+                    break;
+                default:
+                    pivotStateText = "Inconnu";
+            }
 
+            let movementDirectionText = "";
+            switch (pivotDirection) {
+                case 1:
+                    movementDirectionText = "Avant";
+                    break;
+                case 2:
+                    movementDirectionText = "Arrière";
+                    break;
+                default:
+                    movementDirectionText = "Aucun";
+            }
+
+            document.getElementById('pivotState').textContent = `Etat du pivot : ${pivotStateText}`;
+            document.getElementById('movementDirection').textContent = `Sens de marche : ${movementDirectionText}`;
+            document.getElementById('currentAngle').textContent = `Angle actuel : ${currentAngle}°`;
+
+            // Récupérer la météo
+            getWeather();
+        }
+
+        // Fonction pour récupérer les données météo depuis wttr.in sans clé API
+        async function getWeather() {
+            try {
+                const response = await fetch('https://wttr.in/Paris?format=%C+%t+%h+%P');
+                const weatherData = await response.text();
+                const [condition, temp, humidity, precip] = weatherData.split(' ');
+
+                // Mettre à jour le panneau d'affichage avec les infos météo
+                document.getElementById('weather').innerHTML = `
+                    Condition : ${condition}<br>
+                    Température : ${temp}°C<br>
+                    Humidité : ${humidity}%<br>
+                    Risque de pluie : ${precip}%<br>
+                `;
+            } catch (error) {
+                document.getElementById('weather').textContent = "Erreur lors de la récupération des données météo.";
+            }
+        }
+
+        // Mettre à jour l'interface
+        updateInfoPanel();
+    </script>
 </body>
 </html>
