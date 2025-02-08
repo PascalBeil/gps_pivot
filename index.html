@@ -9,8 +9,8 @@
         #map { width: 100%; height: 100vh; }
         #weatherPanel { position: absolute; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.7); padding: 10px; border-radius: 8px; }
         .line { color: blue; weight: 2; }
-        .dashedLine { color: black; weight: 3; dashArray: '5,5'; }
-        .arc { color: yellow; weight: 3; }
+        .dashedLine { color: black; weight: 4; dashArray: '5,5'; }
+        .arc { color: yellow; weight: 4; }
     </style>
 </head>
 <body>
@@ -44,14 +44,14 @@
 
     // Initialisation de la carte avec OpenStreetMap
     const map = L.map('map').setView([latFixed, lonFixed], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.tileLayer('https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg').addTo(map);  // Carte satellite gratuite
 
     // Tracer les points
     L.marker([latFixed, lonFixed]).addTo(map).bindPopup('Point Fixe');
     L.marker([latZero, lonZero]).addTo(map).bindPopup('Point Zéro');
     L.marker([latLastTower, lonLastTower]).addTo(map).bindPopup('Dernière Tour');
 
-    // Fonction pour dessiner un arc de cercle entre le point zéro et le point mobile
+    // Fonction pour dessiner un arc de cercle entre le point zéro et la dernière tour
     function drawArc(map, lat1, lon1, lat2, lon2) {
         const latLng1 = L.latLng(lat1, lon1);
         const latLng2 = L.latLng(lat2, lon2);
