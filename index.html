@@ -42,9 +42,9 @@
     const maxAngle = parseInt(urlParams.get('maxAngle'));
     const currentAngle = parseInt(urlParams.get('currentAngle'));
 
-    // Initialisation de la carte avec OpenStreetMap
+    // Initialisation de la carte avec OpenStreetMap (carte satellite gratuite)
     const map = L.map('map').setView([latFixed, lonFixed], 14);
-    L.tileLayer('https://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.jpg').addTo(map);  // Carte satellite gratuite
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);  // Carte satellite gratuite
 
     // Tracer les points
     L.marker([latFixed, lonFixed]).addTo(map).bindPopup('Point Fixe');
@@ -55,7 +55,7 @@
     function drawArc(map, lat1, lon1, lat2, lon2) {
         const latLng1 = L.latLng(lat1, lon1);
         const latLng2 = L.latLng(lat2, lon2);
-        
+
         // Utiliser GeometryUtil pour dessiner un arc
         L.GeometryUtil.geodesic(map, latLng1, latLng2, {color: 'yellow', weight: 3}).addTo(map);
     }
@@ -64,10 +64,10 @@
     drawArc(map, latZero, lonZero, latLastTower, lonLastTower);
 
     // Tracer la ligne en pointillés entre le Point Fixe et le Point Zéro
-    L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'black', weight: 4, dashArray: '5,5'}).addTo(map);
+    L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'blue', weight: 4}).addTo(map);
 
     // Tracer la ligne solide entre le Point Fixe et la Dernière Tour
-    L.polyline([[latFixed, lonFixed], [latLastTower, lonLastTower]], {color: 'blue', weight: 4}).addTo(map);
+    L.polyline([[latFixed, lonFixed], [latLastTower, lonLastTower]], {color: 'black', weight: 4, dashArray: '5,5'}).addTo(map);
 
     // Panneau météo (données fictives ici, pas d'API pour météo dans ce code)
     document.getElementById('temp').textContent = '18°C';
