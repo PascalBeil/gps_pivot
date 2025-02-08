@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte Pivot avec Météo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; }
+        #weather { margin-top: 20px; font-size: 16px; }
+        .button-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Affichage de la carte -->
+    <div id="map"></div>
+
+    <!-- Légende météo -->
+    <div id="weather"></div>
+
+    <!-- Boutons pour ajuster l'orientation -->
+    <div class="button-container">
+        <button id="btnOrientationMinus">Orientation -</button>
+        <button id="btnOrientationPlus">Orientation +</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Variable interne pour l'orientation
+        let orientationOffset = 0;
+
+        // Fonction pour obtenir les données météo sans clé API (utilisation de l'API OpenWeatherMap)
+        function getWeather(lat, lon) {
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Extraire les informations météo
+                    const weatherDescription = data.weather[0].description;
+                    const temperature = data.main.temp;
+                    const rain = data.rain ? data.rain["1h"] : 0;  // Pluie en mm/h
+                    const rainRisk = rain > 0 ? `${Math.min(rain * 100, 100)}%` : '0%';
+                    const weatherInfo = `Temps: ${weatherDescription}, Température: ${temperature}°C, Risque de pluie: ${rainRisk}`;
+
+                    // Affichage de la météo sur la carte
+                    const weatherElement = document.getElementById('weather');
+                    weatherElement.innerHTML = weatherInfo;
+                })
+                .catch(error => console.error('Erreur météo:', error));
+        }
+
+        // Fonction pour dessiner l'arc du pivot
+        function drawPivotArc(lat0, lon0, lat1, lon1, orientation, angle) {
+            let radius = 100;
+            let startAngle = orientation;
+            let remainingAngle = angle;
+
+            // Normalisation de l'angle pour gérer les pivots > 360°
+            let fullCircles = Math.floor(remainingAngle / 360);  // Combien de cercles complets
+            let remainingPartialAngle = remainingAngle % 360;  // Angle restant après cercles complets
+
+            // Tracer les cercles complets
+            for (let i = 0; i < fullCircles; i++) {
+                // Dessiner un cercle complet
+                L.circle([lat0, lon0], {
+                    color: 'blue',
+                    fillColor: 'blue',
+                    fillOpacity: 0.3,
+                    radius: radius,
+                }).addTo(map);
+            }
+
+            // Tracer le dernier arc pour l'angle restant
+            if (remainingPartialAngle > 0) {
+                let endAngle = (startAngle + remainingPartialAngle) % 360;
+                let startRad = startAngle * (Math.PI / 180);
+                let endRad = endAngle * (Math.PI / 180);
+
+                // Tracer l'arc partiel
+                L.circle([lat0, lon0], {
+                    color: 'blue',
+                    fillColor: 'blue',
+                    fillOpacity: 0.3,
+                    radius: radius,
+                    startAngle: startRad,
+                    endAngle: endRad,
+                }).addTo(map);
+            }
+
+            // Ajouter les points et la ligne qui relie les deux points
+            const latLngs = [[lat0, lon0], [lat1, lon1]];
+            L.polyline(latLngs, { color: 'blue' }).addTo(map);
+
+            L.marker([lat0, lon0]).addTo(map).bindPopup('Point d\'origine');
+            L.marker([lat1, lon1]).addTo(map).bindPopup('Point mobile');
+        }
+
+        // Initialisation de la carte avec Leaflet
+        var map = L.map('map').setView([45.1234, 2.3456], 13);
+
+        // Ajouter la couche de la carte (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Fonction pour récupérer les paramètres de l'URL
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                lat0: parseFloat(urlParams.get('lat0') || 45.1234),  // Valeur par défaut si non fournie
+                lon0: parseFloat(urlParams.get('lon0') || 2.3456),
+                lat1: parseFloat(urlParams.get('lat1') || 45.2234),
+                lon1: parseFloat(urlParams.get('lon1') || 2.4456),
+                orientation: parseFloat(urlParams.get('orientation') || 0),
+                angle: parseFloat(urlParams.get('angle') || 360)
+            };
+        }
+
+        // Fonction qui sera appelée au chargement de la page pour récupérer et afficher la météo
+        window.onload = function() {
+            const { lat0, lon0, lat1, lon1, orientation, angle } = getUrlParams();
+            
+            // Appel à la fonction pour dessiner l'arc du pivot
+            drawPivotArc(lat0, lon0, lat1, lon1, orientation + orientationOffset, angle);
+
+            // Appel à la fonction pour obtenir et afficher la météo
+            getWeather(lat0, lon0); // Obtenir la météo pour le point d'origine
+        };
+
+        // Fonction pour ajuster l'orientation par les boutons
+        function adjustOrientation(increment) {
+            orientationOffset = (orientationOffset + increment + 360) % 360;
+            // Redessiner la carte avec la nouvelle orientation
+            window.onload();
+        }
+
+        // Attacher les événements des boutons d'orientation
+        document.getElementById('btnOrientationMinus').addEventListener('click', function() {
+            adjustOrientation(-1);  // Réduire l'orientation de 1 degré
+        });
+
+        document.getElementById('btnOrientationPlus').addEventListener('click', function() {
+            adjustOrientation(1);  // Augmenter l'orientation de 1 degré
+        });
+    </script>
+
+</body>
+</html>
