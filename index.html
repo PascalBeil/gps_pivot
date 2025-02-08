@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte Pivot Irrigation</title>
+    <title>Carte Satellite Pivot Irrigation</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
@@ -49,9 +49,9 @@
         // Initialisation de la carte avec OpenStreetMap
         const map = L.map('map').setView([latFixed, lonFixed], 13);
 
-        // Carte OpenStreetMap (sans clé API)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        // Utilisation de la couche satellite gratuite d'Esri
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
 
         // Marqueurs pour les points
@@ -61,7 +61,7 @@
 
         // Lignes entre les points
         const lineFixedToLastTower = L.polyline([[latFixed, lonFixed], [latLastTower, lonLastTower]], {color: 'blue'}).addTo(map);
-        const lineFixedToZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'black', dashArray: '5,5'}).addTo(map);
+        const lineFixedToZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], {color: 'black', weight: 4, dashArray: '5,5'}).addTo(map);
 
         // Fonction pour calculer les points de l'arc de cercle
         function createArc(center, start, end, steps = 100) {
@@ -146,25 +146,13 @@
             getWeather();
         }
 
-        // Fonction pour récupérer les données météo
+        // Fonction pour récupérer les données météo depuis wttr.in sans clé API
         async function getWeather() {
             try {
-                const response = await fetch('https://wttr.in/?format=%C+%t+%h+%P');
+                const response = await fetch('https://wttr.in/Paris?format=%C+%t+%h+%P');
                 const weatherData = await response.text();
-                
-                const regex = /([a-zA-Z\s]+),\s?(\d{1,3}°C),\s?(\d{1,3})%\s?Humid,\s?(\d{1,3})%/;
-                const matches = weatherData.match(regex);
-
-                if (matches) {
-                    const weatherCondition = matches[1];
-                    const temperature = matches[2];
-                    const humidity = matches[3];
-                    const rainChance = matches[4];
-
-                    document.getElementById('weather').textContent = `Météo : ${weatherCondition}, Température : ${temperature}, Humidité : ${humidity}%, Risque de pluie : ${rainChance}%`;
-                } else {
-                    document.getElementById('weather').textContent = "Erreur lors de la récupération des données météo.";
-                }
+                const [condition, temp, humidity, precip] = weatherData.split(' ');
+                document.getElementById('weather').textContent = `Météo : ${condition}, Température : ${temp}°C, Humidité : ${humidity}%, Risque de pluie : ${precip}%`;
             } catch (error) {
                 document.getElementById('weather').textContent = "Erreur lors de la récupération des données météo.";
             }
