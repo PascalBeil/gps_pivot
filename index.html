@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte Pivot avec Météo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; }
+        .info-box {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .button-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <!-- Panneau d'infos météo et état du pivot -->
+    <div id="infoBox" class="info-box">
+        <div id="weather">Météo : Chargement...</div>
+        <div id="pivotStatus">État du pivot : Inconnu</div>
+        <div id="marchingDirection">Sens de marche : Inconnu</div>
+        <div id="weatherIcon"><img id="weatherIconImage" src="" alt="Météo" width="50" /></div>
+    </div>
+
+    <!-- Boutons d'orientation -->
+    <div class="button-container">
+        <button id="btnOrientationMinus">Orientation -</button>
+        <button id="btnOrientationPlus">Orientation +</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        let orientationOffset = 0;
+
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                lat0: parseFloat(urlParams.get('lat0') || 45.1234),
+                lon0: parseFloat(urlParams.get('lon0') || 2.3456),
+                lat1: parseFloat(urlParams.get('lat1') || 45.2234),
+                lon1: parseFloat(urlParams.get('lon1') || 2.4456),
+                orientation: parseFloat(urlParams.get('orientation') || 0),
+                angle: parseFloat(urlParams.get('angle') || 360),
+                pivotStatus: urlParams.get('pivotStatus') || 'normal',
+                marchingDirection: urlParams.get('marchingDirection') || 'horaire'
+            };
+        }
+
+        function getWeather(lat, lon) {
+            const url = `https://wttr.in/${lat},${lon}?format=%C+%t`; // Conditions et température
+            fetch(url)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('weather').textContent = `Météo : ${data}`;
+                    document.getElementById('weatherIconImage').src = `https://wttr.in/${lat},${lon}_0q.png`;
+                })
+                .catch(error => {
+                    document.getElementById('weather').textContent = "Météo non disponible";
+                    console.error("Erreur météo:", error);
+                });
+        }
+
+        function calculateDistance(lat0, lon0, lat1, lon1) {
+            const R = 6371000;
+            const dLat = (lat1 - lat0) * Math.PI / 180;
+            const dLon = (lon1 - lon0) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat0 * Math.PI / 180) * Math.cos(lat1 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function drawArc(map, lat0, lon0, radius, startAngle, endAngle) {
+            const points = [];
+            for (let angle = startAngle; angle <= endAngle; angle += 5) {
+                let rad = angle * (Math.PI / 180);
+                let lat = lat0 + (radius / 111320) * Math.cos(rad);
+                let lon = lon0 + (radius / (111320 * Math.cos(lat0 * (Math.PI / 180)))) * Math.sin(rad);
+                points.push([lat, lon]);
+            }
+            L.polyline(points, { color: 'blue', weight: 2 }).addTo(map);
+        }
+
+        function drawMap(lat0, lon0, lat1, lon1, orientation, angle, pivotStatus, marchingDirection) {
+            var map = L.map('map').setView([lat0, lon0], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '&copy; Esri'
+            }).addTo(map);
+
+            L.marker([lat0, lon0]).addTo(map).bindPopup("Point d'origine");
+            L.marker([lat1, lon1]).addTo(map).bindPopup("Point mobile");
+
+            let lineColor = pivotStatus === 'normal' ? 'blue' : 'red';
+            L.polyline([[lat0, lon0], [lat1, lon1]], { color: lineColor }).addTo(map);
+
+            document.getElementById('pivotStatus').textContent = `État du pivot : ${pivotStatus}`;
+            document.getElementById('marchingDirection').textContent = `Sens de marche : ${marchingDirection}`;
+
+            let radius = calculateDistance(lat0, lon0, lat1, lon1);
+            let startAngle = (orientation + orientationOffset) % 360;
+            let endAngle = (startAngle + angle) % 360;
+
+            drawArc(map, lat0, lon0, radius, startAngle, endAngle);
+        }
+
+        function loadPage() {
+            const params = getUrlParams();
+            drawMap(params.lat0, params.lon0, params.lat1, params.lon1, params.orientation, params.angle, params.pivotStatus, params.marchingDirection);
+            getWeather(params.lat0, params.lon0);
+        }
+
+        document.getElementById('btnOrientationMinus').addEventListener('click', () => { orientationOffset -= 5; loadPage(); });
+        document.getElementById('btnOrientationPlus').addEventListener('click', () => { orientationOffset += 5; loadPage(); });
+
+        window.onload = loadPage;
+    </script>
+
+</body>
+</html>
