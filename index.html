@@ -81,12 +81,12 @@
         }
 
         // Tracer les lignes bleus  
-        const line1 = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 2 }).addTo(map); // Ligne Fixe - Zéro  
-        const line2 = L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'blue', weight: 2 }).addTo(map); // Ligne Fixe - Mobile
+        const line1 = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map); // Ligne Fixe - Zéro  
+        const line2 = L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'blue', weight: 3 }).addTo(map); // Ligne Fixe - Mobile
 
         // Tracer l'arc entre le point zéro et le point mobile  
         const arcPoints = [];
-        const steps = 50; // Nombre de segments pour l'arc  
+        const steps = 100; // Nombre de segments pour l'arc  
         const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
         const angle2 = angleRadians; // Utiliser l'angle actuel  
         const angleStep = (angle2 - angle1) / steps;
@@ -99,7 +99,7 @@
         }
 
         // Dessiner l'arc en bleu  
-        L.polyline(arcPoints, { color: 'blue', weight: 2 }).addTo(map);
+        L.polyline(arcPoints, { color: 'blue', weight: 3 }).addTo(map);
 
         // Tracer le cercle jaune clair autour des trois points  
         L.circle([latFixed, lonFixed], {
