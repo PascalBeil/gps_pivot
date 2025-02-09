@@ -41,10 +41,6 @@
         const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
         const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
         const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
-        const currentAngle = parseFloat(urlParams.get('currentAngle')); // Angle actuel pour le point mobile  
-        const maxAngle = parseFloat(urlParams.get('maxAngle'));    // Angle pour le secteur  
-        const pivotDirection = parseInt(urlParams.get('pivotDirection'));
-        const pivotState = parseInt(urlParams.get('pivotState'));
 
         // Initialisation de la carte avec OpenStreetMap  
         const map = L.map('map').setView([latFixed, lonFixed], 13);
@@ -64,107 +60,31 @@
         // Calculer la distance entre le point fixe et le point zéro  
         const distance = getDistance(latFixed, lonFixed, latZero, lonZero);
 
-        // Calculer la position du point mobile en gardant la même distance  
-        function calculateMobilePoint(latFixed, lonFixed, currentAngle) {
+        // Fonction pour calculer la distance entre deux points GPS  
+        function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371000; // Rayon de la Terre en mètres  
-            const latMobile = latFixed + (distance / R) * Math.sin(currentAngle * Math.PI / 180) * (180 / Math.PI);
-            const lonMobile = lonFixed + (distance / R) * Math.cos(currentAngle * Math.PI / 180) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-            return [latMobile, lonMobile];
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // Distance en mètres  
         }
 
-        // Calculer et ajouter le point mobile  
-        const [latMobile, lonMobile] = calculateMobilePoint(latFixed, lonFixed, currentAngle);
-        const markerMobile = L.marker([latMobile, lonMobile]).addTo(map).bindPopup("Point Mobile").openPopup();
-
-        // Tracer un segment entre le point fixe et le point mobile (bleu)
-        L.polyline([[latFixed, lonFixed], [latMobile, lonMobile]], { color: 'blue' }).addTo(map);
-
-        // Fonction pour dessiner le secteur  
-        function drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle) {
-            const latlngs = [];
-            const steps = 100; // Nombre de points pour dessiner le secteur
-
-            // Ajouter le point fixe (centre)
-            latlngs.push([latFixed, lonFixed]);
-
-            // Calculer les angles de début et de fin  
-            const angleStart = currentAngle - (maxAngle / 2);
-            const angleEnd = currentAngle + (maxAngle / 2);
-
-            // Calculer les points du secteur  
-            for (let i = 0; i <= steps; i++) {
-                const angle = angleStart + (angleEnd - angleStart) * (i / steps);
-                const R = 6371000; // Rayon de la Terre en mètres  
-                const lat = latFixed + (distance / R) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
-                const lon = lonFixed + (distance / R) * Math.cos(angle * Math.PI / 180) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-                latlngs.push([lat, lon]);
-            }
-
-            // Fermer le secteur en revenant au point de départ  
-            latlngs.push(latlngs[1]);
-
-            // Dessiner le secteur  
-            const sector = L.polygon(latlngs, {
-                color: 'yellow',
-                fillColor: '#FFFF99', // Jaune clair  
-                fillOpacity: 0.5  
-            }).addTo(map);
-        }
-
-        // Dessiner le secteur avec les points fixes, zéro et mobile  
-        drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle);
+        // Dessiner un cercle autour du point fixe avec le rayon correspondant à la distance  
+        L.circle([latFixed, lonFixed], {
+            color: 'yellow',
+            fillColor: '#FFFF99', // Jaune clair  
+            fillOpacity: 0.5,
+            radius: distance // Rayon basé sur la distance calculée  
+        }).addTo(map);
 
         // Affichage des informations  
         function updateInfoPanel() {
-            let pivotStateText = "";
-            switch (pivotState) {
-                case 1:
-                    pivotStateText = "En marche";
-                    break;
-                case 2:
-                    pivotStateText = "En défaut";
-                    break;
-                default:
-                    pivotStateText = "Inconnu";
-            }
-
-            let movementDirectionText = "";
-            switch (pivotDirection) {
-                case 1:
-                    movementDirectionText = "Avant";
-                    break;
-                case 2:
-                    movementDirectionText = "Arrière";
-                    break;
-                default:
-                    movementDirectionText = "Aucun";
-            }
-
-            document.getElementById('pivotState').textContent = `Etat du pivot : ${pivotStateText}`;
-            document.getElementById('movementDirection').textContent = `Sens de marche : ${movementDirectionText}`;
-            document.getElementById('currentAngle').textContent = `Angle actuel : ${currentAngle}°`;
-
-            // Récupérer la météo  
-            getWeather();
-        }
-
-        // Fonction pour récupérer les données météo depuis wttr.in sans clé API  
-        async function getWeather() {
-            try {
-                const response = await fetch('https://wttr.in/Paris?format=%C+%t+%h+%P');
-                const weatherData = await response.text();
-                const [condition, temp, humidity, precip] = weatherData.split(' ');
-
-                // Mettre à jour le panneau d'affichage avec les infos météo  
-                document.getElementById('weather').innerHTML = `
-                    Condition : ${condition}<br>
-                    Température : ${temp}°C<br>
-                    Humidité : ${humidity}%<br>
-                    Risque de pluie : ${precip}%<br>
-                `;
-            } catch (error) {
-                document.getElementById('weather').textContent = "Erreur lors de la récupération des données météo.";
-            }
+            document.getElementById('pivotState').textContent = `Etat du pivot : Inconnu`;
+            document.getElementById('movementDirection').textContent = `Sens de marche : Aucun`;
+            document.getElementById('currentAngle').textContent = `Angle actuel : N/A`;
         }
 
         // Mettre à jour l'interface  
