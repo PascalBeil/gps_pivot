@@ -82,22 +82,25 @@
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
 
-        // Vérifier si le dernier point est à la bonne distance du point fixe  
+        // Ajouter le dernier point sur le bord du cercle  
         const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
 
-        let adjustedLatLastTower = latLastTower;
-        let adjustedLonLastTower = lonLastTower;
+        let adjustedLatLastTower;
+        let adjustedLonLastTower;
 
-        // Si le dernier point n'est pas à la bonne distance, ajuster les coordonnées  
-        if (lastPointDistance > distance) {
-            const ratio = distance / lastPointDistance; // Ratio pour ajuster la distance
-
-            // Ajuster les coordonnées pour que le dernier point soit sur le cercle  
-            adjustedLatLastTower = latFixed + (latLastTower - latFixed) * ratio;
-            adjustedLonLastTower = lonFixed + (lonLastTower - lonFixed) * ratio;
+        if (lastPointDistance > 0) {
+            // Calculer l'angle du dernier point par rapport au point fixe  
+            const angle = Math.atan2(latLastTower - latFixed, lonLastTower - lonFixed);
+            // Positionner le dernier point mobile sur le cercle à la distance appropriée  
+            adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
+            adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+        } else {
+            // Si le point mobile n'est pas donné, utiliser une position par défaut sur le cercle  
+            adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(0) * (180 / Math.PI); // Angle 0  
+            adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(0) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
         }
 
-        // Ajouter le dernier point sur le cercle  
+        // Ajouter le dernier point mobile sur le cercle  
         const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
         // Affichage des informations  
