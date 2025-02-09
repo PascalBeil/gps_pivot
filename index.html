@@ -6,7 +6,6 @@
     <title>Carte Satellite Pivot Irrigation</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <style>
         #map { height: 100vh; }
         #infoPanel {
@@ -40,14 +39,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const latFixed = parseFloat(urlParams.get('latFixed'));
         const lonFixed = parseFloat(urlParams.get('lonFixed'));
-        const latLastTower = parseFloat(urlParams.get('latLastTower'));
-        const lonLastTower = parseFloat(urlParams.get('lonLastTower'));
-        const latZero = parseFloat(urlParams.get('latZero'));
-        const lonZero = parseFloat(urlParams.get('lonZero'));
+        const distanceZero = parseFloat(urlParams.get('distanceZero'));
+        const currentAngle = parseFloat(urlParams.get('currentAngle'));
+        const maxAngle = parseFloat(urlParams.get('maxAngle'));
         const pivotDirection = parseInt(urlParams.get('pivotDirection'));
         const pivotState = parseInt(urlParams.get('pivotState'));
-        const maxAngle = parseFloat(urlParams.get('maxAngle'));
-        const currentAngle = parseFloat(urlParams.get('currentAngle'));
 
         // Initialisation de la carte avec OpenStreetMap  
         const map = L.map('map').setView([latFixed, lonFixed], 13);
@@ -57,28 +53,34 @@
             attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
 
-        // Marqueurs pour les points  
-        const fixedPoint = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe");
-        const lastTowerPoint = L.marker([latLastTower, lonLastTower]).addTo(map).bindPopup("Dernière Tour");
-        const zeroPoint = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro");
+        // Fonction pour calculer le point zéro à partir du point fixe  
+        function calculateZeroPoint(latFixed, lonFixed, distance) {
+            const R = 6371000; // Rayon de la Terre en mètres  
+            const latZero = latFixed + (distance / R) * (180 / Math.PI);
+            const lonZero = lonFixed + (distance / R) * (180 / Math.PI) / Math.cos(latFixed * Math.PI / 180);
+            return [latZero, lonZero];
+        }
 
-        // Fonction pour dessiner un secteur ou un cercle  
-        function drawSector(center, angle, radius, steps = 100) {
+        // Calculer le point zéro  
+        const [latZero, lonZero] = calculateZeroPoint(latFixed, lonFixed, distanceZero);
+
+        // Fonction pour dessiner le secteur  
+        function drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle) {
             const latlngs = [];
-            const [centerLat, centerLon] = center;
+            const steps = 100; // Nombre de points pour dessiner le secteur
 
-            // Ajouter le point central  
-            latlngs.push([centerLat, centerLon]);
+            // Ajouter le point fixe (centre)
+            latlngs.push([latFixed, lonFixed]);
 
-            // Calcul des angles de début et de fin  
-            const angleStart = angle - (maxAngle / 2); // Angle de départ  
-            const angleEnd = angle + (maxAngle / 2); // Angle de fin
+            // Calculer les angles de début et de fin  
+            const angleStart = currentAngle - (maxAngle / 2);
+            const angleEnd = currentAngle + (maxAngle / 2);
 
-            // Dessiner les points du secteur ou du cercle  
+            // Calculer les points du secteur  
             for (let i = 0; i <= steps; i++) {
-                const currentAngle = angleStart + (angleEnd - angleStart) * (i / steps);
-                const lat = centerLat + (radius * Math.sin(currentAngle * Math.PI / 180)) * (180 / Math.PI);
-                const lon = centerLon + (radius * Math.cos(currentAngle * Math.PI / 180)) / Math.cos(centerLat * Math.PI / 180) * (180 / Math.PI);
+                const angle = angleStart + (angleEnd - angleStart) * (i / steps);
+                const lat = latZero + (100 / 6371000) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
+                const lon = lonZero + (100 / 6371000) * Math.cos(angle * Math.PI / 180) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
                 latlngs.push([lat, lon]);
             }
 
@@ -93,9 +95,8 @@
             }).addTo(map);
         }
 
-        // Dessiner le secteur ou le cercle entre "Point Zéro" et "Dernière Tour"
-        const radius = 0.1; // Rayon en degrés (~11 km)
-        drawSector([latFixed, lonFixed], currentAngle, radius);
+        // Dessiner le secteur  
+        drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle);
 
         // Affichage des informations  
         function updateInfoPanel() {
