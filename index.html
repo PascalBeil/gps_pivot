@@ -41,8 +41,10 @@
         const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
         const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
         const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
-        const latLastTower = parseFloat(urlParams.get('latLastTower')); // Latitude du dernier point  
-        const lonLastTower = parseFloat(urlParams.get('lonLastTower')); // Longitude du dernier point
+        const angle = parseFloat(urlParams.get('currentAngle'));  // Angle actuel en degrés
+
+        // Convertir l'angle de degrés à radians  
+        const angleRadians = angle * (Math.PI / 180);
 
         // Initialisation de la carte avec OpenStreetMap  
         const map = L.map('map').setView([latFixed, lonFixed], 13);
@@ -52,21 +54,18 @@
             attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
 
-        // Ajouter des marqueurs pour le point fixe, le point zéro et le dernier point mobile  
+        // Ajouter des marqueurs pour le point fixe et le point zéro  
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
-        
-        let adjustedLatLastTower = latFixed;
-        let adjustedLonLastTower = lonFixed;
 
-        const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
-        if (lastPointDistance > 0) {
-            const angle = Math.atan2(latLastTower - latFixed, lonLastTower - lonFixed);
-            const distance = getDistance(latFixed, lonFixed, latZero, lonZero);
-            adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
-            adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-        }
+        // Calculer la distance entre le point fixe et le point zéro  
+        const distance = getDistance(latFixed, lonFixed, latZero, lonZero);
 
+        // Calculer la position du dernier point mobile sur le bord du cercle  
+        const adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(angleRadians) * (180 / Math.PI);
+        const adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(angleRadians) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+
+        // Ajouter un marqueur pour le dernier point mobile  
         const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
         // Fonction pour calculer la distance entre deux points GPS  
@@ -89,52 +88,32 @@
         const arcPoints = [];
         const steps = 50; // Nombre de segments pour l'arc  
         const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
-        const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
+        const angle2 = angleRadians; // Utiliser l'angle actuel  
         const angleStep = (angle2 - angle1) / steps;
 
         for (let i = 0; i <= steps; i++) {
             const angle = angle1 + i * angleStep;
-            const lat = latFixed + (getDistance(latFixed, lonFixed, latZero, lonZero) / 6371000) * Math.sin(angle) * (180 / Math.PI);
-            const lon = lonFixed + (getDistance(latFixed, lonFixed, latZero, lonZero) / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+            const lat = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
+            const lon = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
             arcPoints.push([lat, lon]);
         }
 
         // Dessiner l'arc en noir  
         L.polyline(arcPoints, { color: 'black', weight: 2 }).addTo(map);
 
-        // Remplir le secteur  
-        function fillSector() {
-            const sectorPoints = [];
-            sectorPoints.push([latFixed, lonFixed]); // Point fixe  
-            sectorPoints.push([latZero, lonZero]); // Point Zéro  
-            sectorPoints.push([adjustedLatLastTower, adjustedLonLastTower]); // Dernier point mobile
-
-            // Calculer les points de l'arc entre le dernier point mobile et le point zéro  
-            const angleStep = (angle2 - angle1) / steps;
-
-            for (let i = 0; i <= steps; i++) {
-                const angle = angle1 + i * angleStep;
-                const latEnd = latFixed + (getDistance(latFixed, lonFixed, latZero, lonZero) / 6371000) * Math.sin(angle) * (180 / Math.PI);
-                const lonEnd = lonFixed + (getDistance(latFixed, lonFixed, latZero, lonZero) / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-                sectorPoints.push([latEnd, lonEnd]); // Ajouter aux points du secteur  
-            }
-            
-            // Remplir le secteur avec une couleur verte  
-            L.polygon(sectorPoints, {
-                color: 'green',
-                fillColor: '#00FF00', // Vert clair  
-                fillOpacity: 0.5  
-            }).addTo(map);
-        }
-
-        // Remplir le secteur  
-        fillSector();
+        // Tracer le cercle jaune clair autour des trois points  
+        L.circle([latFixed, lonFixed], {
+            color: 'yellow',
+            fillColor: '#FFFF99', // Jaune clair  
+            fillOpacity: 0.1,
+            radius: distance // Rayon basé sur la distance entre le point fixe et le point zéro  
+        }).addTo(map);
 
         // Affichage des informations  
         function updateInfoPanel() {
             document.getElementById('pivotState').textContent = `Etat du pivot : Inconnu`;
             document.getElementById('movementDirection').textContent = `Sens de marche : Aucun`;
-            document.getElementById('currentAngle').textContent = `Angle actuel : N/A`;
+            document.getElementById('currentAngle').textContent = `Angle actuel : ${angle}°`;
         }
 
         // Mettre à jour l'interface  
