@@ -95,7 +95,7 @@
         // Fonction pour dessiner le secteur coloré en vert  
         function drawSector() {
             // Tracer plusieurs lignes radiales pour remplir le secteur  
-            const steps = 30; // Nombre de lignes  
+            const steps = 50; // Nombre de lignes radiales  
             const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
             const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
             const angleStep = (angle2 - angle1) / steps;
@@ -105,8 +105,8 @@
                 const latEnd = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
                 const lonEnd = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
                 
-                // Tracer chaque ligne radiale  
-                L.polyline([[latFixed, lonFixed], [latEnd, lonEnd]], { color: '#00FF00', weight: 2 }).addTo(map);
+                // Tracer chaque ligne radiale avec un remplissage transparent  
+                L.polyline([[latFixed, lonFixed], [latEnd, lonEnd]], { color: '#00FF00', weight: 2, opacity: 0.5 }).addTo(map);
             }
         }
 
