@@ -58,6 +58,9 @@
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
+        // Tracer un segment entre le point fixe et le point zéro  
+        const line = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue' }).addTo(map);
+
         // Calculer la position du point mobile  
         function calculateMobilePoint(latZero, lonZero, currentAngle) {
             const distance = getDistance(latFixed, lonFixed, latZero, lonZero); // Récupérer la distance entre le point fixe et le point zéro  
@@ -99,8 +102,8 @@
             for (let i = 0; i <= steps; i++) {
                 const angle = angleStart + (angleEnd - angleStart) * (i / steps);
                 const distance = getDistance(latFixed, lonFixed, latZero, lonZero); // Distance entre le point fixe et le point zéro  
-                const lat = latZero + (distance / 6371000) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
-                const lon = lonZero + (distance / 6371000) * Math.cos(angle * Math.PI / 180) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
+                const lat = latFixed + (distance / 6371000) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
+                const lon = lonFixed + (distance / 6371000) * Math.cos(angle * Math.PI / 180) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
                 latlngs.push([lat, lon]);
             }
 
