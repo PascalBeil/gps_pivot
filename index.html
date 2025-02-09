@@ -95,7 +95,7 @@
         // Fonction pour dessiner le secteur coloré en vert  
         function drawSector() {
             // Tracer plusieurs lignes radiales pour remplir le secteur  
-            const steps = 100; // Augmenter le nombre de lignes radiales pour un meilleur remplissage  
+            const steps = 300; // Augmenter le nombre de lignes radiales pour un meilleur remplissage  
             const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
             const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
             const angleStep = (angle2 - angle1) / steps;
