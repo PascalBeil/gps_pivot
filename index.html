@@ -75,7 +75,7 @@
         }
 
         // Dessiner un cercle autour du point fixe avec le rayon correspondant à la distance  
-        L.circle([latFixed, lonFixed], {
+        const circle = L.circle([latFixed, lonFixed], {
             color: 'yellow',
             fillColor: '#FFFF99', // Jaune clair  
             fillOpacity: 0.5,
@@ -116,21 +116,23 @@
             const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
 
             for (let i = 0; i <= steps; i++) {
+                const ratio = i / steps;
                 // Interpolation entre les angles  
-                const angle = angle1 + (angle2 - angle1) * (i / steps);
+                const angle = angle1 + (angle2 - angle1) * ratio;
                 const lat = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
                 const lon = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
                 arcPoints.push([lat, lon]);
             }
 
-            // Créer le polygone du secteur  
+            // Créer le polygone du secteur avec le point fixe  
             const finalPoints = [
-                [latFixed, lonFixed], 
-                ...arcPoints, 
-                [adjustedLatLastTower, adjustedLonLastTower], 
-                [latZero, lonZero]
+                [latFixed, lonFixed],  // Point fixe  
+                ...arcPoints,          // Points de l'arc  
+                [adjustedLatLastTower, adjustedLonLastTower], // Dernier Point Mobile  
+                [latZero, lonZero]     // Point Zéro  
             ];
 
+            // Dessiner le secteur colorié en vert  
             L.polygon(finalPoints, {
                 color: 'green',
                 fillColor: '#00FF00', // Vert clair  
