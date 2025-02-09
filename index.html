@@ -108,15 +108,35 @@
 
         // Fonction pour tracer le secteur coloré en vert  
         function drawSector() {
-            // Définir les points qui forment le secteur  
+            // Tracer le secteur rempli  
             const sectorPoints = [
                 [latFixed, lonFixed],         // Point fixe  
                 [latZero, lonZero],           // Point Zéro  
                 [adjustedLatLastTower, adjustedLonLastTower] // Dernier Point Mobile  
             ];
 
+            // Créer un arc entre le point zéro et le dernier point mobile  
+            const arcPoints = [];
+            const steps = 30; // Nombre de segments pour l'arc  
+            const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
+            const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
+            for (let i = 0; i <= steps; i++) {
+                const angle = angle1 + (angle2 - angle1) * (i / steps);
+                const lat = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
+                const lon = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+                arcPoints.push([lat, lon]);
+            }
+
             // Créer le polygone du secteur  
-            L.polygon(sectorPoints, {
+            const finalPoints = [
+                [latFixed, lonFixed],  // Point fixe  
+                ...arcPoints,          // Points de l'arc  
+                [latZero, lonZero],    // Point Zéro  
+                [adjustedLatLastTower, adjustedLonLastTower] // Dernier Point Mobile  
+            ];
+
+            // Dessiner le secteur colorié en vert  
+            L.polygon(finalPoints, {
                 color: 'green',
                 fillColor: '#00FF00', // Vert clair  
                 fillOpacity: 0.5  
