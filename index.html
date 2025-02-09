@@ -80,9 +80,9 @@
             return R * c; // Distance en mètres  
         }
 
-        // Tracer les lignes noires  
-        const line1 = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'black', weight: 2 }).addTo(map); // Ligne Fixe - Zéro  
-        const line2 = L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'black', weight: 2 }).addTo(map); // Ligne Fixe - Mobile
+        // Tracer les lignes bleus  
+        const line1 = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 2 }).addTo(map); // Ligne Fixe - Zéro  
+        const line2 = L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'blue', weight: 2 }).addTo(map); // Ligne Fixe - Mobile
 
         // Tracer l'arc entre le point zéro et le point mobile  
         const arcPoints = [];
@@ -98,8 +98,8 @@
             arcPoints.push([lat, lon]);
         }
 
-        // Dessiner l'arc en noir  
-        L.polyline(arcPoints, { color: 'black', weight: 2 }).addTo(map);
+        // Dessiner l'arc en bleu  
+        L.polyline(arcPoints, { color: 'blue', weight: 2 }).addTo(map);
 
         // Tracer le cercle jaune clair autour des trois points  
         L.circle([latFixed, lonFixed], {
