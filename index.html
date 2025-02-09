@@ -37,11 +37,12 @@
     <script>
         // Récupérer les paramètres de l'URL  
         const urlParams = new URLSearchParams(window.location.search);
-        const latFixed = parseFloat(urlParams.get('latFixed'));
-        const lonFixed = parseFloat(urlParams.get('lonFixed'));
-        const distanceZero = parseFloat(urlParams.get('distanceZero'));
-        const currentAngle = parseFloat(urlParams.get('currentAngle'));
-        const maxAngle = parseFloat(urlParams.get('maxAngle'));
+        const latFixed = parseFloat(urlParams.get('latFixed'));   // Latitude du point fixe  
+        const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
+        const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
+        const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
+        const currentAngle = parseFloat(urlParams.get('currentAngle')); // Angle actuel pour le point mobile  
+        const maxAngle = parseFloat(urlParams.get('maxAngle'));    // Angle pour le secteur  
         const pivotDirection = parseInt(urlParams.get('pivotDirection'));
         const pivotState = parseInt(urlParams.get('pivotState'));
 
@@ -53,16 +54,34 @@
             attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
 
-        // Fonction pour calculer le point zéro à partir du point fixe  
-        function calculateZeroPoint(latFixed, lonFixed, distance) {
+        // Ajouter des marqueurs pour le point fixe et le point zéro  
+        const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
+        const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
+
+        // Calculer la position du point mobile  
+        function calculateMobilePoint(latZero, lonZero, currentAngle) {
+            const distance = getDistance(latFixed, lonFixed, latZero, lonZero); // Récupérer la distance entre le point fixe et le point zéro  
             const R = 6371000; // Rayon de la Terre en mètres  
-            const latZero = latFixed + (distance / R) * (180 / Math.PI);
-            const lonZero = lonFixed + (distance / R) * (180 / Math.PI) / Math.cos(latFixed * Math.PI / 180);
-            return [latZero, lonZero];
+            const latMobile = latZero + (distance / R) * Math.sin(currentAngle * Math.PI / 180) * (180 / Math.PI);
+            const lonMobile = lonZero + (distance / R) * Math.cos(currentAngle * Math.PI / 180) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
+            return [latMobile, lonMobile];
         }
 
-        // Calculer le point zéro  
-        const [latZero, lonZero] = calculateZeroPoint(latFixed, lonFixed, distanceZero);
+        // Calculer la distance entre deux points GPS  
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Rayon de la Terre en mètres  
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // Distance en mètres  
+        }
+
+        // Calculer et ajouter le point mobile  
+        const [latMobile, lonMobile] = calculateMobilePoint(latZero, lonZero, currentAngle);
+        const markerMobile = L.marker([latMobile, lonMobile]).addTo(map).bindPopup("Point Mobile").openPopup();
 
         // Fonction pour dessiner le secteur  
         function drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle) {
@@ -79,8 +98,9 @@
             // Calculer les points du secteur  
             for (let i = 0; i <= steps; i++) {
                 const angle = angleStart + (angleEnd - angleStart) * (i / steps);
-                const lat = latZero + (100 / 6371000) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
-                const lon = lonZero + (100 / 6371000) * Math.cos(angle * Math.PI / 180) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
+                const distance = getDistance(latFixed, lonFixed, latZero, lonZero); // Distance entre le point fixe et le point zéro  
+                const lat = latZero + (distance / 6371000) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
+                const lon = lonZero + (distance / 6371000) * Math.cos(angle * Math.PI / 180) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
                 latlngs.push([lat, lon]);
             }
 
@@ -95,7 +115,7 @@
             }).addTo(map);
         }
 
-        // Dessiner le secteur  
+        // Dessiner le secteur ou le cercle  
         drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle);
 
         // Affichage des informations  
