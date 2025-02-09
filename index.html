@@ -56,9 +56,6 @@
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
-        // Tracer un segment entre le point fixe et le point zéro (bleu)  
-        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue' }).addTo(map);
-
         // Calculer la distance entre le point fixe et le point zéro  
         const distance = getDistance(latFixed, lonFixed, latZero, lonZero);
 
@@ -82,7 +79,7 @@
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
 
-        // Ajuster le dernier point sur le bord du cercle  
+        // Ajuster le dernier point mobile sur le cercle à la distance appropriée  
         const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
         let adjustedLatLastTower = latFixed;
         let adjustedLonLastTower = lonFixed;
@@ -95,12 +92,13 @@
 
         const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
-        // Tracer un segment entre le point fixe et le dernier point mobile (violet)  
-        L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple' }).addTo(map);
-
         // Fonction pour tracer le secteur coloré en vert  
         function drawSector() {
-            // Définir les points qui forment le secteur  
+            // Tracer les lignes rayonnantes  
+            L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'green' }).addTo(map);
+            L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'green' }).addTo(map);
+
+            // Calculer les points de l'arc entre le point zéro et le dernier point mobile  
             const arcPoints = [];
             const steps = 30; // Nombre de segments pour l'arc  
             const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
