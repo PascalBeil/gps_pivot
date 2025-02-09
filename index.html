@@ -108,26 +108,29 @@
 
         // Fonction pour tracer le secteur coloré en vert  
         function drawSector() {
-            const sectorPoints = [
-                [latFixed, lonFixed], // Point fixe  
-                [latZero, lonZero],   // Point Zéro  
-                [adjustedLatLastTower, adjustedLonLastTower], // Dernier Point Mobile  
-            ];
-
-            // Calculer les points du secteur sur le cercle  
             const steps = 30; // Nombre de segments pour l'arc  
             const arcPoints = [];
+
+            // Calculer l'angle du secteur  
+            const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
+            const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
+
             for (let i = 0; i <= steps; i++) {
-                const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
-                const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
-                const angle = angle1 + (angle2 - angle1) * (i / steps); // Interpolation de l'angle  
+                // Interpolation entre les angles  
+                const angle = angle1 + (angle2 - angle1) * (i / steps);
                 const lat = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
                 const lon = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
                 arcPoints.push([lat, lon]);
             }
 
             // Créer le polygone du secteur  
-            const finalPoints = [...arcPoints, [latZero, lonZero], [adjustedLatLastTower, adjustedLonLastTower]];
+            const finalPoints = [
+                [latFixed, lonFixed], 
+                ...arcPoints, 
+                [adjustedLatLastTower, adjustedLonLastTower], 
+                [latZero, lonZero]
+            ];
+
             L.polygon(finalPoints, {
                 color: 'green',
                 fillColor: '#00FF00', // Vert clair  
