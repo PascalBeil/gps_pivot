@@ -58,8 +58,8 @@
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
-        // Tracer un segment entre le point fixe et le point zéro  
-        const line = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue' }).addTo(map);
+        // Tracer un segment entre le point fixe et le point zéro (bleu)  
+        const lineToZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue' }).addTo(map);
 
         // Calculer la position du point mobile  
         function calculateMobilePoint(latZero, lonZero, currentAngle) {
@@ -85,6 +85,9 @@
         // Calculer et ajouter le point mobile  
         const [latMobile, lonMobile] = calculateMobilePoint(latZero, lonZero, currentAngle);
         const markerMobile = L.marker([latMobile, lonMobile]).addTo(map).bindPopup("Point Mobile").openPopup();
+
+        // Tracer un segment entre le point fixe et le point mobile (bleu)
+        const lineToMobile = L.polyline([[latFixed, lonFixed], [latMobile, lonMobile]], { color: 'blue' }).addTo(map);
 
         // Fonction pour dessiner le secteur  
         function drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle) {
