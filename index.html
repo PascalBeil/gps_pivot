@@ -59,35 +59,25 @@
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
         // Tracer un segment entre le point fixe et le point zéro (bleu)  
-        const lineToZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue' }).addTo(map);
+        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue' }).addTo(map);
 
-        // Calculer la position du point mobile  
-        function calculateMobilePoint(latZero, lonZero, currentAngle) {
-            const distance = getDistance(latFixed, lonFixed, latZero, lonZero); // Récupérer la distance entre le point fixe et le point zéro  
+        // Calculer la distance entre le point fixe et le point zéro  
+        const distance = getDistance(latFixed, lonFixed, latZero, lonZero);
+
+        // Calculer la position du point mobile en gardant la même distance  
+        function calculateMobilePoint(latFixed, lonFixed, currentAngle) {
             const R = 6371000; // Rayon de la Terre en mètres  
-            const latMobile = latZero + (distance / R) * Math.sin(currentAngle * Math.PI / 180) * (180 / Math.PI);
-            const lonMobile = lonZero + (distance / R) * Math.cos(currentAngle * Math.PI / 180) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
+            const latMobile = latFixed + (distance / R) * Math.sin(currentAngle * Math.PI / 180) * (180 / Math.PI);
+            const lonMobile = lonFixed + (distance / R) * Math.cos(currentAngle * Math.PI / 180) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
             return [latMobile, lonMobile];
         }
 
-        // Calculer la distance entre deux points GPS  
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Rayon de la Terre en mètres  
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; // Distance en mètres  
-        }
-
         // Calculer et ajouter le point mobile  
-        const [latMobile, lonMobile] = calculateMobilePoint(latZero, lonZero, currentAngle);
+        const [latMobile, lonMobile] = calculateMobilePoint(latFixed, lonFixed, currentAngle);
         const markerMobile = L.marker([latMobile, lonMobile]).addTo(map).bindPopup("Point Mobile").openPopup();
 
         // Tracer un segment entre le point fixe et le point mobile (bleu)
-        const lineToMobile = L.polyline([[latFixed, lonFixed], [latMobile, lonMobile]], { color: 'blue' }).addTo(map);
+        L.polyline([[latFixed, lonFixed], [latMobile, lonMobile]], { color: 'blue' }).addTo(map);
 
         // Fonction pour dessiner le secteur  
         function drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle) {
@@ -104,9 +94,9 @@
             // Calculer les points du secteur  
             for (let i = 0; i <= steps; i++) {
                 const angle = angleStart + (angleEnd - angleStart) * (i / steps);
-                const distance = getDistance(latFixed, lonFixed, latZero, lonZero); // Distance entre le point fixe et le point zéro  
-                const lat = latFixed + (distance / 6371000) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
-                const lon = lonFixed + (distance / 6371000) * Math.cos(angle * Math.PI / 180) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+                const R = 6371000; // Rayon de la Terre en mètres  
+                const lat = latFixed + (distance / R) * Math.sin(angle * Math.PI / 180) * (180 / Math.PI);
+                const lon = lonFixed + (distance / R) * Math.cos(angle * Math.PI / 180) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
                 latlngs.push([lat, lon]);
             }
 
@@ -121,7 +111,7 @@
             }).addTo(map);
         }
 
-        // Dessiner le secteur ou le cercle  
+        // Dessiner le secteur avec les points fixes, zéro et mobile  
         drawSector(latFixed, lonFixed, latZero, lonZero, currentAngle, maxAngle);
 
         // Affichage des informations  
