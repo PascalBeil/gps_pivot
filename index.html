@@ -103,6 +103,9 @@
         // Ajouter le dernier point mobile sur le cercle  
         const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
+        // Tracer un segment entre le point fixe et le dernier point mobile (violet)  
+        L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple' }).addTo(map);
+
         // Affichage des informations  
         function updateInfoPanel() {
             document.getElementById('pivotState').textContent = `Etat du pivot : Inconnu`;
