@@ -106,6 +106,18 @@
         // Tracer un segment entre le point fixe et le dernier point mobile (violet)  
         L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple' }).addTo(map);
 
+        // Dessiner le secteur formé par les trois points (fixe, zéro, dernier mobile) en vert  
+        const sectorPoints = [
+            [latFixed, lonFixed], 
+            [latZero, lonZero], 
+            [adjustedLatLastTower, adjustedLonLastTower]
+        ];
+        L.polygon(sectorPoints, {
+            color: 'green',
+            fillColor: '#00FF00', // Vert clair  
+            fillOpacity: 0.5  
+        }).addTo(map);
+
         // Affichage des informations  
         function updateInfoPanel() {
             document.getElementById('pivotState').textContent = `Etat du pivot : Inconnu`;
