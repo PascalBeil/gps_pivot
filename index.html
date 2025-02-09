@@ -109,11 +109,30 @@
             radius: distance // Rayon basé sur la distance entre le point fixe et le point zéro  
         }).addTo(map);
 
+        // Fonction pour récupérer les données météo  
+        function fetchWeather(lat, lon) {
+            // Utilisation de l'API wttr.in pour récupérer les données météo  
+            const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`; // Ex: "Ciel dégagé 10°C"
+
+            fetch(weatherUrl)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('weather').textContent = data; // Met à jour l'élément météo  
+                })
+                .catch(error => {
+                    document.getElementById('weather').textContent = 'Erreur de chargement des données météo';
+                    console.error('Erreur:', error);
+                });
+        }
+
         // Affichage des informations  
         function updateInfoPanel() {
             document.getElementById('pivotState').textContent = `Etat du pivot : Inconnu`;
             document.getElementById('movementDirection').textContent = `Sens de marche : Aucun`;
             document.getElementById('currentAngle').textContent = `Angle actuel : ${angle}°`;
+
+            // Appel à la fonction pour récupérer les données météo  
+            fetchWeather(latFixed, lonFixed);
         }
 
         // Mettre à jour l'interface  
