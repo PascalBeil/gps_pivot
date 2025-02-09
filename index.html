@@ -41,6 +41,8 @@
         const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
         const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
         const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
+        const latLastTower = parseFloat(urlParams.get('latLastTower')); // Latitude du dernier point  
+        const lonLastTower = parseFloat(urlParams.get('lonLastTower')); // Longitude du dernier point
 
         // Initialisation de la carte avec OpenStreetMap  
         const map = L.map('map').setView([latFixed, lonFixed], 13);
@@ -79,6 +81,13 @@
             fillOpacity: 0.5,
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
+
+        // Ajouter le dernier point sur le cercle si les coordonnées sont fournies  
+        if (!isNaN(latLastTower) && !isNaN(lonLastTower) && getDistance(latFixed, lonFixed, latLastTower, lonLastTower) <= distance) {
+            const markerLastTower = L.marker([latLastTower, lonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
+        } else {
+            console.error("Le dernier point n'est pas sur le cercle ou les coordonnées sont invalides.");
+        }
 
         // Affichage des informations  
         function updateInfoPanel() {
