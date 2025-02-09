@@ -82,7 +82,7 @@
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
 
-        // Positionner le dernier point mobile sur le cercle à la distance appropriée  
+        // Ajuster le dernier point sur le bord du cercle  
         const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
         let adjustedLatLastTower = latFixed;
         let adjustedLonLastTower = lonFixed;
@@ -100,7 +100,7 @@
 
         // Fonction pour tracer le secteur coloré en vert  
         function drawSector() {
-            // Créer les points de l'arc entre le point zéro et le dernier point mobile  
+            // Définir les points qui forment le secteur  
             const arcPoints = [];
             const steps = 30; // Nombre de segments pour l'arc  
             const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
