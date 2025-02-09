@@ -79,11 +79,12 @@
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
 
-        // Ajuster la position du dernier point mobile sur le bord du cercle  
+        // Positionner le dernier point mobile sur le cercle à la distance appropriée  
+        const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
         let adjustedLatLastTower = latFixed;
         let adjustedLonLastTower = lonFixed;
 
-        if (getDistance(latFixed, lonFixed, latLastTower, lonLastTower) > 0) {
+        if (lastPointDistance > 0) {
             const angle = Math.atan2(latLastTower - latFixed, lonLastTower - lonFixed);
             adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
             adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
@@ -96,7 +97,11 @@
             const sectorPoints = [];
             sectorPoints.push([latFixed, lonFixed]); // Point fixe
             
-            // Calculer les points de l'arc entre le point zéro et le dernier point mobile  
+            // Ajouter le point Zéro et le dernier Point Mobile  
+            sectorPoints.push([latZero, lonZero]); 
+            sectorPoints.push([adjustedLatLastTower, adjustedLonLastTower]); 
+
+            // Calculer les points de l'arc entre le dernier point mobile et le point zéro  
             const steps = 100; // Nombre de lignes radiales  
             const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
             const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
@@ -110,10 +115,6 @@
                 sectorPoints.push([latEnd, lonEnd]); // Ajouter les points de l'arc  
             }
             
-            // Ajouter le point zéro et le dernier point mobile  
-            sectorPoints.push([latZero, lonZero]);
-            sectorPoints.push([adjustedLatLastTower, adjustedLonLastTower]);
-
             // Dessiner le secteur colorié en vert  
             L.polygon(sectorPoints, {
                 color: 'green',
