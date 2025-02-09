@@ -79,7 +79,7 @@
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
 
-        // Ajuster le dernier point mobile sur le cercle à la distance appropriée  
+        // Positionner le dernier point mobile sur le cercle à la distance appropriée  
         const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
         let adjustedLatLastTower = latFixed;
         let adjustedLonLastTower = lonFixed;
@@ -92,13 +92,19 @@
 
         const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
-        // Fonction pour tracer le secteur coloré en vert  
+        // Fonction pour dessiner le secteur coloré en vert  
         function drawSector() {
-            // Tracer les lignes rayonnantes  
-            L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'green' }).addTo(map);
-            L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'green' }).addTo(map);
+            // Tracer les lignes radiales jusqu'au bord du cercle  
+            const fillColor = '#00FF00'; // Couleur de remplissage  
+            const lineWidth = 10; // Largeur de la ligne
 
-            // Calculer les points de l'arc entre le point zéro et le dernier point mobile  
+            // Ligne vers le point zéro  
+            const lineZero = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: fillColor, weight: lineWidth }).addTo(map);
+
+            // Ligne vers le dernier point mobile  
+            const lineLastTower = L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: fillColor, weight: lineWidth }).addTo(map);
+
+            // Créer les points de l'arc entre le point zéro et le dernier point mobile  
             const arcPoints = [];
             const steps = 30; // Nombre de segments pour l'arc  
             const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
@@ -113,16 +119,16 @@
 
             // Créer le polygone pour le secteur  
             const finalPoints = [
-                [latFixed, lonFixed],  // Point fixe  
-                ...arcPoints,          // Points de l'arc  
-                [latZero, lonZero],    // Point Zéro  
+                [latFixed, lonFixed], // Point fixe  
+                ...arcPoints,         // Points de l'arc  
+                [latZero, lonZero],   // Point Zéro  
                 [adjustedLatLastTower, adjustedLonLastTower] // Dernier Point Mobile  
             ];
 
             // Dessiner le secteur colorié en vert  
             L.polygon(finalPoints, {
-                color: 'green',
-                fillColor: '#00FF00', // Vert clair  
+                color: fillColor,
+                fillColor: fillColor,
                 fillOpacity: 0.5  
             }).addTo(map);
         }
