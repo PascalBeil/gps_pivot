@@ -82,12 +82,23 @@
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
 
-        // Ajouter le dernier point sur le cercle si les coordonnées sont fournies  
-        if (!isNaN(latLastTower) && !isNaN(lonLastTower) && getDistance(latFixed, lonFixed, latLastTower, lonLastTower) <= distance) {
-            const markerLastTower = L.marker([latLastTower, lonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
-        } else {
-            console.error("Le dernier point n'est pas sur le cercle ou les coordonnées sont invalides.");
+        // Vérifier si le dernier point est à la bonne distance du point fixe  
+        const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
+
+        let adjustedLatLastTower = latLastTower;
+        let adjustedLonLastTower = lonLastTower;
+
+        // Si le dernier point n'est pas à la bonne distance, ajuster les coordonnées  
+        if (lastPointDistance > distance) {
+            const ratio = distance / lastPointDistance; // Ratio pour ajuster la distance
+
+            // Ajuster les coordonnées pour que le dernier point soit sur le cercle  
+            adjustedLatLastTower = latFixed + (latLastTower - latFixed) * ratio;
+            adjustedLonLastTower = lonFixed + (lonLastTower - lonFixed) * ratio;
         }
+
+        // Ajouter le dernier point sur le cercle  
+        const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
         // Affichage des informations  
         function updateInfoPanel() {
