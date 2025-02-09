@@ -118,10 +118,11 @@
             const steps = 30; // Nombre de segments pour l'arc  
             const arcPoints = [];
             for (let i = 0; i <= steps; i++) {
-                const angle = Math.atan2(sectorPoints[1][0] - sectorPoints[0][0], sectorPoints[1][1] - sectorPoints[0][1]);
-                const adjustedAngle = angle + (i * (Math.atan2(sectorPoints[2][0] - sectorPoints[0][0], sectorPoints[2][1] - sectorPoints[0][1]) - angle) / steps);
-                const lat = latFixed + (distance / 6371000) * Math.sin(adjustedAngle) * (180 / Math.PI);
-                const lon = lonFixed + (distance / 6371000) * Math.cos(adjustedAngle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+                const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
+                const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
+                const angle = angle1 + (angle2 - angle1) * (i / steps); // Interpolation de l'angle  
+                const lat = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
+                const lon = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
                 arcPoints.push([lat, lon]);
             }
 
