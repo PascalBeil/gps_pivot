@@ -75,32 +75,24 @@
         }
 
         // Dessiner un cercle autour du point fixe avec le rayon correspondant à la distance  
-        const circle = L.circle([latFixed, lonFixed], {
+        L.circle([latFixed, lonFixed], {
             color: 'yellow',
             fillColor: '#FFFF99', // Jaune clair  
             fillOpacity: 0.5,
             radius: distance // Rayon basé sur la distance calculée  
         }).addTo(map);
 
-        // Ajouter le dernier point sur le bord du cercle  
+        // Positionner le dernier point mobile sur le cercle à la distance appropriée  
         const lastPointDistance = getDistance(latFixed, lonFixed, latLastTower, lonLastTower);
-
-        let adjustedLatLastTower;
-        let adjustedLonLastTower;
+        let adjustedLatLastTower = latFixed;
+        let adjustedLonLastTower = lonFixed;
 
         if (lastPointDistance > 0) {
-            // Calculer l'angle du dernier point par rapport au point fixe  
             const angle = Math.atan2(latLastTower - latFixed, lonLastTower - lonFixed);
-            // Positionner le dernier point mobile sur le cercle à la distance appropriée  
             adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
             adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-        } else {
-            // Si le point mobile n'est pas donné, utiliser une position par défaut sur le cercle  
-            adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(0) * (180 / Math.PI); // Angle 0  
-            adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(0) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
         }
 
-        // Ajouter le dernier point mobile sur le cercle  
         const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
         // Tracer un segment entre le point fixe et le dernier point mobile (violet)  
@@ -108,18 +100,12 @@
 
         // Fonction pour tracer le secteur coloré en vert  
         function drawSector() {
-            // Tracer le secteur rempli  
-            const sectorPoints = [
-                [latFixed, lonFixed],         // Point fixe  
-                [latZero, lonZero],           // Point Zéro  
-                [adjustedLatLastTower, adjustedLonLastTower] // Dernier Point Mobile  
-            ];
-
-            // Créer un arc entre le point zéro et le dernier point mobile  
+            // Créer les points de l'arc entre le point zéro et le dernier point mobile  
             const arcPoints = [];
             const steps = 30; // Nombre de segments pour l'arc  
             const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
             const angle2 = Math.atan2(adjustedLatLastTower - latFixed, adjustedLonLastTower - lonFixed);
+
             for (let i = 0; i <= steps; i++) {
                 const angle = angle1 + (angle2 - angle1) * (i / steps);
                 const lat = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
@@ -127,7 +113,7 @@
                 arcPoints.push([lat, lon]);
             }
 
-            // Créer le polygone du secteur  
+            // Créer le polygone pour le secteur  
             const finalPoints = [
                 [latFixed, lonFixed],  // Point fixe  
                 ...arcPoints,          // Points de l'arc  
