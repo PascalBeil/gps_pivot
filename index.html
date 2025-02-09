@@ -82,8 +82,8 @@
         }
 
         // Tracer les lignes noires  
-        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'black', weight: 2 }).addTo(map); // Ligne Fixe - Zéro  
-        L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'black', weight: 2 }).addTo(map); // Ligne Fixe - Mobile
+        const line1 = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'black', weight: 2 }).addTo(map); // Ligne Fixe - Zéro  
+        const line2 = L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'black', weight: 2 }).addTo(map); // Ligne Fixe - Mobile
 
         // Tracer l'arc entre le point zéro et le point mobile  
         const arcPoints = [];
@@ -101,6 +101,34 @@
 
         // Dessiner l'arc en noir  
         L.polyline(arcPoints, { color: 'black', weight: 2 }).addTo(map);
+
+        // Remplir le secteur  
+        function fillSector() {
+            const sectorPoints = [];
+            sectorPoints.push([latFixed, lonFixed]); // Point fixe  
+            sectorPoints.push([latZero, lonZero]); // Point Zéro  
+            sectorPoints.push([adjustedLatLastTower, adjustedLonLastTower]); // Dernier point mobile
+
+            // Calculer les points de l'arc entre le dernier point mobile et le point zéro  
+            const angleStep = (angle2 - angle1) / steps;
+
+            for (let i = 0; i <= steps; i++) {
+                const angle = angle1 + i * angleStep;
+                const latEnd = latFixed + (getDistance(latFixed, lonFixed, latZero, lonZero) / 6371000) * Math.sin(angle) * (180 / Math.PI);
+                const lonEnd = lonFixed + (getDistance(latFixed, lonFixed, latZero, lonZero) / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+                sectorPoints.push([latEnd, lonEnd]); // Ajouter aux points du secteur  
+            }
+            
+            // Remplir le secteur avec une couleur verte  
+            L.polygon(sectorPoints, {
+                color: 'green',
+                fillColor: '#00FF00', // Vert clair  
+                fillOpacity: 0.5  
+            }).addTo(map);
+        }
+
+        // Remplir le secteur  
+        fillSector();
 
         // Affichage des informations  
         function updateInfoPanel() {
