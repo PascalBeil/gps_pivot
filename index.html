@@ -54,7 +54,7 @@
         // Calculer la distance entre le point fixe et le point zéro (rayon du cercle)  
         const radius = getDistance(latFixed, lonFixed, latZero, lonZero);
 
-        // Fonction pour calculer et dessiner le secteur circulaire  
+        // Fonction pour dessiner le secteur circulaire  
         function drawSector(lat, lon, radius, startAngle, endAngle) {
             const points = [];
             const R = 6371000; // Rayon de la Terre en mètres
@@ -67,8 +67,8 @@
                 points.push([pointLat, pointLon]);
             }
 
-            // Ajouter le point central pour fermer le secteur  
-            points.unshift([lat, lon]); // Point central
+            // Fermer le secteur avec le point central  
+            points.unshift([lat, lon]);
 
             // Tracer le secteur sur la carte  
             L.polygon(points, { color: 'blue', fillColor: '#99f', fillOpacity: 0.5 }).addTo(map);
@@ -86,11 +86,11 @@
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
-        // Calculer l'angle de départ par rapport à la direction du point zéro 
+        // Calculer l'angle de départ en fonction de la direction vers le point zéro  
         const startAngle = getBearing(latFixed, lonFixed, latZero, lonZero);
 
-        // Dessiner le secteur circulaire  
-        drawSector(latFixed, lonFixed, radius, startAngle, currentAngle); // Dessiner le secteur
+        // Dessiner le secteur circulaire en utilisant l'angle de départ et currentAngle  
+        drawSector(latFixed, lonFixed, radius, startAngle, currentAngle);
 
         // Fonction pour calculer la distance entre deux points GPS  
         function getDistance(lat1, lon1, lat2, lon2) {
@@ -107,7 +107,6 @@
         // Fonction pour calculer l'angle de direction entre deux points  
         function getBearing(lat1, lon1, lat2, lon2) {
             const dLon = (lon2 - lon1) * Math.PI / 180;
-
             const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
             const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
                 Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
@@ -119,9 +118,7 @@
         L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map);
 
         // Tracer une ligne violette du point fixe au point mobile  
-        const adjustedLatLastTower = latZero; // en utilisant le point zéro comme référence  
-        const adjustedLonLastTower = lonZero;
-        L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple', weight: 3 }).addTo(map);
+        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'purple', weight: 3 }).addTo(map);
 
         // Tracer le cercle jaune clair autour des trois points  
         L.circle([latFixed, lonFixed], {
