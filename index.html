@@ -109,20 +109,24 @@
             radius: distance // Rayon basé sur la distance entre le point fixe et le point zéro  
         }).addTo(map);
 
-        // Ajouter des graduations tous les 45° sur le cercle, à partir du point fixe  
+        // Ajouter des graduations tous les 45° à l'extérieur du cercle, dans le sens anti-horaire  
         const graduationInterval = 45; // Intervalle de graduation en degrés  
         const numGradations = 360 / graduationInterval; // Nombre de graduations
 
         for (let i = 0; i < numGradations; i++) {
-            const angleInDegrees = i * graduationInterval;
+            const angleInDegrees = (numGradations - i) * graduationInterval; // Inverser l'ordre pour l'anti-horaire  
             const angleInRadians = angleInDegrees * (Math.PI / 180);
             
             // Calculer les coordonnées du point sur la circonférence du cercle  
             const graduationLat = latFixed + (distance / 6371000) * Math.sin(angleInRadians) * (180 / Math.PI);
             const graduationLon = lonFixed + (distance / 6371000) * Math.cos(angleInRadians) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
 
-            // Tracer la ligne de graduation à partir du point fixe  
-            L.polyline([[latFixed, lonFixed], [graduationLat, graduationLon]], { color: 'blue', weight: 2 }).addTo(map);
+            // Ajouter le texte de graduation à l'extérieur du cercle  
+            const textLat = latFixed + (1.05 * distance / 6371000) * Math.sin(angleInRadians) * (180 / Math.PI);
+            const textLon = lonFixed + (1.05 * distance / 6371000) * Math.cos(angleInRadians) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
+
+            // Ajouter un marqueur de texte pour afficher l'angle sans ligne visible  
+            L.marker([textLat, textLon]).addTo(map).bindTooltip(`${angleInDegrees}°`, { permanent: true, direction: 'center' }).openTooltip();
         }
 
         // Fonction pour récupérer les données météo  
