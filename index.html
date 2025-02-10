@@ -102,12 +102,28 @@
         L.polyline(arcPoints, { color: 'blue', weight: 3 }).addTo(map);
 
         // Tracer le cercle jaune clair autour des trois points  
-        L.circle([latFixed, lonFixed], {
+        const circle = L.circle([latFixed, lonFixed], {
             color: 'yellow',
             fillColor: '#FFFF99', // Jaune clair  
             fillOpacity: 0.1,
             radius: distance // Rayon basé sur la distance entre le point fixe et le point zéro  
         }).addTo(map);
+
+        // Ajouter des graduations sur le cercle, référencées par rapport au point zéro  
+        const numGradations = 36; // Nombre de graduations (10° par graduation)
+        const graduationAngle = 360 / numGradations;
+
+        for (let i = 0; i < numGradations; i++) {
+            const angleInDegrees = i * graduationAngle;
+            const angleInRadians = angleInDegrees * (Math.PI / 180);
+            
+            // Calculer les coordonnées du point sur la circonférence du cercle en utilisant le point zéro comme référence  
+            const graduationLat = latZero + (distance / 6371000) * Math.sin(angleInRadians) * (180 / Math.PI);
+            const graduationLon = lonZero + (distance / 6371000) * Math.cos(angleInRadians) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
+
+            // Tracer la ligne de graduation (ne part pas du point fixe)
+            L.polyline([[latZero, lonZero], [graduationLat, graduationLon]], { color: 'blue', weight: 2 }).addTo(map);
+        }
 
         // Fonction pour récupérer les données météo  
         function fetchWeather(lat, lon) {
@@ -115,7 +131,12 @@
             const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`; // Ex: "Ciel dégagé 10°C"
 
             fetch(weatherUrl)
-                .then(response => response.text())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur réseau');
+                    }
+                    return response.text();
+                })
                 .then(data => {
                     document.getElementById('weather').textContent = data; // Met à jour l'élément météo  
                 })
