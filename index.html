@@ -92,6 +92,13 @@
 
             // Assurez-vous que l'arc est tracé dans le bon sens  
             const angleDiff = angleEnd - angleStart;
+
+            // Ajustement pour le cas où l'arc doit être tracé dans le sens inverse  
+            if (angleDiff < 0) {
+                angleStart = angleEnd;
+                angleEnd = angleStart + Math.PI * 2; // Ajuster pour un arc complet si nécessaire  
+            }
+
             for (let i = 0; i <= numPoints; i++) {
                 const t = i / numPoints;
                 const angle = angleStart + angleDiff * t;
@@ -104,7 +111,7 @@
             // Ajouter les points de l'arc entre le point Zéro et le point Troisième  
             points.splice(1, 0, ...arcPoints); // Insérer l'arc entre le point d'origine et les deux autres points
 
-            // Créer le secteur circulaire  
+            // Créer le secteur circulaire sans traits supplémentaires  
             L.polygon(points, { className: 'sector' }).addTo(map);
         }
 
