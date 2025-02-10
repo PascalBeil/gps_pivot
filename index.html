@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte Satellite Pivot Irrigation</title>
+    <title>Secteur Circulaire</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <style>
@@ -12,168 +12,65 @@
             height: 100vh;
         }
 
-        #infoPanel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 1000;
-            width: 250px;
-            font-family: Arial, sans-serif;
-        }
-
-        #infoPanel p {
-            margin: 5px 0;
+        .sector {
+            fill: rgba(0, 0, 255, 0.5);
+            stroke: blue;
+            stroke-width: 2;
         }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
-    <div id="infoPanel">
-        <h4>Météo et Infos</h4>
-        <p id="weather">Chargement...</p>
-        <p id="pivotState"></p>
-        <p id="movementDirection"></p>
-        <p id="currentAngle"></p>
-    </div>
 
     <script>
-        // Récupérer les paramètres de l'URL  
-        const urlParams = new URLSearchParams(window.location.search);
-        const LatOri = parseFloat(urlParams.get('LatOri'));   // Latitude du point d'origine  
-        const LonOri = parseFloat(urlParams.get('LonOri'));   // Longitude du point d'origine  
-        const LatZero = parseFloat(urlParams.get('LatZero'));  // Latitude du point zéro  
-        const LonZero = parseFloat(urlParams.get('LonZero'));  // Longitude du point zéro  
-        const LatDt = parseFloat(urlParams.get('LatDt'));      // Latitude du troisième point  
-        const LonDt = parseFloat(urlParams.get('LonDt'));      // Longitude du troisième point  
-        const movement = urlParams.get('movement');               // Direction de mouvement  
-        const pivotState = urlParams.get('pivotState');           // État du pivot
+        // Points définis  
+        const LatOri = 48.8570;   // Point d'origine (sommet)
+        const LonOri = 2.3540;    // Point d'origine (sommet)
+        const LatZero = 48.8565;   // Point Zéro (un côté)
+        const LonZero = 2.3530;    // Point Zéro (un côté)
+        const LatDt = 48.8565;     // Troisième Point (l'autre côté)
+        const LonDt = 2.3550;      // Troisième Point (l'autre côté)
 
-        // Fonction pour dessiner un secteur circulaire entre trois points  
-        function drawSector() {
-            // Tracer une ligne entre le point fixe et le point zéro  
-            L.polyline([[LatOri, LonOri], [LatZero, LonZero]], { color: 'blue', weight: 2 }).addTo(map);
-            
-            // Tracer une ligne entre le point fixe et le troisième point  
-            L.polyline([[LatOri, LonOri], [LatDt, LonDt]], { color: 'blue', weight: 2 }).addTo(map);
+        const map = L.map('map').setView([LatOri, LonOri], 15);
 
-            // Arc entre le point zéro et le troisième point  
-            const points = [];
-            const numPoints = 100; // Nombre de points pour l'arc  
-            const radius = getDistance(LatZero, LonZero, LatOri, LonOri); // Rayon pour calculer l'arc
-
-            const startAngle = getBearing(LatZero, LonZero, LatOri, LonOri);
-            const endAngle = getBearing(LatDt, LonDt, LatOri, LonOri);
-
-            // Calcul des points de l'arc de cercle entre LatZero-LonZero et LatDt-LonDt  
-            for (let i = 0; i <= numPoints; i++) {
-                const angle = startAngle + (endAngle - startAngle) * (i / numPoints);
-                const angleRad = angle * (Math.PI / 180);
-                const pointLat = LatOri + (radius / 6371000) * Math.sin(angleRad) * (180 / Math.PI);
-                const pointLon = LonOri + (radius / 6371000) * Math.cos(angleRad) / Math.cos(LatOri * Math.PI / 180) * (180 / Math.PI);
-                points.push([pointLat, pointLon]);
-            }
-
-            // Ajouter les points de l'arc au secteur  
-            L.polygon([[LatZero, LonZero], [LatDt, LonDt], ...points], 
-                      { color: 'blue', fillColor: '#99f', fillOpacity: 0.5 }).addTo(map);
-        }
-
-        // Initialisation de la carte avec OpenStreetMap  
-        const map = L.map('map').setView([LatOri, LonOri], 13);
-
-        // Utilisation de la couche satellite gratuite d'Esri  
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        // Couche de la carte  
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
         }).addTo(map);
 
-        // Ajouter des marqueurs pour les trois points  
-        L.marker([LatOri, LonOri]).addTo(map).bindPopup("Point d'Origine").openPopup();
-        L.marker([LatZero, LonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
-        L.marker([LatDt, LonDt]).addTo(map).bindPopup("Troisième Point").openPopup();
+        // Fonction pour dessiner le secteur circulaire  
+        function drawSector() {
+            const points = [
+                [LatOri, LonOri], // Point d'origine (sommet)
+                [LatZero, LonZero], // Point Zéro (un côté)
+                [LatDt, LonDt] // Troisième point (l'autre côté)
+            ];
 
-        // Dessiner le secteur circulaire avec les trois points  
-        drawSector();
+            // Créer un arc entre LatZero et LatDt  
+            const arcPoints = [];
+            const numPoints = 100; // Nombre de points pour l'arc  
+            const radius = 0.001; // Rayon pour l'arc
 
-        // Fonction pour calculer la distance entre deux points GPS  
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Rayon de la Terre en mètres  
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; // Distance en mètres  
-        }
-
-        // Fonction pour calculer l'angle de direction entre deux points  
-        function getBearing(lat1, lon1, lat2, lon2) {
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
-            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
-                Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
-            const brng = Math.atan2(y, x);
-            return (brng * 180 / Math.PI + 360) % 360; // Convertir en degrés  
-        }
-
-        // Fonction pour récupérer les données météo  
-        function fetchWeather(lat, lon) {
-            const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`;
-
-            fetch(weatherUrl)
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('weather').textContent = data;
-                })
-                .catch(error => {
-                    document.getElementById('weather').textContent = 'Erreur de chargement des données météo';
-                    console.error('Erreur:', error);
-                });
-        }
-
-        // Affichage des informations  
-        function updateInfoPanel() {
-            let pivotStateText;
-            switch (pivotState) {
-                case '1':
-                    pivotStateText = 'Ok';
-                    break;
-                case '2':
-                    pivotStateText = 'Défaut';
-                    break;
-                case '0':
-                    pivotStateText = 'Inconnu';
-                    break;
-                default:
-                    pivotStateText = 'État inconnu';
+            // Tracer l'arc de cercle  
+            const angleStep = Math.atan2(LatDt - LatOri, LonDt - LonOri) - Math.atan2(LatZero - LatOri, LonZero - LonOri);
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                const angle = Math.atan2(LatZero - LatOri, LonZero - LonOri) + angleStep * t;
+                arcPoints.push([
+                    LatOri + radius * Math.sin(angle),
+                    LonOri + radius * Math.cos(angle)
+                ]);
             }
-            document.getElementById('pivotState').textContent = `Etat du pivot : ${pivotStateText}`;
-            document.getElementById('currentAngle').textContent = `Angle actuel : ${currentAngle}°`;
 
-            let movementDirection;
-            switch (movement) {
-                case '1':
-                    movementDirection = 'Marche Avant';
-                    break;
-                case '2':
-                    movementDirection = 'Marche Arrière';
-                    break;
-                case '0':
-                    movementDirection = 'Arrêt';
-                    break;
-                default:
-                    movementDirection = 'Direction inconnue';
-            }
-            document.getElementById('movementDirection').textContent = `Sens de marche : ${movementDirection}`;
+            // Ajouter les points de l'arc  
+            points.splice(1, 0, ...arcPoints); // Insérer l'arc entre le point d'origine et les deux autres points
 
-            fetchWeather(LatOri, LonOri);
+            // Créer le secteur circulaire  
+            L.polygon(points, { className: 'sector' }).addTo(map);
         }
 
-        updateInfoPanel();
+        drawSector(); // Appeler la fonction pour dessiner le secteur  
     </script>
 </body>
 
