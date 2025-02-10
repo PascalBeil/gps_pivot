@@ -81,13 +81,13 @@
         // Fonction pour dessiner le secteur circulaire  
         function drawSector() {
             const arcPoints = [];
-            const numPoints = 100; // Nombre de points pour l'arc  
+            const numPoints = 200; // Augmenter le nombre de points pour un arc plus lisse  
             const radius = 0.001;  // Rayon pour l'arc  
 
             // Calculer l'angle pour le Point Zéro et le Troisième Point  
             const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
             const angleEnd = Math.atan2(LatDt - LatOri, LonDt - LonOri);
-            const angleDiff = angleEnd - angleStart;
+            let angleDiff = angleEnd - angleStart;
 
             // Vérifier si l'arc doit être tracé dans le bon sens  
             if (angleDiff < 0) {
@@ -107,7 +107,7 @@
             const points = [
                 [LatOri, LonOri], // Point d'origine (sommet)
                 ...arcPoints, // Points de l'arc  
-                [LatDt, LonDt] // Troisième point  
+                [LatDt, LonDt] // Troisième point (pour fermer le secteur correctement)
             ];
 
             L.polygon(points, { className: 'sector' }).addTo(map);
