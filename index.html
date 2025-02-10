@@ -41,7 +41,9 @@
         const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
         const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
         const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
-        const angle = parseFloat(urlParams.get('currentAngle'));  // Angle actuel en degrés
+        const angle = parseFloat(urlParams.get('currentAngle'));  // Angle actuel en degrés  
+        const movement = urlParams.get('movement');               // Direction de mouvement  
+        const pivotState = urlParams.get('pivotState');           // État du pivot
 
         // Convertir l'angle de degrés à radians  
         const angleRadians = angle * (Math.PI / 180);
@@ -80,54 +82,19 @@
             return R * c; // Distance en mètres  
         }
 
-        // Tracer les lignes bleus  
-        const line1 = L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map); // Ligne Fixe - Zéro  
-        const line2 = L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'blue', weight: 3 }).addTo(map); // Ligne Fixe - Mobile
+        // Tracer une ligne bleue du point fixe au point zéro  
+        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map); 
 
-        // Tracer l'arc entre le point zéro et le point mobile  
-        const arcPoints = [];
-        const steps = 100; // Nombre de segments pour l'arc  
-        const angle1 = Math.atan2(latZero - latFixed, lonZero - lonFixed);
-        const angle2 = angleRadians; // Utiliser l'angle actuel  
-        const angleStep = (angle2 - angle1) / steps;
-
-        for (let i = 0; i <= steps; i++) {
-            const angle = angle1 + i * angleStep;
-            const lat = latFixed + (distance / 6371000) * Math.sin(angle) * (180 / Math.PI);
-            const lon = lonFixed + (distance / 6371000) * Math.cos(angle) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-            arcPoints.push([lat, lon]);
-        }
-
-        // Dessiner l'arc en bleu  
-        L.polyline(arcPoints, { color: 'blue', weight: 3 }).addTo(map);
+        // Tracer une ligne violette du point fixe au point mobile  
+        L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple', weight: 3 }).addTo(map); 
 
         // Tracer le cercle jaune clair autour des trois points  
-        const circle = L.circle([latFixed, lonFixed], {
+        L.circle([latFixed, lonFixed], {
             color: 'yellow',
             fillColor: '#FFFF99', // Jaune clair  
             fillOpacity: 0.1,
             radius: distance // Rayon basé sur la distance entre le point fixe et le point zéro  
         }).addTo(map);
-
-        // Ajouter des graduations tous les 45° à l'extérieur du cercle, dans le sens anti-horaire  
-        const graduationInterval = 45; // Intervalle de graduation en degrés  
-        const numGradations = 360 / graduationInterval; // Nombre de graduations
-
-        for (let i = 0; i < numGradations; i++) {
-            const angleInDegrees = (numGradations - i) * graduationInterval; // Inverser l'ordre pour l'anti-horaire  
-            const angleInRadians = angleInDegrees * (Math.PI / 180);
-            
-            // Calculer les coordonnées du point sur la circonférence du cercle  
-            const graduationLat = latFixed + (distance / 6371000) * Math.sin(angleInRadians) * (180 / Math.PI);
-            const graduationLon = lonFixed + (distance / 6371000) * Math.cos(angleInRadians) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-
-            // Ajouter le texte de graduation à l'extérieur du cercle  
-            const textLat = latFixed + (1.05 * distance / 6371000) * Math.sin(angleInRadians) * (180 / Math.PI);
-            const textLon = lonFixed + (1.05 * distance / 6371000) * Math.cos(angleInRadians) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
-
-            // Ajouter un marqueur de texte pour afficher l'angle sans ligne visible  
-            L.marker([textLat, textLon]).addTo(map).bindTooltip(`${angleInDegrees}°`, { permanent: true, direction: 'center' }).openTooltip();
-        }
 
         // Fonction pour récupérer les données météo  
         function fetchWeather(lat, lon) {
@@ -135,12 +102,7 @@
             const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`; // Ex: "Ciel dégagé 10°C"
 
             fetch(weatherUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Erreur réseau');
-                    }
-                    return response.text();
-                })
+                .then(response => response.text())
                 .then(data => {
                     document.getElementById('weather').textContent = data; // Met à jour l'élément météo  
                 })
@@ -152,9 +114,40 @@
 
         // Affichage des informations  
         function updateInfoPanel() {
-            document.getElementById('pivotState').textContent = `Etat du pivot : Inconnu`;
-            document.getElementById('movementDirection').textContent = `Sens de marche : Aucun`;
+            // Affichage de l'état du pivot  
+            let pivotStateText;
+            switch (pivotState) {
+                case '1':
+                    pivotStateText = 'Ok';
+                    break;
+                case '2':
+                    pivotStateText = 'Défaut';
+                    break;
+                case '0':
+                    pivotStateText = 'Inconnu';
+                    break;
+                default:
+                    pivotStateText = 'État inconnu';
+            }
+            document.getElementById('pivotState').textContent = `Etat du pivot : ${pivotStateText}`;
             document.getElementById('currentAngle').textContent = `Angle actuel : ${angle}°`;
+
+            // Affichage de la direction de mouvement  
+            let movementDirection;
+            switch(movement) {
+                case '1':
+                    movementDirection = 'Marche Avant';
+                    break;
+                case '2':
+                    movementDirection = 'Marche Arrière';
+                    break;
+                case '0':
+                    movementDirection = 'Arrêt';
+                    break;
+                default:
+                    movementDirection = 'Direction inconnue';
+            }
+            document.getElementById('movementDirection').textContent = `Sens de marche : ${movementDirection}`;
 
             // Appel à la fonction pour récupérer les données météo  
             fetchWeather(latFixed, lonFixed);
