@@ -1,133 +1,57 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secteur Circulaire</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <title>Carte avec 3 droites</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
-        #map {
-            height: 100vh;
-        }
-
-        .sector {
-            fill: rgba(0, 0, 255, 0.5);
-            stroke: blue;
-            stroke-width: 2;
-        }
-
-        #info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-        }
+        #map { height: 100vh; }
     </style>
 </head>
-
 <body>
-    <div id="info"></div>
     <div id="map"></div>
-
     <script>
-        // Fonction pour obtenir les paramètres de l'URL  
-        function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            const results = regex.exec(window.location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                LatOri: parseFloat(params.get('LatOri')),
+                LonOri: parseFloat(params.get('LonOri')),
+                LatZero: parseFloat(params.get('LatZero')),
+                LonZero: parseFloat(params.get('LonZero')),
+                LatMaxAngle: parseFloat(params.get('LatMaxAngle')),
+                LonMaxAngle: parseFloat(params.get('LonMaxAngle')),
+                LatPiv: parseFloat(params.get('LatPiv')),
+                LonPiv: parseFloat(params.get('LonPiv'))
+            };
         }
-
-        // Récupérer les paramètres de l'URL  
-        const LatOri = parseFloat(getUrlParameter('LatOri')); // Point d'origine (sommet)
-        const LonOri = parseFloat(getUrlParameter('LonOri')); // Point d'origine (sommet)
-        const LatZero = parseFloat(getUrlParameter('LatZero')); // Point Zéro (un côté)
-        const LonZero = parseFloat(getUrlParameter('LonZero')); // Point Zéro (un côté)
-        const LatDt = parseFloat(getUrlParameter('LatDt')); // Troisième Point (l'autre côté)
-        const LonDt = parseFloat(getUrlParameter('LonDt')); // Troisième Point (l'autre côté)
-        const movement = getUrlParameter('movement'); // Angle du pivot  
-        const pivotState = getUrlParameter('pivotState'); // État du pivot
-
-        const map = L.map('map').setView([LatOri, LonOri], 15);
-
-        // Couche de la carte satellite d'Esri  
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 18,
-            attribution: 'Tiles &copy; Esri'
+        
+        const coords = getQueryParams();
+        const map = L.map('map').setView([coords.LatOri, coords.LonOri], 15);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
         }).addTo(map);
-
-        // Afficher les informations sur le panneau  
-        const infoPanel = document.getElementById('info');
-        infoPanel.innerHTML = `
-            <strong>Informations du Secteur :</strong><br>
-            Point d'Origine : (${LatOri.toFixed(6)}, ${LonOri.toFixed(6)})<br>
-            Point Zéro : (${LatZero.toFixed(6)}, ${LonZero.toFixed(6)})<br>
-            Troisième Point : (${LatDt.toFixed(6)}, ${LonDt.toFixed(6)})<br>
-            Angle du Pivot : ${movement}<br>
-            État du Pivot : ${pivotState}
-        `;
-
-        // Ajouter des marqueurs pour chaque point  
-        L.marker([LatOri, LonOri]).addTo(map).bindPopup('Point d\'Origine').openPopup();
-        L.marker([LatZero, LonZero]).addTo(map).bindPopup('Point Zéro').openPopup();
-        L.marker([LatDt, LonDt]).addTo(map).bindPopup('Troisième Point').openPopup();
-
-        // Fonction pour dessiner le secteur circulaire  
-        function drawSector() {
-            const arcPoints = [];
-            const numPoints = 200; // Nombre de points pour l'arc  
-
-            // Calculer le rayon basé sur la distance entre LatOri et LatZero  
-            const radius = Math.sqrt(Math.pow(LatZero - LatOri, 2) + Math.pow(LonZero - LonOri, 2));
-
-            // Calculer l'angle pour le Point Zéro et le Troisième Point  
-            const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
-            const angleEnd = Math.atan2(LatDt - LatOri, LonDt - LonOri);
-            let angleDiff = angleEnd - angleStart;
-
-            // Vérifier si l'arc doit être tracé dans le bon sens  
-            if (angleDiff < 0) {
-                angleEnd += Math.PI * 2; // Ajuster pour tracer dans le sens des aiguilles d'une montre  
-            }
-
-            // Limiter l'angle maximum à 180 degrés  
-            if (angleDiff > Math.PI) {
-                angleDiff -= Math.PI * 2; // Ajuster pour retourner dans l'autre sens  
-            } else if (angleDiff < -Math.PI) {
-                angleDiff += Math.PI * 2; // Ajuster pour retourner dans l'autre sens  
-            }
-
-            for (let i = 0; i <= numPoints; i++) {
-                const t = i / numPoints;
-                const angle = angleStart + angleDiff * t;
-
-                // Calculer les coordonnées des points de l'arc  
-                arcPoints.push([
-                    LatOri + radius * Math.sin(angle),
-                    LonOri + radius * Math.cos(angle)
-                ]);
-            }
-
-            // S'assurer que l'arc touche exactement le point Dt  
-            arcPoints.push([LatDt, LonDt]); // Ajouter le point final
-
-            // Créer le secteur circulaire sans traits supplémentaires  
-            const points = [
-                [LatOri, LonOri], // Point d'origine (sommet)
-                ...arcPoints // Points de l'arc  
-            ];
-
-            L.polygon(points, { className: 'sector' }).addTo(map);
-        }
-
-        drawSector(); // Appeler la fonction pour dessiner le secteur  
+        
+        // Définition des points GPS
+        const points = {
+            origine: [coords.LatOri, coords.LonOri],
+            zero: [coords.LatZero, coords.LonZero],
+            maxAngle: [coords.LatMaxAngle, coords.LonMaxAngle],
+            pivot: [coords.LatPiv, coords.LonPiv]
+        };
+        
+        // Ajouter les marqueurs
+        Object.values(points).forEach((point, index) => {
+            L.marker(point).addTo(map).bindPopup(`Point ${index + 1}`);
+        });
+        
+        // Tracer les lignes
+        L.polyline([points.origine, points.zero], { color: 'red' }).addTo(map);
+        L.polyline([points.origine, points.maxAngle], { color: 'blue' }).addTo(map);
+        L.polyline([points.origine, points.pivot], { color: 'green' }).addTo(map);
+        
     </script>
 </body>
-
 </html>
