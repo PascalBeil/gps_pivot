@@ -30,8 +30,8 @@
         const coords = getQueryParams();
         const map = L.map('map').setView([coords.LatOri, coords.LonOri], 15);
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics'
         }).addTo(map);
         
         // Définition des points GPS
@@ -48,8 +48,8 @@
         });
         
         // Tracer les lignes
-        L.polyline([points.origine, points.zero], { color: 'red' }).addTo(map);
-        L.polyline([points.origine, points.maxAngle], { color: 'blue' }).addTo(map);
+        L.polyline([points.origine, points.zero], { color: 'red', dashArray: '5, 5' }).addTo(map);
+        L.polyline([points.origine, points.maxAngle], { color: 'blue', dashArray: '5, 5' }).addTo(map);
         L.polyline([points.origine, points.pivot], { color: 'green' }).addTo(map);
         
     </script>
