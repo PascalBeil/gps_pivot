@@ -26,6 +26,7 @@
             padding: 10px;
             border-radius: 5px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
         }
     </style>
 </head>
@@ -44,24 +45,24 @@
         }
 
         // Récupérer les paramètres de l'URL  
-        const LatOri = parseFloat(getUrlParameter('LatOri'));   // Point d'origine (sommet)
-        const LonOri = parseFloat(getUrlParameter('LonOri'));    // Point d'origine (sommet)
-        const LatZero = parseFloat(getUrlParameter('LatZero'));   // Point Zéro (un côté)
-        const LonZero = parseFloat(getUrlParameter('LonZero'));    // Point Zéro (un côté)
+        const LatOri = parseFloat(getUrlParameter('LatOri'));  // Point d'origine (sommet)
+        const LonOri = parseFloat(getUrlParameter('LonOri'));  // Point d'origine (sommet)
+        const LatZero = parseFloat(getUrlParameter('LatZero')); // Point Zéro (un côté)
+        const LonZero = parseFloat(getUrlParameter('LonZero'));  // Point Zéro (un côté)
         const LatDt = parseFloat(getUrlParameter('LatDt'));     // Troisième Point (l'autre côté)
         const LonDt = parseFloat(getUrlParameter('LonDt'));      // Troisième Point (l'autre côté)
-        const movement = getUrlParameter('movement');  // Angle du pivot  
+        const movement = getUrlParameter('movement'); // Angle du pivot  
         const pivotState = getUrlParameter('pivotState'); // État du pivot
 
         const map = L.map('map').setView([LatOri, LonOri], 15);
 
         // Couche de la carte satellite  
-        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // Afficher les informations sur le panneau 
+        // Afficher les informations sur le panneau  
         const infoPanel = document.getElementById('info');
         infoPanel.innerHTML = `
             <strong>Informations du Secteur :</strong><br>
