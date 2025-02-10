@@ -109,19 +109,19 @@
             radius: distance // Rayon basé sur la distance entre le point fixe et le point zéro  
         }).addTo(map);
 
-        // Ajouter des graduations sur le cercle, référencées par rapport au point zéro  
-        const numGradations = 36; // Nombre de graduations (10° par graduation)
-        const graduationAngle = 360 / numGradations;
+        // Ajouter des graduations tous les 45° sur le cercle, référencées par rapport au point zéro  
+        const graduationInterval = 45; // Intervalle de graduation en degrés  
+        const numGradations = 360 / graduationInterval; // Nombre de graduations
 
         for (let i = 0; i < numGradations; i++) {
-            const angleInDegrees = i * graduationAngle;
+            const angleInDegrees = i * graduationInterval;
             const angleInRadians = angleInDegrees * (Math.PI / 180);
             
-            // Calculer les coordonnées du point sur la circonférence du cercle en utilisant le point zéro comme référence  
+            // Calculer les coordonnées du point sur la circonférence du cercle  
             const graduationLat = latZero + (distance / 6371000) * Math.sin(angleInRadians) * (180 / Math.PI);
             const graduationLon = lonZero + (distance / 6371000) * Math.cos(angleInRadians) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
 
-            // Tracer la ligne de graduation (ne part pas du point fixe)
+            // Tracer la ligne de graduation à partir du point zéro  
             L.polyline([[latZero, lonZero], [graduationLat, graduationLon]], { color: 'blue', weight: 2 }).addTo(map);
         }
 
