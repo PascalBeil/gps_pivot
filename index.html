@@ -45,13 +45,13 @@
         }
 
         // Récupérer les paramètres de l'URL  
-        const LatOri = parseFloat(getUrlParameter('LatOri'));   // Point d'origine (sommet)
-        const LonOri = parseFloat(getUrlParameter('LonOri'));    // Point d'origine (sommet)
-        const LatZero = parseFloat(getUrlParameter('LatZero'));   // Point Zéro (un côté)
-        const LonZero = parseFloat(getUrlParameter('LonZero'));    // Point Zéro (un côté)
-        const LatDt = parseFloat(getUrlParameter('LatDt'));     // Troisième Point (l'autre côté)
-        const LonDt = parseFloat(getUrlParameter('LonDt'));      // Troisième Point (l'autre côté)
-        const movement = getUrlParameter('movement');  // Angle du pivot  
+        const LatOri = parseFloat(getUrlParameter('LatOri')); // Point d'origine (sommet)
+        const LonOri = parseFloat(getUrlParameter('LonOri')); // Point d'origine (sommet)
+        const LatZero = parseFloat(getUrlParameter('LatZero')); // Point Zéro (un côté)
+        const LonZero = parseFloat(getUrlParameter('LonZero')); // Point Zéro (un côté)
+        const LatDt = parseFloat(getUrlParameter('LatDt')); // Troisième Point (l'autre côté)
+        const LonDt = parseFloat(getUrlParameter('LonDt')); // Troisième Point (l'autre côté)
+        const movement = getUrlParameter('movement'); // Angle du pivot  
         const pivotState = getUrlParameter('pivotState'); // État du pivot
 
         const map = L.map('map').setView([LatOri, LonOri], 15);
@@ -67,7 +67,7 @@
         infoPanel.innerHTML = `
             <strong>Informations du Secteur :</strong><br>
             Point d'Origine : (${LatOri.toFixed(6)}, ${LonOri.toFixed(6)})<br>
-            Point Zéro : (${LatZero.toFixed(6)}, ${LonZero.toFixed(6})<br>
+            Point Zéro : (${LatZero.toFixed(6)}, ${LonZero.toFixed(6)})<br>
             Troisième Point : (${LatDt.toFixed(6)}, ${LonDt.toFixed(6)})<br>
             Angle du Pivot : ${movement}<br>
             État du Pivot : ${pivotState}
@@ -82,7 +82,7 @@
         function drawSector() {
             const arcPoints = [];
             const numPoints = 200; // Nombre de points pour l'arc  
-            const radius = LatOri === LatDt && LonOri === LonDt ? 0.001 : 0.001; // Ajuster le rayon
+            const radius = 0.001; // Rayon pour l'arc
 
             // Calculer l'angle pour le Point Zéro et le Troisième Point  
             const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
@@ -105,8 +105,8 @@
                 ]);
             }
 
-            // Calculer la position exacte pour le point final  
-            arcPoints.push([LatDt, LonDt]); // S'assurer que le dernier point soit le point dt
+            // Ajouter le point final au secteur pour assurer la fermeture  
+            arcPoints.push([LatDt, LonDt]);
 
             // Créer le secteur circulaire sans traits supplémentaires  
             const points = [
