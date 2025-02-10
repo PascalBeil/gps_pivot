@@ -61,15 +61,15 @@
             popupAnchor: [0, -32]
         });
         
-        L.marker(points.origine, { icon: pivotIcon }).addTo(map).bindPopup('Pilonne du Pivot');
+        L.marker(points.origine, { icon: pivotIcon }).addTo(map).bindPopup('Pilonne du Pivot').setZIndexOffset(1000);
         L.marker(points.zero).addTo(map).bindPopup('Point Zero');
-        L.marker(points.maxAngle).addTo(map).bindPopup('Max Angle');
+        if (coords.PivCirc === 0) {
+            L.marker(points.maxAngle).addTo(map).bindPopup('Max Angle');
+            L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
+        }
         L.marker(points.pivot).addTo(map).bindPopup('Pivot');
         
         L.polyline([points.origine, points.zero], { color: 'red', dashArray: '5, 5' }).addTo(map);
-        if (coords.PivCirc === 0) {
-            L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
-        }
         L.polyline([points.origine, points.pivot], { color: 'green' }).addTo(map);
         
         const bounds = L.latLngBounds(Object.values(points));
