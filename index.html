@@ -45,24 +45,24 @@
         }
 
         // Récupérer les paramètres de l'URL  
-        const LatOri = parseFloat(getUrlParameter('LatOri'));  // Point d'origine (sommet)
-        const LonOri = parseFloat(getUrlParameter('LonOri'));  // Point d'origine (sommet)
-        const LatZero = parseFloat(getUrlParameter('LatZero')); // Point Zéro (un côté)
-        const LonZero = parseFloat(getUrlParameter('LonZero'));  // Point Zéro (un côté)
+        const LatOri = parseFloat(getUrlParameter('LatOri'));   // Point d'origine (sommet)
+        const LonOri = parseFloat(getUrlParameter('LonOri'));    // Point d'origine (sommet)
+        const LatZero = parseFloat(getUrlParameter('LatZero'));   // Point Zéro (un côté)
+        const LonZero = parseFloat(getUrlParameter('LonZero'));    // Point Zéro (un côté)
         const LatDt = parseFloat(getUrlParameter('LatDt'));     // Troisième Point (l'autre côté)
         const LonDt = parseFloat(getUrlParameter('LonDt'));      // Troisième Point (l'autre côté)
-        const movement = getUrlParameter('movement'); // Angle du pivot  
+        const movement = getUrlParameter('movement');  // Angle du pivot  
         const pivotState = getUrlParameter('pivotState'); // État du pivot
 
         const map = L.map('map').setView([LatOri, LonOri], 15);
 
-        // Couche de la carte satellite  
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        // Couche de la carte satellite avec Stamen  
+        L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/satellite/{z}/{x}/{y}.jpg', {
+            maxZoom: 18,
+            attribution: 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under ODbL.'
         }).addTo(map);
 
-        // Afficher les informations sur le panneau  
+        // Afficher les informations sur le panneau 
         const infoPanel = document.getElementById('info');
         infoPanel.innerHTML = `
             <strong>Informations du Secteur :</strong><br>
@@ -85,10 +85,13 @@
             const arcPoints = [];
             const numPoints = 100; // Nombre de points pour l'arc  
             const radius = 0.001;  // Rayon pour l'arc  
+
+            // Calculer l'angle pour le Point Zéro et le Troisième Point  
             const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
             const angleEnd = Math.atan2(LatDt - LatOri, LonDt - LonOri);
-            const angleDiff = angleEnd - angleStart;
 
+            // Assurez-vous que l'arc est tracé dans le bon sens  
+            const angleDiff = angleEnd - angleStart;
             for (let i = 0; i <= numPoints; i++) {
                 const t = i / numPoints;
                 const angle = angleStart + angleDiff * t;
