@@ -43,61 +43,71 @@
     <script>
         // Récupérer les paramètres de l'URL  
         const urlParams = new URLSearchParams(window.location.search);
-        const latFixed = parseFloat(urlParams.get('latFixed'));   // Latitude du point fixe  
-        const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
-        const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
-        const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
+        const LatOri = parseFloat(urlParams.get('LatOri'));   // Latitude du point d'origine  
+        const LonOri = parseFloat(urlParams.get('LonOri'));   // Longitude du point d'origine  
+        const LatZero = parseFloat(urlParams.get('LatZero'));  // Latitude du point zéro  
+        const LonZero = parseFloat(urlParams.get('LonZero'));  // Longitude du point zéro  
+        const LatDt = parseFloat(urlParams.get('LatDt'));      // Latitude du troisième point  
+        const LonDt = parseFloat(urlParams.get('LonDt'));      // Longitude du troisième point  
         const currentAngle = parseFloat(urlParams.get('currentAngle'));  // Angle actuel en degrés  
         const movement = urlParams.get('movement');               // Direction de mouvement  
         const pivotState = urlParams.get('pivotState');           // État du pivot
 
-        // Calculer la distance entre le point fixe et le point zéro (rayon du cercle)  
-        const radius = getDistance(latFixed, lonFixed, latZero, lonZero);
-
-        // Fonction pour dessiner un arc de cercle  
-        function drawArc(centerLat, centerLon, radius, startAngle, endAngle) {
+        // Fonction pour dessiner un secteur circulaire entre trois points  
+        function drawSector(lat0, lon0, lat1, lon1, lat2, lon2) {
+            // Calculer l'arc de cercle du point zéro au troisième point  
             const points = [];
             const R = 6371000; // Rayon de la Terre en mètres
 
-            for (let angle = startAngle; angle <= endAngle; angle++) {
+            // Calculer l'angle entre le point zéro et le point d'origine  
+            const startAngle = getBearing(lat0, lon0, lat1, lon1);
+            // Calculer l'angle entre le point zéro et le troisième point  
+            const endAngle = getBearing(lat0, lon0, lat2, lon2);
+
+            // Ajouter les points pour l'arc  
+            const numPoints = 100; // Nombre de points pour l'arc  
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = startAngle + ((endAngle - startAngle) * i) / numPoints;
                 const angleRadians = angle * (Math.PI / 180);
-                const pointLat = centerLat + (radius / R) * Math.sin(angleRadians) * (180 / Math.PI);
-                const pointLon = centerLon + (radius / R) * Math.cos(angleRadians) / Math.cos(centerLat * Math.PI / 180) * (180 / Math.PI);
+                
+                const pointLat = lat0 + (radius / R) * Math.sin(angleRadians) * (180 / Math.PI);
+                const pointLon = lon0 + (radius / R) * Math.cos(angleRadians) / Math.cos(lat0 * Math.PI / 180) * (180 / Math.PI);
                 points.push([pointLat, pointLon]);
             }
 
-            // Fermer l'arc avec le point d'origine  
-            points.unshift([centerLat, centerLon]);
+            // Ajouter les trois points à la fin de l'arc  
+            points.unshift([lat0, lon0]); // Point zéro  
+            points.push([lat1, lon1]); // Point d'origine  
+            points.push([lat2, lon2]); // Troisième point
 
-            // Tracer l'arc de cercle sur la carte  
+            // Tracer le secteur sur la carte  
             L.polygon(points, { color: 'blue', fillColor: '#99f', fillOpacity: 0.5 }).addTo(map);
         }
 
         // Initialisation de la carte avec OpenStreetMap  
-        const map = L.map('map').setView([latFixed, lonFixed], 13);
+        const map = L.map('map').setView([LatOri, LonOri], 13);
 
         // Utilisation de la couche satellite gratuite d'Esri  
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
 
-        // Ajouter des marqueurs pour le point fixe et le point zéro  
-        const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
-        const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
+        // Ajouter des marqueurs pour les trois points  
+        L.marker([LatOri, LonOri]).addTo(map).bindPopup("Point d'Origine").openPopup();
+        L.marker([LatZero, LonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
+        L.marker([LatDt, LonDt]).addTo(map).bindPopup("Troisième Point").openPopup();
 
-        // Tracer l'arc circulaire entre le point de départ et l'angle courant  
-        drawArc(latZero, lonZero, radius, 0, currentAngle); // L'angle de départ est 0° et on s'étend jusqu'à currentAngle
+        // Dessiner le secteur circulaire avec les trois points  
+        drawSector(LatZero, LonZero, LatOri, LonOri, LatDt, LonDt);
 
-        // Fonction pour calculer la distance entre deux points GPS  
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Rayon de la Terre en mètres  
-            const dLat = (lat2 - lat1) * Math.PI / 180;
+        // Fonction pour calculer l'angle de direction entre deux points  
+        function getBearing(lat1, lon1, lat2, lon2) {
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; // Distance en mètres  
+            const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+                Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+            const brng = Math.atan2(y, x);
+            return (brng * 180 / Math.PI + 360) % 360; // Convertir en degrés  
         }
 
         // Fonction pour récupérer les données météo  
@@ -150,7 +160,7 @@
             }
             document.getElementById('movementDirection').textContent = `Sens de marche : ${movementDirection}`;
 
-            fetchWeather(latFixed, lonFixed);
+            fetchWeather(LatOri, LonOri);
         }
 
         updateInfoPanel();
