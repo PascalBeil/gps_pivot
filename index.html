@@ -63,7 +63,7 @@
         L.marker(points.pivot).addTo(map).bindPopup('Dernière tour');
         
         L.polyline([points.origine, points.zero], { color: 'red', dashArray: '5, 5' }).addTo(map);
-        L.polyline([points.origine, points.pivot], { color: 'green' }).addTo(map);
+        L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
         
         const bounds = L.latLngBounds(Object.values(points));
         map.fitBounds(bounds);
