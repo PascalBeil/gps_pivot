@@ -67,7 +67,7 @@
                 points.push([pointLat, pointLon]);
             }
 
-            // Fermer le secteur avec le point central  
+            // Fermer le secteur avec le point d'origine  
             points.unshift([lat, lon]);
 
             // Tracer le secteur sur la carte  
@@ -87,10 +87,10 @@
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
         // Calculer l'angle de départ en fonction de la direction vers le point zéro  
-        const startAngle = getBearing(latFixed, lonFixed, latZero, lonZero);
+        const startAngle = getBearing(latZero, lonZero, latFixed, lonFixed); // Angle vers le point fixe depuis le point zéro
 
         // Dessiner le secteur circulaire en utilisant l'angle de départ et currentAngle  
-        drawSector(latFixed, lonFixed, radius, startAngle, currentAngle);
+        drawSector(latZero, lonZero, radius, startAngle, currentAngle); // Commencer au point zéro
 
         // Fonction pour calculer la distance entre deux points GPS  
         function getDistance(lat1, lon1, lat2, lon2) {
@@ -113,20 +113,6 @@
             const brng = Math.atan2(y, x);
             return (brng * 180 / Math.PI + 360) % 360; // Convertir en degrés  
         }
-
-        // Tracer une ligne bleue du point fixe au point zéro  
-        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map);
-
-        // Tracer une ligne violette du point fixe au point mobile  
-        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'purple', weight: 3 }).addTo(map);
-
-        // Tracer le cercle jaune clair autour des trois points  
-        L.circle([latFixed, lonFixed], {
-            color: 'yellow',
-            fillColor: '#FFFF99', // Jaune clair  
-            fillOpacity: 0.1,
-            radius: radius // Rayon basé sur la distance entre le point fixe et le point zéro  
-        }).addTo(map);
 
         // Fonction pour récupérer les données météo  
         function fetchWeather(lat, lon) {
