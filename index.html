@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte avec 3 droites</title>
+    <title>Pivot Irrifrance</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
@@ -54,20 +54,13 @@
             pivot: [coords.LatPiv, coords.LonPiv]
         };
         
-        const pivotIcon = L.icon({
-            iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e6/Water_Sprinkler_Pivot.png',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-            popupAnchor: [0, -32]
-        });
-        
-        L.marker(points.origine, { icon: pivotIcon }).addTo(map).bindPopup('Pilonne du Pivot').setZIndexOffset(1000);
-        L.marker(points.zero).addTo(map).bindPopup('Point Zero');
+        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
+        L.marker(points.zero).addTo(map).bindPopup('Point Zéro');
         if (coords.PivCirc === 0) {
-            L.marker(points.maxAngle).addTo(map).bindPopup('Max Angle');
+            L.marker(points.maxAngle).addTo(map).bindPopup('Angle maximum');
             L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
         }
-        L.marker(points.pivot).addTo(map).bindPopup('Pivot');
+        L.marker(points.pivot).addTo(map).bindPopup('Dernière tour');
         
         L.polyline([points.origine, points.zero], { color: 'red', dashArray: '5, 5' }).addTo(map);
         L.polyline([points.origine, points.pivot], { color: 'green' }).addTo(map);
@@ -81,10 +74,10 @@
                 const data = await response.text();
                 const [temperature, humidity, rainRisk, date, time] = data.split('\n');
                 document.getElementById('weather-panel').innerHTML = `
-                    <strong>Météo :</strong><br><br>
+                    <strong>Météo :</strong><br>
                     <strong>Température :</strong> ${temperature}<br>
                     <strong>Hygrométrie :</strong> ${humidity}<br>
-                    <strong>Risque de pluie :</strong> ${rainRisk}<br><br>
+                    <strong>Risque de pluie :</strong> ${rainRisk}<br>
                     <strong>Date :</strong> ${date}<br>
                     <strong>Heure :</strong> ${time}
                 `;
