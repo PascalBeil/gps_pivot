@@ -35,59 +35,73 @@
     </div>
 
     <script>
+        // Récupérer les paramètres de l'URL  
         const urlParams = new URLSearchParams(window.location.search);
-        const latFixed = parseFloat(urlParams.get('latFixed'));  
-        const lonFixed = parseFloat(urlParams.get('lonFixed'));  
-        const latZero = parseFloat(urlParams.get('latZero'));     
-        const lonZero = parseFloat(urlParams.get('lonZero'));     
-        const angle = parseFloat(urlParams.get('currentAngle'));  
-        const movement = urlParams.get('movement');               
-        const pivotState = urlParams.get('pivotState');           
+        const latFixed = parseFloat(urlParams.get('latFixed'));   // Latitude du point fixe  
+        const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
+        const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
+        const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
+        const angle = parseFloat(urlParams.get('currentAngle'));  // Angle actuel en degrés  
+        const movement = urlParams.get('movement');               // Direction de mouvement  
+        const pivotState = urlParams.get('pivotState');           // État du pivot
 
+        // Calculer la distance entre le point fixe et le point zéro  
         const distance = getDistance(latFixed, lonFixed, latZero, lonZero);
-        
+
         // Calculer la position du point mobile le long du cercle  
         const adjustedLatLastTower = latZero + (distance / 6371000) * Math.sin(-angle * (Math.PI / 180)) * (180 / Math.PI);
         const adjustedLonLastTower = lonZero + (distance / 6371000) * Math.cos(-angle * (Math.PI / 180)) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
 
+        // Initialisation de la carte avec OpenStreetMap  
         const map = L.map('map').setView([latFixed, lonFixed], 13);
+
+        // Utilisation de la couche satellite gratuite d'Esri  
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '&copy; <a href="https://www.esri.com/en-us/arcgis/products/arcgis-online/overview">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
 
+        // Ajouter des marqueurs pour le point fixe et le point zéro  
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
         // Ajouter un marqueur pour le dernier point mobile  
         const markerLastTower = L.marker([adjustedLatLastTower, adjustedLonLastTower]).addTo(map).bindPopup("Dernier Point Mobile").openPopup();
 
+        // Fonction pour calculer la distance entre deux points GPS  
         function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000; 
+            const R = 6371000; // Rayon de la Terre en mètres  
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
                       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
                       Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; 
+            return R * c; // Distance en mètres  
         }
 
+        // Tracer une ligne bleue du point fixe au point zéro  
         L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map); 
+
+        // Tracer une ligne violette du point fixe au point mobile  
         L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple', weight: 3 }).addTo(map); 
+
+        // Tracer le cercle jaune clair autour des trois points  
         L.circle([latFixed, lonFixed], {
             color: 'yellow',
-            fillColor: '#FFFF99', 
+            fillColor: '#FFFF99', // Jaune clair  
             fillOpacity: 0.1,
-            radius: distance 
+            radius: distance // Rayon basé sur la distance entre le point fixe et le point zéro  
         }).addTo(map);
 
+        // Fonction pour récupérer les données météo  
         function fetchWeather(lat, lon) {
-            const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`;
+            // Utilisation de l'API wttr.in pour récupérer les données météo  
+            const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`; // Ex: "Ciel dégagé 10°C"
 
             fetch(weatherUrl)
                 .then(response => response.text())
                 .then(data => {
-                    document.getElementById('weather').textContent = data; 
+                    document.getElementById('weather').textContent = data; // Met à jour l'élément météo  
                 })
                 .catch(error => {
                     document.getElementById('weather').textContent = 'Erreur de chargement des données météo';
@@ -95,7 +109,9 @@
                 });
         }
 
+        // Affichage des informations  
         function updateInfoPanel() {
+            // Affichage de l'état du pivot  
             let pivotStateText;
             switch (pivotState) {
                 case '1':
@@ -113,6 +129,7 @@
             document.getElementById('pivotState').textContent = `Etat du pivot : ${pivotStateText}`;
             document.getElementById('currentAngle').textContent = `Angle actuel : ${angle}°`;
 
+            // Affichage de la direction de mouvement  
             let movementDirection;
             switch(movement) {
                 case '1':
@@ -129,9 +146,11 @@
             }
             document.getElementById('movementDirection').textContent = `Sens de marche : ${movementDirection}`;
 
+            // Appel à la fonction pour récupérer les données météo  
             fetchWeather(latFixed, lonFixed);
         }
 
+        // Mettre à jour l'interface  
         updateInfoPanel();
     </script>
 </body>
