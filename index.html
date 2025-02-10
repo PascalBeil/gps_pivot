@@ -82,7 +82,9 @@
         function drawSector() {
             const arcPoints = [];
             const numPoints = 200; // Nombre de points pour l'arc  
-            const radius = 0.001; // Rayon pour l'arc
+
+            // Calculer le rayon basé sur la distance entre LatOri et LatZero  
+            const radius = Math.sqrt(Math.pow(LatZero - LatOri, 2) + Math.pow(LonZero - LonOri, 2));
 
             // Calculer l'angle pour le Point Zéro et le Troisième Point  
             const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
@@ -98,15 +100,15 @@
                 const t = i / numPoints;
                 const angle = angleStart + angleDiff * t;
 
-                // S'assurer que l'arc touche exactement le point Dt  
+                // Calculer les coordonnées des points de l'arc  
                 arcPoints.push([
                     LatOri + radius * Math.sin(angle),
                     LonOri + radius * Math.cos(angle)
                 ]);
             }
 
-            // Ajouter le point final au secteur pour assurer la fermeture  
-            arcPoints.push([LatDt, LonDt]);
+            // S'assurer que l'arc touche exactement le point Dt  
+            arcPoints.push([LatDt, LonDt]); // Ajouter le point final
 
             // Créer le secteur circulaire sans traits supplémentaires  
             const points = [
