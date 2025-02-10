@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carte Satellite Pivot Irrigation</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <style>
-        #map { height: 100vh; }
+        #map {
+            height: 100vh;
+        }
+
         #infoPanel {
             position: absolute;
             top: 10px;
@@ -19,11 +23,13 @@
             width: 250px;
             font-family: Arial, sans-serif;
         }
+
         #infoPanel p {
             margin: 5px 0;
         }
     </style>
 </head>
+
 <body>
     <div id="map"></div>
     <div id="infoPanel">
@@ -41,7 +47,7 @@
         const lonFixed = parseFloat(urlParams.get('lonFixed'));   // Longitude du point fixe  
         const latZero = parseFloat(urlParams.get('latZero'));     // Latitude du point zéro  
         const lonZero = parseFloat(urlParams.get('lonZero'));     // Longitude du point zéro  
-        const angle = parseFloat(urlParams.get('currentAngle'));  // Angle actuel en degrés  
+        const currentAngle = parseFloat(urlParams.get('currentAngle'));  // Angle actuel en degrés  
         const movement = urlParams.get('movement');               // Direction de mouvement  
         const pivotState = urlParams.get('pivotState');           // État du pivot
 
@@ -80,32 +86,42 @@
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
-        // Ajouter un marqueur pour le dernier point mobile  
-        const adjustedLatLastTower = latZero; // en utilisant le point zéro comme référence  
-        const adjustedLonLastTower = lonZero;
+        // Calculer l'angle de départ par rapport à la direction du point zéro 
+        const startAngle = getBearing(latFixed, lonFixed, latZero, lonZero);
 
         // Dessiner le secteur circulaire  
-        const startAngle = 0; // Angle de départ  
-        const endAngle = angle; // Utiliser currentAngle comme angle de fin  
-        drawSector(latFixed, lonFixed, radius, startAngle, endAngle); // Dessiner le secteur
+        drawSector(latFixed, lonFixed, radius, startAngle, currentAngle); // Dessiner le secteur
 
         // Fonction pour calculer la distance entre deux points GPS  
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371000; // Rayon de la Terre en mètres  
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + 
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c; // Distance en mètres  
         }
 
+        // Fonction pour calculer l'angle de direction entre deux points  
+        function getBearing(lat1, lon1, lat2, lon2) {
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+
+            const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+                Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+            const brng = Math.atan2(y, x);
+            return (brng * 180 / Math.PI + 360) % 360; // Convertir en degrés  
+        }
+
         // Tracer une ligne bleue du point fixe au point zéro  
-        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map); 
+        L.polyline([[latFixed, lonFixed], [latZero, lonZero]], { color: 'blue', weight: 3 }).addTo(map);
 
         // Tracer une ligne violette du point fixe au point mobile  
-        L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple', weight: 3 }).addTo(map); 
+        const adjustedLatLastTower = latZero; // en utilisant le point zéro comme référence  
+        const adjustedLonLastTower = lonZero;
+        L.polyline([[latFixed, lonFixed], [adjustedLatLastTower, adjustedLonLastTower]], { color: 'purple', weight: 3 }).addTo(map);
 
         // Tracer le cercle jaune clair autour des trois points  
         L.circle([latFixed, lonFixed], {
@@ -117,12 +133,12 @@
 
         // Fonction pour récupérer les données météo  
         function fetchWeather(lat, lon) {
-            const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`; 
+            const weatherUrl = `https://wttr.in/${lat},${lon}?format=%C+%t`;
 
             fetch(weatherUrl)
                 .then(response => response.text())
                 .then(data => {
-                    document.getElementById('weather').textContent = data; 
+                    document.getElementById('weather').textContent = data;
                 })
                 .catch(error => {
                     document.getElementById('weather').textContent = 'Erreur de chargement des données météo';
@@ -147,10 +163,10 @@
                     pivotStateText = 'État inconnu';
             }
             document.getElementById('pivotState').textContent = `Etat du pivot : ${pivotStateText}`;
-            document.getElementById('currentAngle').textContent = `Angle actuel : ${angle}°`;
+            document.getElementById('currentAngle').textContent = `Angle actuel : ${currentAngle}°`;
 
             let movementDirection;
-            switch(movement) {
+            switch (movement) {
                 case '1':
                     movementDirection = 'Marche Avant';
                     break;
@@ -171,4 +187,5 @@
         updateInfoPanel();
     </script>
 </body>
+
 </html>
