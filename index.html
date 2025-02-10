@@ -17,27 +17,60 @@
             stroke: blue;
             stroke-width: 2;
         }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 
 <body>
+    <div id="info"></div>
     <div id="map"></div>
 
     <script>
-        // Points définis  
-        const LatOri = 48.8570;   // Point d'origine (sommet)
-        const LonOri = 2.3540;    // Point d'origine (sommet)
-        const LatZero = 48.8565;   // Point Zéro (un côté)
-        const LonZero = 2.3530;    // Point Zéro (un côté)
-        const LatDt = 48.8565;     // Troisième Point (l'autre côté)
-        const LonDt = 2.3550;      // Troisième Point (l'autre côté)
+        // Fonction pour obtenir les paramètres de l'URL  
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(window.location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Récupérer les paramètres de l'URL  
+        const LatOri = parseFloat(getUrlParameter('LatOri'));   // Point d'origine (sommet)
+        const LonOri = parseFloat(getUrlParameter('LonOri'));    // Point d'origine (sommet)
+        const LatZero = parseFloat(getUrlParameter('LatZero'));   // Point Zéro (un côté)
+        const LonZero = parseFloat(getUrlParameter('LonZero'));    // Point Zéro (un côté)
+        const LatDt = parseFloat(getUrlParameter('LatDt'));     // Troisième Point (l'autre côté)
+        const LonDt = parseFloat(getUrlParameter('LonDt'));      // Troisième Point (l'autre côté)
+        const movement = getUrlParameter('movement');  // Angle du pivot  
+        const pivotState = getUrlParameter('pivotState'); // État du pivot
 
         const map = L.map('map').setView([LatOri, LonOri], 15);
 
-        // Couche de la carte  
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Couche de la carte satellite  
+        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
+
+        // Afficher les informations sur le panneau 
+        const infoPanel = document.getElementById('info');
+        infoPanel.innerHTML = `
+            <strong>Informations du Secteur :</strong><br>
+            Point d'Origine : (${LatOri.toFixed(6)}, ${LonOri.toFixed(6)})<br>
+            Point Zéro : (${LatZero.toFixed(6)}, ${LonZero.toFixed(6)})<br>
+            Troisième Point : (${LatDt.toFixed(6)}, ${LonDt.toFixed(6)})<br>
+            Angle du Pivot : ${movement}<br>
+            État du Pivot : ${pivotState}
+        `;
 
         // Fonction pour dessiner le secteur circulaire  
         function drawSector() {
@@ -47,23 +80,24 @@
                 [LatDt, LonDt] // Troisième point (l'autre côté)
             ];
 
-            // Créer un arc entre LatZero et LatDt  
+            // Tracer l'arc de cercle uniquement entre le Point Zéro et le Troisième Point  
             const arcPoints = [];
             const numPoints = 100; // Nombre de points pour l'arc  
-            const radius = 0.001; // Rayon pour l'arc
+            const radius = 0.001;  // Rayon pour l'arc  
+            const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
+            const angleEnd = Math.atan2(LatDt - LatOri, LonDt - LonOri);
+            const angleDiff = angleEnd - angleStart;
 
-            // Tracer l'arc de cercle  
-            const angleStep = Math.atan2(LatDt - LatOri, LonDt - LonOri) - Math.atan2(LatZero - LatOri, LonZero - LonOri);
             for (let i = 0; i <= numPoints; i++) {
                 const t = i / numPoints;
-                const angle = Math.atan2(LatZero - LatOri, LonZero - LonOri) + angleStep * t;
+                const angle = angleStart + angleDiff * t;
                 arcPoints.push([
                     LatOri + radius * Math.sin(angle),
                     LonOri + radius * Math.cos(angle)
                 ]);
             }
 
-            // Ajouter les points de l'arc  
+            // Ajouter les points de l'arc entre le point Zéro et le point Troisième  
             points.splice(1, 0, ...arcPoints); // Insérer l'arc entre le point d'origine et les deux autres points
 
             // Créer le secteur circulaire  
