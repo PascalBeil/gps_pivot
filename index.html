@@ -62,12 +62,12 @@
             attribution: 'Tiles &copy; Esri'
         }).addTo(map);
 
-        // Afficher les informations sur le panneau 
+        // Afficher les informations sur le panneau  
         const infoPanel = document.getElementById('info');
         infoPanel.innerHTML = `
             <strong>Informations du Secteur :</strong><br>
             Point d'Origine : (${LatOri.toFixed(6)}, ${LonOri.toFixed(6)})<br>
-            Point Zéro : (${LatZero.toFixed(6)}, ${LonZero.toFixed(6)})<br>
+            Point Zéro : (${LatZero.toFixed(6)}, ${LonZero.toFixed(6})<br>
             Troisième Point : (${LatDt.toFixed(6)}, ${LonDt.toFixed(6)})<br>
             Angle du Pivot : ${movement}<br>
             État du Pivot : ${pivotState}
@@ -81,8 +81,8 @@
         // Fonction pour dessiner le secteur circulaire  
         function drawSector() {
             const arcPoints = [];
-            const numPoints = 200; // Augmenter le nombre de points pour un arc plus lisse  
-            const radius = 0.001;  // Rayon pour l'arc  
+            const numPoints = 200; // Nombre de points pour l'arc  
+            const radius = LatOri === LatDt && LonOri === LonDt ? 0.001 : 0.001; // Ajuster le rayon
 
             // Calculer l'angle pour le Point Zéro et le Troisième Point  
             const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
@@ -97,17 +97,21 @@
             for (let i = 0; i <= numPoints; i++) {
                 const t = i / numPoints;
                 const angle = angleStart + angleDiff * t;
+
+                // S'assurer que l'arc touche exactement le point Dt  
                 arcPoints.push([
                     LatOri + radius * Math.sin(angle),
                     LonOri + radius * Math.cos(angle)
                 ]);
             }
 
+            // Calculer la position exacte pour le point final  
+            arcPoints.push([LatDt, LonDt]); // S'assurer que le dernier point soit le point dt
+
             // Créer le secteur circulaire sans traits supplémentaires  
             const points = [
                 [LatOri, LonOri], // Point d'origine (sommet)
-                ...arcPoints, // Points de l'arc  
-                [LatDt, LonDt] // Troisième point (pour fermer le secteur correctement)
+                ...arcPoints // Points de l'arc  
             ];
 
             L.polygon(points, { className: 'sector' }).addTo(map);
