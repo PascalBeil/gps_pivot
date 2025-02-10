@@ -73,15 +73,13 @@
             État du Pivot : ${pivotState}
         `;
 
+        // Ajouter des marqueurs pour chaque point  
+        L.marker([LatOri, LonOri]).addTo(map).bindPopup('Point d\'Origine').openPopup();
+        L.marker([LatZero, LonZero]).addTo(map).bindPopup('Point Zéro').openPopup();
+        L.marker([LatDt, LonDt]).addTo(map).bindPopup('Troisième Point').openPopup();
+
         // Fonction pour dessiner le secteur circulaire  
         function drawSector() {
-            const points = [
-                [LatOri, LonOri], // Point d'origine (sommet)
-                [LatZero, LonZero], // Point Zéro (un côté)
-                [LatDt, LonDt] // Troisième point (l'autre côté)
-            ];
-
-            // Tracer l'arc de cercle uniquement entre le Point Zéro et le Troisième Point  
             const arcPoints = [];
             const numPoints = 100; // Nombre de points pour l'arc  
             const radius = 0.001;  // Rayon pour l'arc  
@@ -89,14 +87,11 @@
             // Calculer l'angle pour le Point Zéro et le Troisième Point  
             const angleStart = Math.atan2(LatZero - LatOri, LonZero - LonOri);
             const angleEnd = Math.atan2(LatDt - LatOri, LonDt - LonOri);
-
-            // Assurez-vous que l'arc est tracé dans le bon sens  
             const angleDiff = angleEnd - angleStart;
 
-            // Ajustement pour le cas où l'arc doit être tracé dans le sens inverse  
+            // Vérifier si l'arc doit être tracé dans le bon sens  
             if (angleDiff < 0) {
-                angleStart = angleEnd;
-                angleEnd = angleStart + Math.PI * 2; // Ajuster pour un arc complet si nécessaire  
+                angleEnd += Math.PI * 2; // Ajuster pour tracer dans le sens des aiguilles d'une montre  
             }
 
             for (let i = 0; i <= numPoints; i++) {
@@ -108,10 +103,13 @@
                 ]);
             }
 
-            // Ajouter les points de l'arc entre le point Zéro et le point Troisième  
-            points.splice(1, 0, ...arcPoints); // Insérer l'arc entre le point d'origine et les deux autres points
-
             // Créer le secteur circulaire sans traits supplémentaires  
+            const points = [
+                [LatOri, LonOri], // Point d'origine (sommet)
+                ...arcPoints, // Points de l'arc  
+                [LatDt, LonDt] // Troisième point  
+            ];
+
             L.polygon(points, { className: 'sector' }).addTo(map);
         }
 
