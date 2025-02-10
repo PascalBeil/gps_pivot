@@ -56,10 +56,10 @@
 
         const map = L.map('map').setView([LatOri, LonOri], 15);
 
-        // Couche de la carte satellite avec Stamen  
-        L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/satellite/{z}/{x}/{y}.jpg', {
+        // Couche de la carte satellite d'Esri  
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 18,
-            attribution: 'Map tiles by <a href="https://stamen.com">Stamen Design</a>, under <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="https://openstreetmap.org">OpenStreetMap</a>, under ODbL.'
+            attribution: 'Tiles &copy; Esri'
         }).addTo(map);
 
         // Afficher les informations sur le panneau 
