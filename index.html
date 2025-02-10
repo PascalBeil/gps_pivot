@@ -96,6 +96,13 @@
                 angleEnd += Math.PI * 2; // Ajuster pour tracer dans le sens des aiguilles d'une montre  
             }
 
+            // Limiter l'angle maximum à 180 degrés  
+            if (angleDiff > Math.PI) {
+                angleDiff -= Math.PI * 2; // Ajuster pour retourner dans l'autre sens  
+            } else if (angleDiff < -Math.PI) {
+                angleDiff += Math.PI * 2; // Ajuster pour retourner dans l'autre sens  
+            }
+
             for (let i = 0; i <= numPoints; i++) {
                 const t = i / numPoints;
                 const angle = angleStart + angleDiff * t;
