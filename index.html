@@ -55,20 +55,19 @@
         const radius = getDistance(latFixed, lonFixed, latZero, lonZero);
 
         // Fonction pour dessiner le secteur circulaire  
-        function drawSector(lat, lon, radius, startAngle, endAngle) {
+        function drawSector(lat0, lon0, radius, angle) {
             const points = [];
-            const R = 6371000; // Rayon de la Terre en mètres
+            const R = 6371000; // Rayon de la Terre en mètres  
+            const angleRadians = angle * (Math.PI / 180);
 
-            // Calculer les points du secteur  
-            for (let angle = startAngle; angle <= endAngle; angle++) {
-                const angleRadians = angle * (Math.PI / 180);
-                const pointLat = lat + (radius / R) * Math.sin(angleRadians) * (180 / Math.PI);
-                const pointLon = lon + (radius / R) * Math.cos(angleRadians) / Math.cos(lat * Math.PI / 180) * (180 / Math.PI);
-                points.push([pointLat, pointLon]);
-            }
+            // Calculer le troisième point à partir des coordonnées du point zéro et de l'angle  
+            const pointLat = lat0 + (radius / R) * Math.sin(angleRadians) * (180 / Math.PI);
+            const pointLon = lon0 + (radius / R) * Math.cos(angleRadians) / Math.cos(lat0 * Math.PI / 180) * (180 / Math.PI);
 
-            // Fermer le secteur avec le point d'origine  
-            points.unshift([lat, lon]);
+            // Ajouter les points pour le secteur  
+            points.push([latZero, lonZero]); // Point zéro  
+            points.push([latFixed, lonFixed]); // Point fixe  
+            points.push([pointLat, pointLon]); // Troisième point
 
             // Tracer le secteur sur la carte  
             L.polygon(points, { color: 'blue', fillColor: '#99f', fillOpacity: 0.5 }).addTo(map);
@@ -86,11 +85,8 @@
         const markerFixed = L.marker([latFixed, lonFixed]).addTo(map).bindPopup("Point Fixe").openPopup();
         const markerZero = L.marker([latZero, lonZero]).addTo(map).bindPopup("Point Zéro").openPopup();
 
-        // Calculer l'angle de départ en fonction de la direction vers le point zéro  
-        const startAngle = getBearing(latZero, lonZero, latFixed, lonFixed); // Angle vers le point fixe depuis le point zéro
-
-        // Dessiner le secteur circulaire en utilisant l'angle de départ et currentAngle  
-        drawSector(latZero, lonZero, radius, startAngle, currentAngle); // Commencer au point zéro
+        // Dessiner le secteur circulaire en utilisant le point zéro et l'angle  
+        drawSector(latZero, lonZero, radius, currentAngle);
 
         // Fonction pour calculer la distance entre deux points GPS  
         function getDistance(lat1, lon1, lat2, lon2) {
@@ -102,16 +98,6 @@
                 Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c; // Distance en mètres  
-        }
-
-        // Fonction pour calculer l'angle de direction entre deux points  
-        function getBearing(lat1, lon1, lat2, lon2) {
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
-            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
-                Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
-            const brng = Math.atan2(y, x);
-            return (brng * 180 / Math.PI + 360) % 360; // Convertir en degrés  
         }
 
         // Fonction pour récupérer les données météo  
