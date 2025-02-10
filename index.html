@@ -50,9 +50,9 @@
 
         // Calculer la position du point mobile sur le cercle  
         const angleRadians = angle * (Math.PI / 180);
-        // Position du point mobile sur le cercle  
+        // Position du point mobile sur le cercle autour du point fixe  
         const adjustedLatLastTower = latFixed + (distance / 6371000) * Math.sin(angleRadians) * (180 / Math.PI);
-        const adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(angleRadians) / Math.cos(latZero * Math.PI / 180) * (180 / Math.PI);
+        const adjustedLonLastTower = lonFixed + (distance / 6371000) * Math.cos(angleRadians) / Math.cos(latFixed * Math.PI / 180) * (180 / Math.PI);
 
         // Initialisation de la carte avec OpenStreetMap  
         const map = L.map('map').setView([latFixed, lonFixed], 13);
