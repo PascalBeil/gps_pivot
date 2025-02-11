@@ -81,11 +81,10 @@
                 const data = await response.text();
                 const [temperature, humidity, rainRisk, date, time] = data.split('|');
                 document.getElementById('weather-panel').innerHTML = `
-                    <strong>Météo :</strong><br>
+                    <strong>${date} - ${time.replace(/\+.*/, '')}</strong><br><br>
                     <img src='https://cdn-icons-png.flaticon.com/128/4814/4814268.png'/> Temp: ${temperature}<br>
                     <img src='https://cdn-icons-png.flaticon.com/128/414/414927.png'/> Humidité: ${humidity}<br>
-                    <img src='https://cdn-icons-png.flaticon.com/128/2965/2965992.png'/> Pluie: ${rainRisk}%<br>
-                    ${date} - ${time.replace(/\+.*/, '')}
+                    <img src='https://cdn-icons-png.flaticon.com/128/2965/2965992.png'/> Risque de pluie: ${parseInt(rainRisk)}%<br>
                 `;
             } catch (error) {
                 document.getElementById('weather-panel').innerText = 'Erreur météo';
