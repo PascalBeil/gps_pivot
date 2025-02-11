@@ -84,7 +84,7 @@
                     <strong>${date} - ${time.replace(/\+.*/, '')}</strong><br><br>
                     <img src='https://cdn-icons-png.flaticon.com/128/4814/4814268.png'/> Temp: ${temperature}<br>
                     <img src='https://cdn-icons-png.flaticon.com/128/414/414927.png'/> Humidité: ${humidity}<br>
-                    <img src='https://cdn-icons-png.flaticon.com/128/2965/2965992.png'/> Risque de pluie: ${parseInt(rainRisk)}%<br>
+                    <img src='https://cdn-icons-png.flaticon.com/128/2965/2965992.png'/> Risque de pluie: ${Math.max(0, Math.min(100, ((1020 - parseFloat(rainRisk)) / 20 * 100).toFixed(0)))}%<br>
                 `;
             } catch (error) {
                 document.getElementById('weather-panel').innerText = 'Erreur météo';
