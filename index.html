@@ -18,12 +18,21 @@
             font-family: Arial, sans-serif;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
             z-index: 1000;
+            width: 200px;
+            text-align: left;
+        }
+        #weather-panel img {
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 5px;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="weather-panel">Chargement météo...</div>
+    
     <script>
         function getQueryParams() {
             const params = new URLSearchParams(window.location.search);
@@ -54,35 +63,32 @@
             pivot: [coords.LatPiv, coords.LonPiv]
         };
         
-        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
+        L.marker(points.origine).addTo(map).bindPopup('Pilonne');
         L.marker(points.zero).addTo(map).bindPopup('Point Zéro');
         if (coords.PivCirc === 0) {
             L.marker(points.maxAngle).addTo(map).bindPopup('Angle maximum');
             L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
         }
         L.marker(points.pivot).addTo(map).bindPopup('Dernière tour');
-        
         L.polyline([points.origine, points.zero], { color: 'red', dashArray: '5, 5' }).addTo(map);
         L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
         
-        const bounds = L.latLngBounds(Object.values(points));
-        map.fitBounds(bounds);
+        map.fitBounds(L.latLngBounds(Object.values(points)));
         
         async function fetchWeather(lat, lon) {
             try {
-                const response = await fetch(`https://wttr.in/${lat},${lon}?format=%t\n%h\n%P\n%D\n%T`);
+                const response = await fetch(`https://wttr.in/${lat},${lon}?format=%t|%h|%P|%D|%T`);
                 const data = await response.text();
-                const [temperature, humidity, rainRisk, date, time] = data.split('\n');
+                const [temperature, humidity, rainRisk, date, time] = data.split('|');
                 document.getElementById('weather-panel').innerHTML = `
                     <strong>Météo :</strong><br>
-                    <strong>Température :</strong> ${temperature}<br>
-                    <strong>Hygrométrie :</strong> ${humidity}<br>
-                    <strong>Risque de pluie :</strong> ${rainRisk}<br>
-                    <strong>Date :</strong> ${date}<br>
-                    <strong>Heure :</strong> ${time}
+                    <img src='https://cdn-icons-png.flaticon.com/128/4814/4814268.png'/> Temp: ${temperature}<br>
+                    <img src='https://cdn-icons-png.flaticon.com/128/414/414927.png'/> Humidité: ${humidity}<br>
+                    <img src='https://cdn-icons-png.flaticon.com/128/2965/2965992.png'/> Pluie: ${rainRisk}<br>
+                    ${date} - ${time}
                 `;
             } catch (error) {
-                document.getElementById('weather-panel').innerText = 'Erreur de chargement météo';
+                document.getElementById('weather-panel').innerText = 'Erreur météo';
             }
         }
         
