@@ -89,8 +89,9 @@
                 const data = await response.text();
                 const [temperature, humidity, pressure, rawDate, time] = data.split('|');
                 // Conversion de la date en format lisible (JJ/MM/AAAA)
-                const dateParts = rawDate.split('-');
-                const date = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                // Conversion universelle de la date
+                const dateObj = new Date(rawDate);
+                const date = dateObj.toLocaleDateString('fr-FR');
                 
                 // Conversion de la pression atmosphérique (hPa) en pourcentage de risque de pluie
                 // Approximatif : Plus la pression est basse, plus le risque de pluie est élevé
