@@ -87,7 +87,10 @@
                 // Requête vers wttr.in pour obtenir la météo sous format texte structuré
                 const response = await fetch(`https://wttr.in/${lat},${lon}?format=%t|%h|%P|%D|%T`);
                 const data = await response.text();
-                const [temperature, humidity, pressure, date, time] = data.split('|');
+                const [temperature, humidity, pressure, rawDate, time] = data.split('|');
+                // Conversion de la date en format lisible (JJ/MM/AAAA)
+                const dateParts = rawDate.split('-');
+                const date = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
                 
                 // Conversion de la pression atmosphérique (hPa) en pourcentage de risque de pluie
                 // Approximatif : Plus la pression est basse, plus le risque de pluie est élevé
