@@ -88,11 +88,8 @@
                 const response = await fetch(`https://wttr.in/${lat},${lon}?format=%t|%h|%P|%D|%T`);
                 const data = await response.text();
                 const [temperature, humidity, pressure, rawDate, time] = data.split('|');
-                // Conversion de la date en format lisible (JJ/MM/AAAA)
-                // Conversion universelle de la date
-                // Conversion manuelle de la date au format JJ/MM/AAAA
-                const dateParts = rawDate.split('-');
-                const date = (dateParts.length === 3) ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : 'Date inconnue';
+                // Gestion plus robuste de la date
+                const date = rawDate.includes('-') ? rawDate.split('-').reverse().join('/') : 'Date inconnue';
     </script>
 </body>
 </html>
