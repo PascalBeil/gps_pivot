@@ -90,28 +90,9 @@
                 const [temperature, humidity, pressure, rawDate, time] = data.split('|');
                 // Conversion de la date en format lisible (JJ/MM/AAAA)
                 // Conversion universelle de la date
-                const dateObj = new Date(rawDate);
-                const date = dateObj.toLocaleDateString('fr-FR');
-                
-                // Conversion de la pression atmosphérique (hPa) en pourcentage de risque de pluie
-                // Approximatif : Plus la pression est basse, plus le risque de pluie est élevé
-                const rainRisk = Math.max(0, Math.min(100, ((1020 - parseFloat(pressure)) / 20 * 100).toFixed(0)));
-                
-                // Mise à jour du panneau météo avec les informations récupérées
-                document.getElementById('weather-panel').innerHTML = `
-                    <strong>${date} - ${time.replace(/\+.*/, '')}</strong><br><br>
-                    <img src='https://cdn-icons-png.flaticon.com/128/4814/4814268.png'/> Temp: ${temperature}<br>
-                    <img src='https://cdn-icons-png.flaticon.com/128/414/414927.png'/> Humidité: ${humidity}<br>
-                    <img src='https://cdn-icons-png.flaticon.com/128/2965/2965992.png'/> Risque de pluie: ${rainRisk}%<br>
-                `;
-            } catch (error) {
-                // Gestion d'erreur en cas d'échec de récupération des données météo
-                document.getElementById('weather-panel').innerText = 'Erreur météo';
-            }
-        }
-        
-        // Appel de la fonction météo avec les coordonnées de l'origine du pivot
-        fetchWeather(coords.LatOri, coords.LonOri);
+                // Conversion manuelle de la date au format JJ/MM/AAAA
+                const dateParts = rawDate.split('-');
+                const date = (dateParts.length === 3) ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : 'Date inconnue';
     </script>
 </body>
 </html>
