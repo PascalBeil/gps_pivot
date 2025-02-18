@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pivot Irrifrance</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map { height: 100vh; }
+        #weather-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="weather-panel">Chargement météo...</div>
+    <script>
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                LatOri: parseFloat(params.get('LatOri')),
+                LonOri: parseFloat(params.get('LonOri')),
+                LatZero: parseFloat(params.get('LatZero')),
+                LonZero: parseFloat(params.get('LonZero')),
+                LatMaxAngle: parseFloat(params.get('LatMaxAngle')),
+                LonMaxAngle: parseFloat(params.get('LonMaxAngle')),
+                LatPiv: parseFloat(params.get('LatPiv')),
+                LonPiv: parseFloat(params.get('LonPiv')),
+                PivCirc: parseInt(params.get('PivCirc'))
+            };
+        }
+        
+        const coords = getQueryParams();
+        const map = L.map('map');
+        
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics'
+        }).addTo(map);
+        
+        const points = {
+            origine: [coords.LatOri, coords.LonOri],
+            zero: [coords.LatZero, coords.LonZero],
+            maxAngle: [coords.LatMaxAngle, coords.LonMaxAngle],
+            pivot: [coords.LatPiv, coords.LonPiv]
+        };
+        
+        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
+        L.marker(points.zero).addTo(map).bindPopup('Point Zéro');
+        if (coords.PivCirc === 0) {
+            L.marker(points.maxAngle).addTo(map).bindPopup('Angle maximum');
+            L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
+        }
+        L.marker(points.pivot).addTo(map).bindPopup('Dernière tour');
+        
+        L.polyline([points.origine, points.zero], { color: 'red', dashArray: '5, 5' }).addTo(map);
+        L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
+        
+        const bounds = L.latLngBounds(Object.values(points));
+        map.fitBounds(bounds);
+        
+        async function fetchWeather(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,precipitation_probability&timezone=auto`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Erreur réseau: ' + response.status);
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Erreur lors de la récupération des données météo:', error);
+                throw error;
+            }
+        }
+
+        function displayWeather(data) {
+            const current = data.current_weather;
+            const weatherPanel = document.getElementById('weather-panel');
+            weatherPanel.innerHTML = `
+                <p>Température : ${current.temperature.toFixed(1)}°C</p>
+                <p>Vent : ${current.windspeed.toFixed(1)} km/h</p>
+                <p>Conditions : ${getWeatherDescription(current.weathercode)}</p>
+                <p>Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
+            `;
+        }
+
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: "Ciel dégagé",
+                1: "Ciel dégagé",
+                2: "Partiellement nuageux",
+                3: "Couvert",
+                45: "Brouillard",
+                48: "Brouillard givrant",
+                51: "Bruine légère",
+                53: "Bruine modérée",
+                55: "Bruine dense",
+                61: "Pluie légère",
+                63: "Pluie modérée",
+                65: "Pluie forte",
+                71: "Neige légère",
+                73: "Neige modérée",
+                75: "Neige forte",
+                95: "Orage"
+            };
+            return descriptions[code] || "Inconnu";
+        }
+
+        async function updateWeather() {
+            try {
+                const weatherData = await fetchWeather(coords.LatOri, coords.LonOri);
+                displayWeather(weatherData);
+            } catch (error) {
+                document.getElementById('weather-panel').textContent = 'Erreur de chargement météo';
+            }
+        }
+
+        updateWeather();
+    </script>
+</body>
+</html>
+
