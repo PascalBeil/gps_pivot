@@ -39,47 +39,97 @@
                 PivCirc: parseInt(params.get('PivCirc'))
             };
         }
-        
+
         const coords = getQueryParams();
-        const map = L.map('map');
-        
+        const map = L.map('map').setView([coords.LatOri, coords.LonOri], 16);
+
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '© Esri, Maxar, Earthstar Geographics'
         }).addTo(map);
-        
+
         const points = {
-            origine: [coords.LatOri, coords.LonOri],
-            zero: [coords.LatZero, coords.LonZero],
+            origine: L.latLng(coords.LatOri, coords.LonOri),
+            zero: L.latLng(coords.LatZero, coords.LonZero),
             maxAngle: [coords.LatMaxAngle, coords.LonMaxAngle],
-            pivot: [coords.LatPiv, coords.LonPiv]
+            pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
+        const pivotIcon = L.icon({
+            iconUrl: "pivot.png",
+            iconSize: [50, 50],
+            iconAnchor: [25, 50],
+            popupAnchor: [0, -50]
+        });
+        // Marqueurs principaux
+        L.marker(points.origine, { icon: pivotIcon }).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
         
-        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
-        L.marker(points.zero).addTo(map).bindPopup('Point Zéro');
         if (coords.PivCirc === 0) {
-            L.marker(points.maxAngle).addTo(map).bindPopup('Angle maximum');
-            L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
+           
+            L.polyline([points.origine, points.maxAngle], { color: 'blue', dashArray: '5, 5' }).addTo(map);
         }
-        L.marker(points.pivot).addTo(map).bindPopup('Dernière tour');
-        
-        L.polyline([points.origine, points.zero], { color: 'red', dashArray: '5, 5' }).addTo(map);
+       
+
+        // Lignes de référence
+        L.polyline([points.origine, points.zero], { color: 'blue', dashArray: '5, 5' }).addTo(map);
         L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
-        
-        const bounds = L.latLngBounds(Object.values(points));
+
+        // Fonction d'arc améliorée
+        function drawFilledArc(center, startPoint, endPoint) {
+            const toPoint = latlng => map.latLngToLayerPoint(latlng);
+            const toLatLng = point => map.layerPointToLatLng(point);
+            
+            const centerPoint = toPoint(center);
+            const startPointPx = toPoint(startPoint);
+            const endPointPx = toPoint(endPoint);
+
+            // Calcul des angles
+            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
+            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+            let angleDiff = angleEnd - angleStart;
+            
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+            // Génération des points d'arc
+            const radius = centerPoint.distanceTo(startPointPx);
+            const points = [center];
+            
+            for (let i = 0; i <= 100; i++) {
+                const angle = angleStart + (angleDiff * (i / 100));
+                const point = centerPoint.add(L.point({
+                    x: radius * Math.cos(angle),
+                    y: radius * Math.sin(angle)
+                }));
+                points.push(toLatLng(point));
+            }
+            
+            // Création du polygone rempli
+            L.polygon(points, {
+                color: 'green',
+                fillColor:  'green',
+                fillOpacity: 0.5,
+                weight: 1
+            }).addTo(map);
+        }
+
+        // Dessin de l'arc
+        drawFilledArc(points.origine, points.pivot, points.zero);
+
+        // Ajustement de la vue
+        const bounds = L.latLngBounds([
+            points.origine,
+            points.zero,
+            points.pivot
+        ]);
         map.fitBounds(bounds);
-        
+
+        // Gestion météo
         async function fetchWeather(lat, lon) {
             const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,precipitation_probability&timezone=auto`;
             try {
                 const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error('Erreur réseau: ' + response.status);
-                }
                 const data = await response.json();
-                return data;
+                displayWeather(data);
             } catch (error) {
-                console.error('Erreur lors de la récupération des données météo:', error);
-                throw error;
+                document.getElementById('weather-panel').textContent = 'Erreur de chargement météo';
             }
         }
 
@@ -116,17 +166,7 @@
             return descriptions[code] || "Inconnu";
         }
 
-        async function updateWeather() {
-            try {
-                const weatherData = await fetchWeather(coords.LatOri, coords.LonOri);
-                displayWeather(weatherData);
-            } catch (error) {
-                document.getElementById('weather-panel').textContent = 'Erreur de chargement météo';
-            }
-        }
-
-        updateWeather();
+        fetchWeather(coords.LatOri, coords.LonOri);
     </script>
 </body>
 </html>
-
