@@ -3,170 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pivot Irrifrance</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <title>Carte GPS Statique</title>
     <style>
-        #map { height: 100vh; }
+        #map { width: 600px; height: 400px; display: block; margin: auto; }
         #weather-panel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
+            margin-top: 10px;
             background: rgba(255, 255, 255, 0.9);
             padding: 10px;
             border-radius: 5px;
             font-family: Arial, sans-serif;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <img id="map" src="" alt="Carte satellite statique">
     <div id="weather-panel">Chargement météo...</div>
+    
     <script>
         function getQueryParams() {
-            const params = new URLSearchParams(window.location.search);
+            var params = new URLSearchParams(window.location.search);
             return {
-                LatOri: parseFloat(params.get('LatOri')),
-                LonOri: parseFloat(params.get('LonOri')),
-                LatZero: parseFloat(params.get('LatZero')),
-                LonZero: parseFloat(params.get('LonZero')),
-                LatMaxAngle: parseFloat(params.get('LatMaxAngle')),
-                LonMaxAngle: parseFloat(params.get('LonMaxAngle')),
-                LatPiv: parseFloat(params.get('LatPiv')),
-                LonPiv: parseFloat(params.get('LonPiv')),
-                PivCirc: parseInt(params.get('PivCirc'))
+                LatOri: params.get("LatOri"),
+                LonOri: params.get("LonOri"),
+                LatZero: params.get("LatZero"),
+                LonZero: params.get("LonZero"),
+                LatMaxAngle: params.get("LatMaxAngle"),
+                LonMaxAngle: params.get("LonMaxAngle"),
+                LatPiv: params.get("LatPiv"),
+                LonPiv: params.get("LonPiv"),
+                PivCirc: params.get("PivCirc")
             };
         }
-
-        const coords = getQueryParams();
-        const map = L.map('map').setView([coords.LatOri, coords.LonOri], 16);
-
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri, Maxar, Earthstar Geographics'
-        }).addTo(map);
-
-        const points = {
-            origine: L.latLng(coords.LatOri, coords.LonOri),
-            zero: L.latLng(coords.LatZero, coords.LonZero),
-            maxAngle: [coords.LatMaxAngle, coords.LonMaxAngle],
-            pivot: L.latLng(coords.LatPiv, coords.LonPiv)
-        };
-        const pivotIcon = L.icon({
-            iconUrl: "pivot.png",
-            iconSize: [50, 50],
-            iconAnchor: [25, 50],
-            popupAnchor: [0, -50]
-        });
-        // Marqueurs principaux
-        L.marker(points.origine, { icon: pivotIcon }).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
         
-        if (coords.PivCirc === 0) {
-           
-            L.polyline([points.origine, points.maxAngle], { color: 'blue', dashArray: '5, 5' }).addTo(map);
-        }
-       
-
-        // Lignes de référence
-        L.polyline([points.origine, points.zero], { color: 'blue', dashArray: '5, 5' }).addTo(map);
-        L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
-
-        // Fonction d'arc améliorée
-        function drawFilledArc(center, startPoint, endPoint) {
-            const toPoint = latlng => map.latLngToLayerPoint(latlng);
-            const toLatLng = point => map.layerPointToLatLng(point);
-            
-            const centerPoint = toPoint(center);
-            const startPointPx = toPoint(startPoint);
-            const endPointPx = toPoint(endPoint);
-
-            // Calcul des angles
-            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
-            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
-            let angleDiff = angleEnd - angleStart;
-            
-            if (angleDiff < 0) angleDiff += 2 * Math.PI;
-
-            // Génération des points d'arc
-            const radius = centerPoint.distanceTo(startPointPx);
-            const points = [center];
-            
-            for (let i = 0; i <= 100; i++) {
-                const angle = angleStart + (angleDiff * (i / 100));
-                const point = centerPoint.add(L.point({
-                    x: radius * Math.cos(angle),
-                    y: radius * Math.sin(angle)
-                }));
-                points.push(toLatLng(point));
+        var coords = getQueryParams();
+        
+        // Génération de la carte satellite statique avec lignes entre les points
+        var mapUrl = "https://static-maps.yandex.ru/1.x/?l=sat&size=600,400"
+            + "&pt=" + coords.LonOri + "," + coords.LatOri + ",pm2rdm~"
+            + coords.LonZero + "," + coords.LatZero + ",pm2blm~"
+            + coords.LonMaxAngle + "," + coords.LatMaxAngle + ",pm2grm~"
+            + coords.LonPiv + "," + coords.LatPiv + ",pm2org"
+            + "&pl=c:ff0000,w:4," + coords.LonOri + "," + coords.LatOri + "," + coords.LonZero + "," + coords.LatZero // Ligne rouge
+            + "&pl=c:0000ff,w:4," + coords.LonOri + "," + coords.LatOri + "," + coords.LonMaxAngle + "," + coords.LatMaxAngle // Ligne bleue
+            + "&pl=c:00ff00,w:4," + coords.LonOri + "," + coords.LatOri + "," + coords.LonPiv + "," + coords.LatPiv; // Ligne verte
+        
+        document.getElementById("map").src = mapUrl;
+        
+        // Récupération des infos météo via XMLHTTPRequest pour compatibilité avec Weintek
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "https://wttr.in/?format=%t\n%h\n%P\n%D\n%T", true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var data = xhr.responseText.split("\n");
+                document.getElementById("weather-panel").innerHTML =
+                    "<strong>Météo :</strong><br>" +
+                    "<strong>Température :</strong> " + data[0] + "<br>" +
+                    "<strong>Hygrométrie :</strong> " + data[1] + "<br>" +
+                    "<strong>Risque de pluie :</strong> " + data[2] + "<br>" +
+                    "<strong>Date :</strong> " + data[3] + "<br>" +
+                    "<strong>Heure :</strong> " + data[4];
             }
-            
-            // Création du polygone rempli
-            L.polygon(points, {
-                color: 'green',
-                fillColor:  'green',
-                fillOpacity: 0.5,
-                weight: 1
-            }).addTo(map);
-        }
-
-        // Dessin de l'arc
-        drawFilledArc(points.origine, points.pivot, points.zero);
-
-        // Ajustement de la vue
-        const bounds = L.latLngBounds([
-            points.origine,
-            points.zero,
-            points.pivot
-        ]);
-        map.fitBounds(bounds);
-
-        // Gestion météo
-        async function fetchWeather(lat, lon) {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,precipitation_probability&timezone=auto`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                displayWeather(data);
-            } catch (error) {
-                document.getElementById('weather-panel').textContent = 'Erreur de chargement météo';
-            }
-        }
-
-        function displayWeather(data) {
-            const current = data.current_weather;
-            const weatherPanel = document.getElementById('weather-panel');
-            weatherPanel.innerHTML = `
-                <p>Température : ${current.temperature.toFixed(1)}°C</p>
-                <p>Vent : ${current.windspeed.toFixed(1)} km/h</p>
-                <p>Conditions : ${getWeatherDescription(current.weathercode)}</p>
-                <p>Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
-            `;
-        }
-
-        function getWeatherDescription(code) {
-            const descriptions = {
-                0: "Ciel dégagé",
-                1: "Ciel dégagé",
-                2: "Partiellement nuageux",
-                3: "Couvert",
-                45: "Brouillard",
-                48: "Brouillard givrant",
-                51: "Bruine légère",
-                53: "Bruine modérée",
-                55: "Bruine dense",
-                61: "Pluie légère",
-                63: "Pluie modérée",
-                65: "Pluie forte",
-                71: "Neige légère",
-                73: "Neige modérée",
-                75: "Neige forte",
-                95: "Orage"
-            };
-            return descriptions[code] || "Inconnu";
-        }
-
-        fetchWeather(coords.LatOri, coords.LonOri);
+        };
+        xhr.send();
     </script>
 </body>
 </html>
