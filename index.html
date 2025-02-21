@@ -67,7 +67,7 @@
         
         if (coords.PivCirc === 0) {
            
-            L.polyline([points.origine, points.maxAngle], { color: 'blue', dashArray: '5, 5' }).addTo(map);
+            L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
         }
        
 
@@ -106,8 +106,8 @@
             
             // Création du polygone rempli
             L.polygon(points, {
-                color: 'blue',
-                fillColor:  'blue',
+                color: 'light blue',
+                fillColor:  'light blue',
                 fillOpacity: 0.10,
                 weight: 1
             }).addTo(map);
