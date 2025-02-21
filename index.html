@@ -26,19 +26,22 @@
     <div id="weather-panel">Chargement météo...</div>
     <script>
         function getQueryParams() {
-            const params = new URLSearchParams(window.location.search);
-            return {
-                LatOri: parseFloat(params.get('LatOri')),
-                LonOri: parseFloat(params.get('LonOri')),
-                LatZero: parseFloat(params.get('LatZero')),
-                LonZero: parseFloat(params.get('LonZero')),
-                LatMaxAngle: parseFloat(params.get('LatMaxAngle')),
-                LonMaxAngle: parseFloat(params.get('LonMaxAngle')),
-                LatPiv: parseFloat(params.get('LatPiv')),
-                LonPiv: parseFloat(params.get('LonPiv')),
-                PivCirc: parseInt(params.get('PivCirc'))
-            };
-        }
+    const params = new URLSearchParams(window.location.search);
+    const values = params.get('p')?.split(',').map(Number); // Récupère et divise les valeurs
+
+    return values && values.length === 9 ? {
+        LatOri: values[0],
+        LonOri: values[1],
+        LatZero: values[2],
+        LonZero: values[3],
+        LatMaxAngle: values[4],
+        LonMaxAngle: values[5],
+        LatPiv: values[6],
+        LonPiv: values[7],
+        PivCirc: values[8]
+    } : null;
+}
+
 
         const coords = getQueryParams();
         const map = L.map('map').setView([coords.LatOri, coords.LonOri], 16);
