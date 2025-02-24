@@ -29,7 +29,7 @@
     const params = new URLSearchParams(window.location.search);
     const values = params.get('p')?.split(',').map(Number); // Récupère et divise les valeurs
 
-    return values && values.length === 9 ? {
+    return values && values.length === 10 ? {
         LatOri: values[0],
         LonOri: values[1],
         LatZero: values[2],
@@ -38,11 +38,12 @@
         LonMaxAngle: values[5],
         LatPiv: values[6],
         LonPiv: values[7],
-        PivCirc: values[8]
+        PivCirc: values[8],
+        sens: values[9]
     } : null;
 }
 
-
+      
         const coords = getQueryParams();
         const map = L.map('map').setView([coords.LatOri, coords.LonOri], 16);
 
@@ -56,15 +57,12 @@
             maxAngle: [coords.LatMaxAngle, coords.LonMaxAngle],
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
-        const pivotIcon = L.icon({
-            iconUrl: "pivot.png",
-            iconSize: [50, 50],
-            iconAnchor: [25, 50],
-            popupAnchor: [0, -50]
-        });
-        // Marqueurs principaux
-        L.marker(points.origine, { icon: pivotIcon }).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
         
+        
+        // Marqueurs principaux
+        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
+        
+        L.marker(points.pivot).addTo(map).bindPopup('Pivot');
         if (coords.PivCirc === 0) {
            
             L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
@@ -76,45 +74,54 @@
         L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
 
         // Fonction d'arc améliorée
-        function drawFilledArc(center, startPoint, endPoint) {
-            const toPoint = latlng => map.latLngToLayerPoint(latlng);
-            const toLatLng = point => map.layerPointToLatLng(point);
-            
-            const centerPoint = toPoint(center);
-            const startPointPx = toPoint(startPoint);
-            const endPointPx = toPoint(endPoint);
+        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue') {
+    const toPoint = latlng => map.latLngToLayerPoint(latlng);
+    const toLatLng = point => map.layerPointToLatLng(point);
 
-            // Calcul des angles
-            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
-            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
-            let angleDiff = angleEnd - angleStart;
-            
-            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+    const centerPoint = toPoint(center);
+    const startPointPx = toPoint(startPoint);
+    const endPointPx = toPoint(endPoint);
 
-            // Génération des points d'arc
-            const radius = centerPoint.distanceTo(startPointPx);
-            const points = [center];
-            
-            for (let i = 0; i <= 100; i++) {
-                const angle = angleStart + (angleDiff * (i / 100));
-                const point = centerPoint.add(L.point({
-                    x: radius * Math.cos(angle),
-                    y: radius * Math.sin(angle)
-                }));
-                points.push(toLatLng(point));
-            }
-            
-            // Création du polygone rempli
-            L.polygon(points, {
-                color: 'lightblue',
-                fillColor:  'lightblue',
-                fillOpacity: 0.25,
-                weight: 1
-            }).addTo(map);
+    // Calcul des angles
+    const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
+    const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+    let angleDiff = angleEnd - angleStart;
+    
+    if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+    // Génération des points d'arc
+    const radius = centerPoint.distanceTo(startPointPx);
+    const points = [center];
+
+    for (let i = 0; i <= 100; i++) {
+        const angle = angleStart + (angleDiff * (i / 100));
+        const point = centerPoint.add(L.point({
+            x: radius * Math.cos(angle),
+            y: radius * Math.sin(angle)
+        }));
+        points.push(toLatLng(point));
+    }
+
+    // Création du polygone rempli avec la bonne couleur
+    L.polygon(points, {
+        color: color, // Bordure
+        fillColor: color, // Remplissage
+        fillOpacity: 0.5,
+        weight: 1
+    }).addTo(map);
+}
+
+
+        // ✅ Appels conditionnels à `drawFilledArc()`
+        if (coords.sens === 0) {
+            drawFilledArc(points.origine, points.pivot, points.zero);
+        } else if (coords.sens === 1) {
+            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue');
+            drawFilledArc(points.origine, points.maxAngle, points.pivot, '#ffae47');
+        } else if (coords.sens === 2) {
+            drawFilledArc(points.origine, points.pivot, points.zero, '#ffae47');
+            drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue');
         }
-
-        // Dessin de l'arc
-        drawFilledArc(points.origine, points.pivot, points.zero);
 
         // Ajustement de la vue
         const bounds = L.latLngBounds([
@@ -137,15 +144,29 @@
         }
 
         function displayWeather(data) {
-            const current = data.current_weather;
-            const weatherPanel = document.getElementById('weather-panel');
-            weatherPanel.innerHTML = `
-                <p>Température : ${current.temperature.toFixed(1)}°C</p>
-                <p>Vent : ${current.windspeed.toFixed(1)} km/h</p>
-                <p>Conditions : ${getWeatherDescription(current.weathercode)}</p>
-                <p>Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
-            `;
-        }
+    const current = data.current_weather;
+    const weatherPanel = document.getElementById('weather-panel');
+
+    function updateTime() {
+        const now = new Date();
+        const date = now.toLocaleDateString('fr-FR');
+        const heure = now.toLocaleTimeString('fr-FR');
+
+        weatherPanel.innerHTML = 
+        `   <p>📅 Date : ${date}</p>
+            <p>⏰ Heure : ${heure}</p>
+            <p>🌡️ Température : ${current.temperature.toFixed(1)}°C</p>
+            <p>💨 Vent : ${current.windspeed.toFixed(1)} km/h</p>
+            <p>🌤️ Conditions : ${getWeatherDescription(current.weathercode)}</p>
+            <p>☔ Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
+        `;
+    }
+
+    updateTime();
+    setInterval(updateTime, 1000);
+}
+
+
 
         function getWeatherDescription(code) {
             const descriptions = {
