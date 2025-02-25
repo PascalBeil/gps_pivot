@@ -60,7 +60,7 @@
         
         
         // Marqueurs principaux
-        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1000);
+        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1);
         
         L.marker(points.pivot).addTo(map).bindPopup('Pivot');
         if (coords.PivCirc === 0) {
@@ -78,50 +78,73 @@
     const toPoint = latlng => map.latLngToLayerPoint(latlng);
     const toLatLng = point => map.layerPointToLatLng(point);
 
+    // Conversion des coordonnées géographiques en points de la carte (pixels)
     const centerPoint = toPoint(center);
     const startPointPx = toPoint(startPoint);
     const endPointPx = toPoint(endPoint);
 
-    // Calcul des angles
+    // Calcul des rayons pour startPoint et endPoint
+    const radiusStart = centerPoint.distanceTo(startPointPx);
+    const radiusEnd = centerPoint.distanceTo(endPointPx);
+
+    // Calcul des angles pour l'arc
     const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
     const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+
+    // Ajustement de l'angle pour garantir un tracé correct
     let angleDiff = angleEnd - angleStart;
-    
     if (angleDiff < 0) angleDiff += 2 * Math.PI;
 
-    // Génération des points d'arc
-    const radius = centerPoint.distanceTo(startPointPx);
+    // Liste des points pour l'arc
     const points = [center];
+    const numPoints = 1000; // Nombre de segments pour lisser l'arc
 
-    for (let i = 0; i <= 100; i++) {
-        const angle = angleStart + (angleDiff * (i / 100));
-        const point = centerPoint.add(L.point({
-            x: radius * Math.cos(angle),
-            y: radius * Math.sin(angle)
-        }));
-        points.push(toLatLng(point));
+    for (let i = 0; i <= numPoints; i++) {
+        // Calcul de l'angle interpolé entre start et end
+        const angle = angleStart + (angleDiff * (i / numPoints));
+
+        // Interpolation du rayon entre radiusStart et radiusEnd
+        const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
+
+        // Calcul de la position en pixels en fonction de l'angle et du rayon
+        const pointPx = L.point({
+            x: centerPoint.x + radius * Math.cos(angle),
+            y: centerPoint.y + radius * Math.sin(angle)
+        });
+
+        // Conversion en coordonnées géographiques pour Leaflet
+        points.push(toLatLng(pointPx));
     }
 
-    // Création du polygone rempli avec la bonne couleur
+    // Dessin du polygone représentant l'arc
     L.polygon(points, {
-        color: color, // Bordure
-        fillColor: color, // Remplissage
+        color: color, // Bordure de l'arc
+        fillColor: color, // Couleur de remplissage
         fillOpacity: 0.5,
         weight: 1
     }).addTo(map);
 }
 
 
-        // ✅ Appels conditionnels à `drawFilledArc()`
-        if (coords.sens === 0) {
-            drawFilledArc(points.origine, points.pivot, points.zero);
-        } else if (coords.sens === 1) {
-            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue');
-            drawFilledArc(points.origine, points.maxAngle, points.pivot, '#ffae47');
-        } else if (coords.sens === 2) {
-            drawFilledArc(points.origine, points.pivot, points.zero, '#ffae47');
-            drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue');
-        }
+// ✅ Appels conditionnels à `drawFilledArc()`
+if (coords.sens === 0) {
+    drawFilledArc(points.origine, points.pivot, points.zero);
+} else if (coords.sens === 1 && coords.PivCirc === 0) {
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue');
+    drawFilledArc(points.origine, points.maxAngle, points.pivot, '#ffae47');
+} else if (coords.sens === 2 && coords.PivCirc === 0) {
+    drawFilledArc(points.origine, points.pivot, points.zero, '#ffae47');
+    drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue');
+}   else if (coords.sens === 1 && coords.PivCirc === 1) {
+    drawFilledArc(points.origine, points.pivot, points.zero, '#ffae47');
+    drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue');
+
+}   else if (coords.sens === 2 && coords.PivCirc === 1) {
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue');
+    drawFilledArc(points.origine, points.zero, points.pivot, '#ffae47');
+}
+
+
 
         // Ajustement de la vue
         const bounds = L.latLngBounds([
@@ -129,7 +152,11 @@
             points.zero,
             points.pivot
         ]);
-        map.fitBounds(bounds);
+        map.fitBounds(bounds, { padding: [150, 150] });
+        // Forcer un zoom moins élevé après l'ajustement des limites
+        setTimeout(() => {
+            map.setView(bounds.getCenter(), map.getZoom() - 1);
+        }, 500);
 
         // Gestion météo
         async function fetchWeather(lat, lon) {
