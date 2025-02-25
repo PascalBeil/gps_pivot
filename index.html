@@ -180,12 +180,12 @@ if (coords.sens === 0) {
         const heure = now.toLocaleTimeString('fr-FR');
 
         weatherPanel.innerHTML = 
-        `   <p>📅 Date : ${date}</p>
-            <p>⏰ Heure : ${heure}</p>
-            <p>🌡️ Température : ${current.temperature.toFixed(1)}°C</p>
-            <p>💨 Vent : ${current.windspeed.toFixed(1)} km/h</p>
-            <p>🌤️ Conditions : ${getWeatherDescription(current.weathercode)}</p>
-            <p>☔ Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
+        `   <p>-Date : ${date}</p>
+            <p>-Heure : ${heure}</p>
+            <p>-Température : ${current.temperature.toFixed(1)}°C</p>
+            <p>-Vent : ${current.windspeed.toFixed(1)} km/h</p>
+            <p>-Conditions : ${getWeatherDescription(current.weathercode)}</p>
+            <p>-Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
         `;
     }
 
