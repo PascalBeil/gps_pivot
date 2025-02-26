@@ -74,7 +74,7 @@
         L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
 
         // Fonction d'arc améliorée
-        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue') {
+        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
     const toPoint = latlng => map.latLngToLayerPoint(latlng);
     const toLatLng = point => map.layerPointToLatLng(point);
 
@@ -97,7 +97,7 @@
 
     // Liste des points pour l'arc
     const points = [center];
-    const numPoints = 1000; // Nombre de segments pour lisser l'arc
+    const numPoints = 100; // Nombre de segments pour lisser l'arc
 
     for (let i = 0; i <= numPoints; i++) {
         // Calcul de l'angle interpolé entre start et end
@@ -120,29 +120,35 @@
     L.polygon(points, {
         color: color, // Bordure de l'arc
         fillColor: color, // Couleur de remplissage
-        fillOpacity: 0.5,
+        fillOpacity: opacity, // Utilisation du paramètre opacity
         weight: 1
     }).addTo(map);
 }
 
 
+
 // ✅ Appels conditionnels à `drawFilledArc()`
 if (coords.sens === 0) {
-    drawFilledArc(points.origine, points.pivot, points.zero);
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
 } else if (coords.sens === 1 && coords.PivCirc === 0) {
-    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue');
-    drawFilledArc(points.origine, points.maxAngle, points.pivot, '#ffae47');
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
 } else if (coords.sens === 2 && coords.PivCirc === 0) {
-    drawFilledArc(points.origine, points.pivot, points.zero, '#ffae47');
-    drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue');
-}   else if (coords.sens === 1 && coords.PivCirc === 1) {
-    drawFilledArc(points.origine, points.pivot, points.zero, '#ffae47');
-    drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue');
-
-}   else if (coords.sens === 2 && coords.PivCirc === 1) {
-    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue');
-    drawFilledArc(points.origine, points.zero, points.pivot, '#ffae47');
+    drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+} else if (coords.sens === 1 && coords.PivCirc === 1) {
+    drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+} else if (coords.sens === 2 && coords.PivCirc === 1) {
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
 }
+
 
 
 
@@ -155,7 +161,7 @@ if (coords.sens === 0) {
         map.fitBounds(bounds, { padding: [150, 150] });
         // Forcer un zoom moins élevé après l'ajustement des limites
         setTimeout(() => {
-            map.setView(bounds.getCenter(), map.getZoom() - 0.5);
+            map.setView(bounds.getCenter(), map.getZoom() - 1);
         }, 500);
 
         // Gestion météo
