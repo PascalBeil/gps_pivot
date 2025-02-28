@@ -18,6 +18,7 @@
             font-family: Arial, sans-serif;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
             z-index: 1000;
+            min-width: 300px;
         }
     </style>
 </head>
@@ -29,7 +30,7 @@
     const params = new URLSearchParams(window.location.search);
     const values = params.get('p')?.split(',').map(Number); // Récupère et divise les valeurs
 
-    return values && values.length === 10 ? {
+    return values && values.length === 11 ? {
         LatOri: values[0],
         LonOri: values[1],
         LatZero: values[2],
@@ -39,7 +40,8 @@
         LatPiv: values[6],
         LonPiv: values[7],
         PivCirc: values[8],
-        sens: values[9]
+        sens: values[9],
+        lang:values[10]
     } : null;
 }
 
@@ -137,7 +139,7 @@ if (coords.sens === 0) {
     drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
 } else if (coords.sens === 2 && coords.PivCirc === 0) {
     drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
-    drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 5);
+    drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.5);
     drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
 } else if (coords.sens === 1 && coords.PivCirc === 1) {
     drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
@@ -179,21 +181,84 @@ if (coords.sens === 0) {
         function displayWeather(data) {
     const current = data.current_weather;
     const weatherPanel = document.getElementById('weather-panel');
-
+    if (coords.lang === 5) {
+    weatherPanel.style.direction = "rtl";
+    weatherPanel.style.textAlign = "right";
+    weatherPanel.style.fontFamily = "Tajawal, Arial, sans-serif"; // Tajawal est une bonne police pour l'arabe
+}
     function updateTime() {
-        const now = new Date();
-        const date = now.toLocaleDateString('fr-FR');
-        const heure = now.toLocaleTimeString('fr-FR');
+    const now = new Date();
+    const date = now.toLocaleDateString('fr-FR');
+    const heure = now.toLocaleTimeString('fr-FR');
 
+    if (coords.lang === 0) {
         weatherPanel.innerHTML = 
-        `   <p>-Date : ${date}</p>
-            <p>-Heure : ${heure}</p>
-            <p>-Température : ${current.temperature.toFixed(1)}°C</p>
-            <p>-Vent : ${current.windspeed.toFixed(1)} km/h</p>
-            <p>-Conditions : ${getWeatherDescription(current.weathercode)}</p>
-            <p>-Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
-        `;
+        `<p>-Date : ${date}</p>
+        <p>-Heure : ${heure}</p>
+        <p>-Température : ${current.temperature.toFixed(1)}°C</p>
+        <p>-Vent : ${current.windspeed.toFixed(1)} km/h</p>
+        <p>-Conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>`;
     }
+    else if (coords.lang === 1) {
+        weatherPanel.innerHTML = 
+        `<p>-Date : ${date}</p>
+        <p>-Time : ${heure}</p>
+        <p>-Temperature : ${current.temperature.toFixed(1)}°C</p>
+        <p>-Wind : ${current.windspeed.toFixed(1)} km/h</p>
+        <p>-Weather conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Precipitation probability : ${data.hourly.precipitation_probability[0]}%</p>`;
+    }
+    else if (coords.lang === 2) {
+        weatherPanel.innerHTML = 
+        `<p>-Fecha : ${date}</p>
+        <p>-Hora : ${heure}</p>
+        <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
+        <p>-Viento : ${current.windspeed.toFixed(1)} km/h</p>
+        <p>-Condiciones meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Probabilidad de precipitaciones : ${data.hourly.precipitation_probability[0]}%</p>`;
+    }
+    else if (coords.lang === 3) {
+        weatherPanel.innerHTML = 
+        `<p>-Data : ${date}</p>
+        <p>-Hora : ${heure}</p>
+        <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
+        <p>-Vento : ${current.windspeed.toFixed(1)} km/h</p>
+        <p>-Condições meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Probabilidade de precipitação : ${data.hourly.precipitation_probability[0]}%</p>`;
+    }
+    else if (coords.lang === 4) {
+        weatherPanel.innerHTML = 
+        `<p>-Datum : ${date}</p>
+        <p>-Uhrzeit : ${heure}</p>
+        <p>-Temperatur : ${current.temperature.toFixed(1)}°C</p>
+        <p>-Wind : ${current.windspeed.toFixed(1)} km/h</p>
+        <p>-Wetterbedingungen : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Niederschlagswahrscheinlichkeit : ${data.hourly.precipitation_probability[0]}%</p>`;
+    }
+    else if (coords.lang === 5) {
+    weatherPanel.innerHTML =
+    `<p>-التاريخ : ${date}</p>
+    <p>-الوقت : ${heure}</p> 
+    <p>-درجة الحرارة : <span dir="ltr">${current.temperature.toFixed(1)} °C</span></p> 
+    <p>-الرياح : <span dir="ltr">${current.windspeed.toFixed(1)} km/h</span></p> 
+    <p>-الأحوال الجوية : ${getWeatherDescription(current.weathercode,coords.lang)}</p> 
+    <p>-احتمال هطول الأمطار : <span dir="ltr">${data.hourly.precipitation_probability[0]} %</span></p>`;
+}
+
+
+   
+    else if (coords.lang === 6) {
+        weatherPanel.innerHTML = 
+        `<p>-Data : ${date}</p>
+        <p>-Ora : ${heure}</p>
+        <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
+        <p>-Vento : ${current.windspeed.toFixed(1)} km/h</p>
+        <p>-Condizioni meteorologiche : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Probabilità di precipitazioni : ${data.hourly.precipitation_probability[0]}%</p>`; 
+    } 
+}
+
 
     updateTime();
     setInterval(updateTime, 1000);
@@ -201,27 +266,83 @@ if (coords.sens === 0) {
 
 
 
-        function getWeatherDescription(code) {
-            const descriptions = {
-                0: "Ciel dégagé",
-                1: "Ciel dégagé",
-                2: "Partiellement nuageux",
-                3: "Couvert",
-                45: "Brouillard",
-                48: "Brouillard givrant",
-                51: "Bruine légère",
-                53: "Bruine modérée",
-                55: "Bruine dense",
-                61: "Pluie légère",
-                63: "Pluie modérée",
-                65: "Pluie forte",
-                71: "Neige légère",
-                73: "Neige modérée",
-                75: "Neige forte",
-                95: "Orage"
-            };
-            return descriptions[code] || "Inconnu";
+function getWeatherDescription(code, lang) {
+    const descriptions = {
+        0: {
+            0: "Ciel dégagé", 1: "Clear sky", 2: "Cielo despejado", 3: "Céu limpo", 
+            4: "Klarer Himmel", 5: "سماء صافية", 6: "Cielo sereno"
+        },
+        1: {
+            0: "Ciel dégagé", 1: "Clear sky", 2: "Cielo despejado", 3: "Céu limpo",
+            4: "Klarer Himmel", 5: "سماء صافية", 6: "Cielo sereno"
+        },
+        2: {
+            0: "Partiellement nuageux", 1: "Partly cloudy", 2: "Parcialmente nublado", 3: "Parcialmente nublado",
+            4: "Teilweise bewölkt", 5: "غائم جزئيًا", 6: "Parzialmente nuvoloso"
+        },
+        3: {
+            0: "Couvert", 1: "Overcast", 2: "Cubierto", 3: "Encoberto",
+            4: "Bedeckt", 5: "غائم", 6: "Coperto"
+        },
+        45: {
+            0: "Brouillard", 1: "Fog", 2: "Niebla", 3: "Nevoeiro",
+            4: "Nebel", 5: "ضباب", 6: "Nebbia"
+        },
+        48: {
+            0: "Brouillard givrant", 1: "Freezing fog", 2: "Niebla helada", 3: "Nevoeiro congelante",
+            4: "Gefrierender Nebel", 5: "ضباب جليدي", 6: "Nebbia gelata"
+        },
+        51: {
+            0: "Bruine légère", 1: "Light drizzle", 2: "Llovizna ligera", 3: "Chuvisco leve",
+            4: "Leichter Nieselregen", 5: "رذاذ خفيف", 6: "Pioviggine leggera"
+        },
+        53: {
+            0: "Bruine modérée", 1: "Moderate drizzle", 2: "Llovizna moderada", 3: "Chuvisco moderado",
+            4: "Mäßiger Nieselregen", 5: "رذاذ معتدل", 6: "Pioviggine moderata"
+        },
+        55: {
+            0: "Bruine dense", 1: "Dense drizzle", 2: "Llovizna densa", 3: "Chuvisco denso",
+            4: "Dichter Nieselregen", 5: "رذاذ كثيف", 6: "Pioviggine densa"
+        },
+        61: {
+            0: "Pluie légère", 1: "Light rain", 2: "Lluvia ligera", 3: "Chuva leve",
+            4: "Leichter Regen", 5: "مطر خفيف", 6: "Pioggia leggera"
+        },
+        63: {
+            0: "Pluie modérée", 1: "Moderate rain", 2: "Lluvia moderada", 3: "Chuva moderada",
+            4: "Mäßiger Regen", 5: "مطر معتدل", 6: "Pioggia moderata"
+        },
+        65: {
+            0: "Pluie forte", 1: "Heavy rain", 2: "Lluvia fuerte", 3: "Chuva forte",
+            4: "Starker Regen", 5: "مطر غزير", 6: "Pioggia forte"
+        },
+        71: {
+            0: "Neige légère", 1: "Light snow", 2: "Nieve ligera", 3: "Neve leve",
+            4: "Leichter Schnee", 5: "ثلج خفيف", 6: "Neve leggera"
+        },
+        73: {
+            0: "Neige modérée", 1: "Moderate snow", 2: "Nieve moderada", 3: "Neve moderada",
+            4: "Mäßiger Schnee", 5: "ثلج معتدل", 6: "Neve moderata"
+        },
+        75: {
+            0: "Neige forte", 1: "Heavy snow", 2: "Nieve fuerte", 3: "Neve forte",
+            4: "Starker Schnee", 5: "ثلج كثيف", 6: "Neve forte"
+        },
+        95: {
+            0: "Orage", 1: "Thunderstorm", 2: "Tormenta", 3: "Trovoada",
+            4: "Gewitter", 5: "عاصفة رعدية", 6: "Temporale"
         }
+    };
+
+    // Vérifie si le code météo existe, sinon retourne "Inconnu"
+    if (!descriptions[code]) {
+        return "Inconnu";
+    }
+
+    // Vérifie si la langue demandée existe, sinon retourne en français (index 0)
+    return descriptions[code][lang] || descriptions[code][0];
+}
+
 
         fetchWeather(coords.LatOri, coords.LonOri);
     </script>
