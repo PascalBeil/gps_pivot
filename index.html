@@ -8,21 +8,42 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
         #map { height: 100vh; }
+        #weather-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="weather-panel">Chargement météo...</div>
     <script>
         function getQueryParams() {
-            const params = new URLSearchParams(window.location.search);
-            const values = params.get('p')?.split(',').map(Number);
-            return values && values.length === 10 ? {
-                LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
-                LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
-                PivCirc: values[8], sens: values[9]
-            } : null;
-        }
+    const params = new URLSearchParams(window.location.search);
+    const values = params.get('p')?.split(',').map(Number); // Récupère et divise les valeurs
 
+    return values && values.length === 10 ? {
+        LatOri: values[0],
+        LonOri: values[1],
+        LatZero: values[2],
+        LonZero: values[3],
+        LatMaxAngle: values[4],
+        LonMaxAngle: values[5],
+        LatPiv: values[6],
+        LonPiv: values[7],
+        PivCirc: values[8],
+        sens: values[9]
+    } : null;
+}
+
+      
         const coords = getQueryParams();
         const map = L.map('map').setView([coords.LatOri, coords.LonOri], 16);
 
@@ -33,74 +54,176 @@
         const points = {
             origine: L.latLng(coords.LatOri, coords.LonOri),
             zero: L.latLng(coords.LatZero, coords.LonZero),
-            maxAngle: L.latLng(coords.LatMaxAngle, coords.LonMaxAngle),
+            maxAngle: [coords.LatMaxAngle, coords.LonMaxAngle],
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
-
-        // Ajout des marqueurs
-        L.marker(points.origine).addTo(map).bindPopup('Pilonne');
+        
+        
+        // Marqueurs principaux
+        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1);
+        
         L.marker(points.pivot).addTo(map).bindPopup('Pivot');
-
-        // Ajout des lignes
-        L.polyline([points.origine, points.zero], { color: 'blue', dashArray: '5, 5' }).addTo(map);
-        L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
         if (coords.PivCirc === 0) {
+           
             L.polyline([points.origine, points.maxAngle], { color: 'red', dashArray: '5, 5' }).addTo(map);
         }
+       
 
-        // Fonction pour dessiner un arc
+        // Lignes de référence
+        L.polyline([points.origine, points.zero], { color: 'blue', dashArray: '5, 5' }).addTo(map);
+        L.polyline([points.origine, points.pivot], { color: 'blue' }).addTo(map);
+
+        // Fonction d'arc améliorée
         function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
-            const toPoint = latlng => map.latLngToLayerPoint(latlng);
-            const toLatLng = point => map.layerPointToLatLng(point);
-            const centerPoint = toPoint(center);
-            const startPointPx = toPoint(startPoint);
-            const endPointPx = toPoint(endPoint);
-            const radiusStart = centerPoint.distanceTo(startPointPx);
-            const radiusEnd = centerPoint.distanceTo(endPointPx);
-            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
-            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
-            let angleDiff = angleEnd - angleStart;
-            if (angleDiff < 0) angleDiff += 2 * Math.PI;
-            const points = [center];
-            const numPoints = 50;
-            for (let i = 0; i <= numPoints; i++) {
-                const angle = angleStart + (angleDiff * (i / numPoints));
-                const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
-                const pointPx = L.point({
-                    x: centerPoint.x + radius * Math.cos(angle),
-                    y: centerPoint.y + radius * Math.sin(angle)
-                });
-                points.push(toLatLng(pointPx));
+    const toPoint = latlng => map.latLngToLayerPoint(latlng);
+    const toLatLng = point => map.layerPointToLatLng(point);
+
+    // Conversion des coordonnées géographiques en points de la carte (pixels)
+    const centerPoint = toPoint(center);
+    const startPointPx = toPoint(startPoint);
+    const endPointPx = toPoint(endPoint);
+
+    // Calcul des rayons pour startPoint et endPoint
+    const radiusStart = centerPoint.distanceTo(startPointPx);
+    const radiusEnd = centerPoint.distanceTo(endPointPx);
+
+    // Calcul des angles pour l'arc
+    const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
+    const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+
+    // Ajustement de l'angle pour garantir un tracé correct
+    let angleDiff = angleEnd - angleStart;
+    if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+    // Liste des points pour l'arc
+    const points = [center];
+    const numPoints = 100; // Nombre de segments pour lisser l'arc
+
+    for (let i = 0; i <= numPoints; i++) {
+        // Calcul de l'angle interpolé entre start et end
+        const angle = angleStart + (angleDiff * (i / numPoints));
+
+        // Interpolation du rayon entre radiusStart et radiusEnd
+        const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
+
+        // Calcul de la position en pixels en fonction de l'angle et du rayon
+        const pointPx = L.point({
+            x: centerPoint.x + radius * Math.cos(angle),
+            y: centerPoint.y + radius * Math.sin(angle)
+        });
+
+        // Conversion en coordonnées géographiques pour Leaflet
+        points.push(toLatLng(pointPx));
+    }
+
+    // Dessin du polygone représentant l'arc
+    L.polygon(points, {
+        color: color, // Bordure de l'arc
+        fillColor: color, // Couleur de remplissage
+        fillOpacity: opacity, // Utilisation du paramètre opacity
+        weight: 1
+    }).addTo(map);
+}
+
+
+
+// ✅ Appels conditionnels à `drawFilledArc()`
+if (coords.sens === 0) {
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+} else if (coords.sens === 1 && coords.PivCirc === 0) {
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+} else if (coords.sens === 2 && coords.PivCirc === 0) {
+    drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+} else if (coords.sens === 1 && coords.PivCirc === 1) {
+    drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+} else if (coords.sens === 2 && coords.PivCirc === 1) {
+    drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+    drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.5);
+    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+}
+
+
+
+
+        // Ajustement de la vue
+        const bounds = L.latLngBounds([
+            points.origine,
+            points.zero,
+            points.pivot
+        ]);
+        map.fitBounds(bounds, { padding: [150, 150] });
+        // Forcer un zoom moins élevé après l'ajustement des limites
+        setTimeout(() => {
+            map.setView(bounds.getCenter(), map.getZoom() - 1);
+        }, 500);
+
+        // Gestion météo
+        async function fetchWeather(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,precipitation_probability&timezone=auto`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                displayWeather(data);
+            } catch (error) {
+                document.getElementById('weather-panel').textContent = 'Erreur de chargement météo';
             }
-            L.polygon(points, {
-                color: color,
-                fillColor: color,
-                fillOpacity: opacity,
-                weight: 1
-            }).addTo(map);
         }
 
-        // Affichage des arcs en fonction des paramètres
-        if (coords.sens === 0) {
-            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
-            drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
-        } else if (coords.sens === 1 && coords.PivCirc === 0) {
-            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
-            drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5);
-            drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
-        } else if (coords.sens === 2 && coords.PivCirc === 0) {
-            drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
-            drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.5);
-            drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
-        } else if (coords.sens === 1 && coords.PivCirc === 1) {
-            drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
-            drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5);
-            drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
-        } else if (coords.sens === 2 && coords.PivCirc === 1) {
-            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
-            drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.5);
-            drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
+        function displayWeather(data) {
+    const current = data.current_weather;
+    const weatherPanel = document.getElementById('weather-panel');
+
+    function updateTime() {
+        const now = new Date();
+        const date = now.toLocaleDateString('fr-FR');
+        const heure = now.toLocaleTimeString('fr-FR');
+
+        weatherPanel.innerHTML = 
+        `   <p>-Date : ${date}</p>
+            <p>-Heure : ${heure}</p>
+            <p>-Température : ${current.temperature.toFixed(1)}°C</p>
+            <p>-Vent : ${current.windspeed.toFixed(1)} km/h</p>
+            <p>-Conditions : ${getWeatherDescription(current.weathercode)}</p>
+            <p>-Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>
+        `;
+    }
+
+    updateTime();
+    setInterval(updateTime, 1000);
+}
+
+
+
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: "Ciel dégagé",
+                1: "Ciel dégagé",
+                2: "Partiellement nuageux",
+                3: "Couvert",
+                45: "Brouillard",
+                48: "Brouillard givrant",
+                51: "Bruine légère",
+                53: "Bruine modérée",
+                55: "Bruine dense",
+                61: "Pluie légère",
+                63: "Pluie modérée",
+                65: "Pluie forte",
+                71: "Neige légère",
+                73: "Neige modérée",
+                75: "Neige forte",
+                95: "Orage"
+            };
+            return descriptions[code] || "Inconnu";
         }
+
+        fetchWeather(coords.LatOri, coords.LonOri);
     </script>
 </body>
 </html>
