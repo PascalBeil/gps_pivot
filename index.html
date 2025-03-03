@@ -160,7 +160,7 @@ if (coords.sens === 0) {
             points.zero,
             points.pivot
         ]);
-        map.fitBounds(bounds, { padding: [100, 100] });
+        map.fitBounds(bounds, { padding: [50, 50] });
         // Forcer un zoom moins élevé après l'ajustement des limites
         setTimeout(() => {
             map.setView(bounds.getCenter(), map.getZoom() - 1);
