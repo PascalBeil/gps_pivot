@@ -160,7 +160,7 @@ if (coords.sens === 0) {
             points.zero,
             points.pivot
         ]);
-        map.fitBounds(bounds, { padding: [50, 50] });
+        map.fitBounds(bounds, { padding: [150, 150] });
         // Forcer un zoom moins élevé après l'ajustement des limites
         setTimeout(() => {
             map.setView(bounds.getCenter(), map.getZoom() - 1);
@@ -181,11 +181,8 @@ if (coords.sens === 0) {
         function displayWeather(data) {
     const current = data.current_weather;
     const weatherPanel = document.getElementById('weather-panel');
-    if (coords.lang === 5) {
-    weatherPanel.style.direction = "rtl";
-    weatherPanel.style.textAlign = "right";
-    weatherPanel.style.fontFamily = "Tajawal, Arial, sans-serif"; // Tajawal est une bonne police pour l'arabe
-}
+   
+
     function updateTime() {
     const now = new Date();
     const date = now.toLocaleDateString('fr-FR');
@@ -237,13 +234,13 @@ if (coords.sens === 0) {
         <p>-Niederschlagswahrscheinlichkeit : ${data.hourly.precipitation_probability[0]}%</p>`;
     }
     else if (coords.lang === 5) {
-    weatherPanel.innerHTML =
-    `<p>-التاريخ : ${date}</p>
-    <p>-الوقت : ${heure}</p> 
-    <p>-درجة الحرارة : <span dir="ltr">${current.temperature.toFixed(1)} °C</span></p> 
-    <p>-الرياح : <span dir="ltr">${current.windspeed.toFixed(1)} km/h</span></p> 
-    <p>-الأحوال الجوية : ${getWeatherDescription(current.weathercode,coords.lang)}</p> 
-    <p>-احتمال هطول الأمطار : <span dir="ltr">${data.hourly.precipitation_probability[0]} %</span></p>`;
+    weatherPanel.innerHTML = 
+    `<p>-Datum: ${date}</p>
+    <p>-Tijd: ${heure}</p>
+    <p>-Temperatuur: ${current.temperature.toFixed(1)}°C</p>
+    <p>-Wind: ${current.windspeed.toFixed(1)} km/u</p>
+    <p>-Weersomstandigheden: ${getWeatherDescription(current.weathercode, coords.lang)}</p>
+    <p>-Kans op neerslag: ${data.hourly.precipitation_probability[0]}%</p>`;
 }
 
 
@@ -270,69 +267,72 @@ function getWeatherDescription(code, lang) {
     const descriptions = {
         0: {
             0: "Ciel dégagé", 1: "Clear sky", 2: "Cielo despejado", 3: "Céu limpo", 
-            4: "Klarer Himmel", 5: "سماء صافية", 6: "Cielo sereno"
+            4: "Klarer Himmel", 5: "Onbewolkte hemel", 6: "Cielo sereno"
         },
         1: {
             0: "Ciel dégagé", 1: "Clear sky", 2: "Cielo despejado", 3: "Céu limpo",
-            4: "Klarer Himmel", 5: "سماء صافية", 6: "Cielo sereno"
+            4: "Klarer Himmel", 5: "Onbewolkte hemel", 6: "Cielo sereno"
         },
         2: {
             0: "Partiellement nuageux", 1: "Partly cloudy", 2: "Parcialmente nublado", 3: "Parcialmente nublado",
-            4: "Teilweise bewölkt", 5: "غائم جزئيًا", 6: "Parzialmente nuvoloso"
+            4: "Teilweise bewölkt", 5: "Gedeeltelijk bewolkt", 6: "Parzialmente nuvoloso"
         },
         3: {
             0: "Couvert", 1: "Overcast", 2: "Cubierto", 3: "Encoberto",
-            4: "Bedeckt", 5: "غائم", 6: "Coperto"
+            4: "Bedeckt", 5: "Bewolkt", 6: "Coperto"
         },
         45: {
             0: "Brouillard", 1: "Fog", 2: "Niebla", 3: "Nevoeiro",
-            4: "Nebel", 5: "ضباب", 6: "Nebbia"
+            4: "Nebel", 5: "Mist", 6: "Nebbia"
         },
         48: {
             0: "Brouillard givrant", 1: "Freezing fog", 2: "Niebla helada", 3: "Nevoeiro congelante",
-            4: "Gefrierender Nebel", 5: "ضباب جليدي", 6: "Nebbia gelata"
+            4: "Gefrierender Nebel", 5: "IJzelmist", 6: "Nebbia gelata"
         },
         51: {
             0: "Bruine légère", 1: "Light drizzle", 2: "Llovizna ligera", 3: "Chuvisco leve",
-            4: "Leichter Nieselregen", 5: "رذاذ خفيف", 6: "Pioviggine leggera"
+            4: "Leichter Nieselregen", 5: "Lichte motregen", 6: "Pioviggine leggera"
         },
         53: {
             0: "Bruine modérée", 1: "Moderate drizzle", 2: "Llovizna moderada", 3: "Chuvisco moderado",
-            4: "Mäßiger Nieselregen", 5: "رذاذ معتدل", 6: "Pioviggine moderata"
+            4: "Mäßiger Nieselregen", 5: "Matige motregen", 6: "Pioviggine moderata"
         },
         55: {
             0: "Bruine dense", 1: "Dense drizzle", 2: "Llovizna densa", 3: "Chuvisco denso",
-            4: "Dichter Nieselregen", 5: "رذاذ كثيف", 6: "Pioviggine densa"
+            4: "Dichter Nieselregen", 5: "Dichte motregen", 6: "Pioviggine densa"
         },
         61: {
             0: "Pluie légère", 1: "Light rain", 2: "Lluvia ligera", 3: "Chuva leve",
-            4: "Leichter Regen", 5: "مطر خفيف", 6: "Pioggia leggera"
+            4: "Leichter Regen", 5: "Lichte regen", 6: "Pioggia leggera"
         },
         63: {
             0: "Pluie modérée", 1: "Moderate rain", 2: "Lluvia moderada", 3: "Chuva moderada",
-            4: "Mäßiger Regen", 5: "مطر معتدل", 6: "Pioggia moderata"
+            4: "Mäßiger Regen", 5: "Matige regen", 6: "Pioggia moderata"
         },
         65: {
             0: "Pluie forte", 1: "Heavy rain", 2: "Lluvia fuerte", 3: "Chuva forte",
-            4: "Starker Regen", 5: "مطر غزير", 6: "Pioggia forte"
+            4: "Starker Regen", 5: "Zware regen", 6: "Pioggia forte"
         },
         71: {
             0: "Neige légère", 1: "Light snow", 2: "Nieve ligera", 3: "Neve leve",
-            4: "Leichter Schnee", 5: "ثلج خفيف", 6: "Neve leggera"
+            4: "Leichter Schnee", 5: "Lichte sneeuw", 6: "Neve leggera"
         },
         73: {
             0: "Neige modérée", 1: "Moderate snow", 2: "Nieve moderada", 3: "Neve moderada",
-            4: "Mäßiger Schnee", 5: "ثلج معتدل", 6: "Neve moderata"
+            4: "Mäßiger Schnee", 5: "Matige sneeuw", 6: "Neve moderata"
         },
         75: {
             0: "Neige forte", 1: "Heavy snow", 2: "Nieve fuerte", 3: "Neve forte",
-            4: "Starker Schnee", 5: "ثلج كثيف", 6: "Neve forte"
+            4: "Starker Schnee", 5: "Zware sneeuw", 6: "Neve forte"
         },
         95: {
             0: "Orage", 1: "Thunderstorm", 2: "Tormenta", 3: "Trovoada",
-            4: "Gewitter", 5: "عاصفة رعدية", 6: "Temporale"
+            4: "Gewitter", 5: "Onweer", 6: "Temporale"
         }
     };
+
+
+
 
     // Vérifie si le code météo existe, sinon retourne "Inconnu"
     if (!descriptions[code]) {
