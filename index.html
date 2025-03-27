@@ -61,15 +61,8 @@
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
         
-        var valueIcon = L.divIcon({
-    className: "value-label",
-    html: "<div style='background:white; padding:2px 5px; border-radius:5px; font-size:14px; text-align:center;'>" + coords.ang + "°</div>",
-    iconSize: [50, 20],
-    iconAnchor: [points.maxAngle] // Décalage vers le haut
-});
 
-// Ajouter le label au-dessus du marqueur "Pilonne"
-L.marker([coords.LatOri + 0.0003, coords.LonOri], { icon: valueIcon }).addTo(map);
+
 
 // Ajouter le marqueur du Pilonne
 
@@ -204,42 +197,48 @@ if (coords.sens === 0) {
         `<p>-Date : ${date}</p>
         <p>-Heure : ${heure}</p>
         <p>-Température : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
+        <p>-Conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Angle actuel: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 1) {
         weatherPanel.innerHTML = 
         `<p>-Date : ${date}</p>
         <p>-Time : ${heure}</p>
         <p>-Temperature : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Weather conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
+        <p>-Weather conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Current angle: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 2) {
         weatherPanel.innerHTML = 
         `<p>-Fecha : ${date}</p>
         <p>-Hora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Condiciones meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
+        <p>-Condiciones meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Ángulo actual: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 3) {
         weatherPanel.innerHTML = 
         `<p>-Data : ${date}</p>
         <p>-Hora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Condições meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
+        <p>-Condições meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Ângulo actual: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 4) {
         weatherPanel.innerHTML = 
         `<p>-Datum : ${date}</p>
         <p>-Uhrzeit : ${heure}</p>
         <p>-Temperatur : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Wetterbedingungen : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
+        <p>-Wetterbedingungen : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Aktueller Winkel: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 5) {
     weatherPanel.innerHTML = 
     `<p>-Datum: ${date}</p>
     <p>-Tijd: ${heure}</p>
     <p>-Temperatuur: ${current.temperature.toFixed(1)}°C</p>
-    <p>-Weersomstandigheden: ${getWeatherDescription(current.weathercode, coords.lang)}</p>`;
+    <p>-Weersomstandigheden: ${getWeatherDescription(current.weathercode, coords.lang)}</p>
+    <p>-Huidige hoek: ${coords.ang}°</p>`;
 }
 
 
@@ -249,7 +248,8 @@ if (coords.sens === 0) {
         `<p>-Data : ${date}</p>
         <p>-Ora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Condizioni meteorologiche : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`; 
+        <p>-Condizioni meteorologiche : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        <p>-Angolo attuale: ${coords.ang}°</p>`; 
     } 
 }
 
