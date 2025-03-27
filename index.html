@@ -18,7 +18,7 @@
             font-family: Arial, sans-serif;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
             z-index: 1000;
-            min-width: 300px;
+            min-width: 30px;
         }
     </style>
 </head>
@@ -30,7 +30,7 @@
     const params = new URLSearchParams(window.location.search);
     const values = params.get('p')?.split(',').map(Number); // Récupère et divise les valeurs
 
-    return values && values.length === 11 ? {
+    return values && values.length === 12 ? {
         LatOri: values[0],
         LonOri: values[1],
         LatZero: values[2],
@@ -41,7 +41,8 @@
         LonPiv: values[7],
         PivCirc: values[8],
         sens: values[9],
-        lang:values[10]
+        lang:values[10],
+        ang:values[11]
     } : null;
 }
 
@@ -60,9 +61,19 @@
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
         
-        
-        // Marqueurs principaux
-        L.marker(points.origine).addTo(map).bindPopup('Pilonne').setZIndexOffset(1);
+        var valueIcon = L.divIcon({
+    className: "value-label",
+    html: "<div style='background:white; padding:2px 5px; border-radius:5px; font-size:14px; text-align:center;'>" + coords.ang + "°</div>",
+    iconSize: [50, 20],
+    iconAnchor: [points.maxAngle] // Décalage vers le haut
+});
+
+// Ajouter le label au-dessus du marqueur "Pilonne"
+L.marker([coords.LatOri + 0.0003, coords.LonOri], { icon: valueIcon }).addTo(map);
+
+// Ajouter le marqueur du Pilonne
+
+
         
         L.marker(points.pivot).addTo(map).bindPopup('Pivot');
         if (coords.PivCirc === 0) {
@@ -163,7 +174,7 @@ if (coords.sens === 0) {
         map.fitBounds(bounds, { padding: [150, 150] });
         // Forcer un zoom moins élevé après l'ajustement des limites
         setTimeout(() => {
-            map.setView(bounds.getCenter(), map.getZoom() - 0.5); // 2 = 2x le zoom
+            map.setView(bounds.getCenter(), map.getZoom() - 0.1);
         }, 500);
 
         // Gestion météo
@@ -193,54 +204,42 @@ if (coords.sens === 0) {
         `<p>-Date : ${date}</p>
         <p>-Heure : ${heure}</p>
         <p>-Température : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Vent : ${current.windspeed.toFixed(1)} km/h</p>
-        <p>-Conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
-        <p>-Probabilité de précipitations : ${data.hourly.precipitation_probability[0]}%</p>`;
+        <p>-Conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
     }
     else if (coords.lang === 1) {
         weatherPanel.innerHTML = 
         `<p>-Date : ${date}</p>
         <p>-Time : ${heure}</p>
         <p>-Temperature : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Wind : ${current.windspeed.toFixed(1)} km/h</p>
-        <p>-Weather conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
-        <p>-Precipitation probability : ${data.hourly.precipitation_probability[0]}%</p>`;
+        <p>-Weather conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
     }
     else if (coords.lang === 2) {
         weatherPanel.innerHTML = 
         `<p>-Fecha : ${date}</p>
         <p>-Hora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Viento : ${current.windspeed.toFixed(1)} km/h</p>
-        <p>-Condiciones meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
-        <p>-Probabilidad de precipitaciones : ${data.hourly.precipitation_probability[0]}%</p>`;
+        <p>-Condiciones meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
     }
     else if (coords.lang === 3) {
         weatherPanel.innerHTML = 
         `<p>-Data : ${date}</p>
         <p>-Hora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Vento : ${current.windspeed.toFixed(1)} km/h</p>
-        <p>-Condições meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
-        <p>-Probabilidade de precipitação : ${data.hourly.precipitation_probability[0]}%</p>`;
+        <p>-Condições meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
     }
     else if (coords.lang === 4) {
         weatherPanel.innerHTML = 
         `<p>-Datum : ${date}</p>
         <p>-Uhrzeit : ${heure}</p>
         <p>-Temperatur : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Wind : ${current.windspeed.toFixed(1)} km/h</p>
-        <p>-Wetterbedingungen : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
-        <p>-Niederschlagswahrscheinlichkeit : ${data.hourly.precipitation_probability[0]}%</p>`;
+        <p>-Wetterbedingungen : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`;
     }
     else if (coords.lang === 5) {
     weatherPanel.innerHTML = 
     `<p>-Datum: ${date}</p>
     <p>-Tijd: ${heure}</p>
     <p>-Temperatuur: ${current.temperature.toFixed(1)}°C</p>
-    <p>-Wind: ${current.windspeed.toFixed(1)} km/u</p>
-    <p>-Weersomstandigheden: ${getWeatherDescription(current.weathercode, coords.lang)}</p>
-    <p>-Kans op neerslag: ${data.hourly.precipitation_probability[0]}%</p>`;
+    <p>-Weersomstandigheden: ${getWeatherDescription(current.weathercode, coords.lang)}</p>`;
 }
 
 
@@ -250,9 +249,7 @@ if (coords.sens === 0) {
         `<p>-Data : ${date}</p>
         <p>-Ora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Vento : ${current.windspeed.toFixed(1)} km/h</p>
-        <p>-Condizioni meteorologiche : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
-        <p>-Probabilità di precipitazioni : ${data.hourly.precipitation_probability[0]}%</p>`; 
+        <p>-Condizioni meteorologiche : ${getWeatherDescription(current.weathercode,coords.lang)}</p>`; 
     } 
 }
 
