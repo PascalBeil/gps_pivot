@@ -136,15 +136,15 @@
 // ✅ Appels conditionnels à `drawFilledArc()`
 if (coords.sens === 0) {
     drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
-    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+
 } else if (coords.sens === 1 && coords.PivCirc === 0) {
     drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
     drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5);
-    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+
 } else if (coords.sens === 2 && coords.PivCirc === 0) {
     drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
     drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.5);
-    drawFilledArc(points.origine, points.zero, points.maxAngle, 'red',0.4);
+ 
 } else if (coords.sens === 1 && coords.PivCirc === 1) {
     drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
     drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5);
@@ -197,7 +197,7 @@ if (coords.sens === 0) {
         `<p>-Date : ${date}</p>
         <p>-Heure : ${heure}</p>
         <p>-Température : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+       
         <p>-Angle actuel: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 1) {
@@ -205,7 +205,7 @@ if (coords.sens === 0) {
         `<p>-Date : ${date}</p>
         <p>-Time : ${heure}</p>
         <p>-Temperature : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Weather conditions : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        
         <p>-Current angle: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 2) {
@@ -213,7 +213,7 @@ if (coords.sens === 0) {
         `<p>-Fecha : ${date}</p>
         <p>-Hora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Condiciones meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        
         <p>-Ángulo actual: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 3) {
@@ -221,7 +221,7 @@ if (coords.sens === 0) {
         `<p>-Data : ${date}</p>
         <p>-Hora : ${heure}</p>
         <p>-Temperatura : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Condições meteorológicas : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        
         <p>-Ângulo actual: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 4) {
@@ -229,7 +229,7 @@ if (coords.sens === 0) {
         `<p>-Datum : ${date}</p>
         <p>-Uhrzeit : ${heure}</p>
         <p>-Temperatur : ${current.temperature.toFixed(1)}°C</p>
-        <p>-Wetterbedingungen : ${getWeatherDescription(current.weathercode,coords.lang)}</p>
+        
         <p>-Aktueller Winkel: ${coords.ang}°</p>`;
     }
     else if (coords.lang === 5) {
@@ -237,7 +237,7 @@ if (coords.sens === 0) {
     `<p>-Datum: ${date}</p>
     <p>-Tijd: ${heure}</p>
     <p>-Temperatuur: ${current.temperature.toFixed(1)}°C</p>
-    <p>-Weersomstandigheden: ${getWeatherDescription(current.weathercode, coords.lang)}</p>
+    
     <p>-Huidige hoek: ${coords.ang}°</p>`;
 }
 
