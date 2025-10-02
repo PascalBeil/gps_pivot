@@ -48,11 +48,12 @@
 
       
         const coords = getQueryParams();
-        const map = L.map('map').setView([coords.LatOri, coords.LonOri], 16);
+
+        // Création de la carte
+        const map = L.map('map', {minZoom: 0, maxZoom: 22}).setView([coords.LatOri, coords.LonOri], 16);
 
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri, Maxar, Earthstar Geographics'
-        }).addTo(map);
+        attribution: '© Esri, Maxar, Earthstar Geographics', maxZoom: 22}).addTo(map);
 
         const points = {
             origine: L.latLng(coords.LatOri, coords.LonOri),
@@ -345,6 +346,7 @@ function getWeatherDescription(code, lang) {
     </script>
 </body>
 </html>
+
 
 
 
