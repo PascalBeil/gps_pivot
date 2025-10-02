@@ -168,7 +168,7 @@ if (coords.sens === 0) {
         map.fitBounds(bounds, { padding: [150, 150] });
         // Forcer un zoom moins élevé après l'ajustement des limites
         setTimeout(() => {
-            map.setView(bounds.getCenter(), map.getZoom() + 0.0);
+            map.setView(bounds.getCenter(), map.getZoom() - 0.1);
         }, 500);
 
         // Gestion météo
@@ -346,6 +346,7 @@ function getWeatherDescription(code, lang) {
     </script>
 </body>
 </html>
+
 
 
 
