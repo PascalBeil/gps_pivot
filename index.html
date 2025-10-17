@@ -16,42 +16,131 @@
             top: 10px;
             right: 10px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
             font-family: Arial, sans-serif;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
-            min-width: 200px;
-            max-width: 300px;
-            backdrop-filter: blur(5px);
+            max-width: 180px;
+            font-size: 12px;
+            line-height: 1.3;
+            backdrop-filter: blur(3px);
+            border: 1px solid #ddd;
+        }
+        .weather-compact {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .weather-expanded {
+            max-width: 220px;
         }
         .legend {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
+            bottom: 10px;
+            left: 10px;
             background: rgba(255, 255, 255, 0.95);
-            padding: 10px;
+            padding: 6px 8px;
             border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
+            max-width: 150px;
+            font-size: 11px;
+            border: 1px solid #ddd;
+        }
+        .legend.collapsed {
+            width: auto;
+            padding: 4px 8px;
+        }
+        .legend-header {
+            font-weight: bold;
+            margin-bottom: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .legend-content {
+            max-height: 200px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .legend.collapsed .legend-content {
+            max-height: 0;
         }
         .legend-item {
             display: flex;
             align-items: center;
-            margin: 5px 0;
+            margin: 3px 0;
         }
         .legend-color {
+            width: 12px;
+            height: 8px;
+            margin-right: 6px;
+            border: 1px solid #666;
+            flex-shrink: 0;
+        }
+        .toggle-icon {
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        .compact-view {
+            display: none;
+        }
+        .legend.collapsed .compact-view {
+            display: block;
+            font-size: 10px;
+            color: #666;
+        }
+        .weather-toggle {
+            cursor: pointer;
+            font-size: 10px;
+            color: #0066cc;
+            text-align: right;
+            margin-top: 4px;
+        }
+        /* Style personnalisé pour le marqueur pivot */
+        .pivot-marker {
+            background-color: #ff0000;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
             width: 20px;
-            height: 10px;
-            margin-right: 8px;
-            border: 1px solid #333;
+            height: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="weather-panel">Chargement météo...</div>
-    <div class="legend" id="legend"></div>
+    <div id="weather-panel" class="weather-compact">Chargement...</div>
+    <div class="legend" id="legend">
+        <div class="legend-header">
+            <span>Légende</span>
+            <span class="toggle-icon">−</span>
+        </div>
+        <div class="legend-content">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: lightblue;"></div>
+                <span>Zone irriguée</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #fff941;"></div>
+                <span>Zone à irriguer</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: red;"></div>
+                <span>Direction max</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: blue;"></div>
+                <span>Lignes référence</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff0000;"></div>
+                <span>Dernière tour</span>
+            </div>
+        </div>
+        <div class="compact-view">Légende (cliquer pour développer)</div>
+    </div>
     
     <script>
         // Fonction pour récupérer les paramètres d'URL
@@ -77,9 +166,8 @@
 
         const coords = getQueryParams();
         
-        // Message d'erreur si pas de coordonnées
         if (!coords) {
-            document.body.innerHTML = '<div style="padding: 20px; text-align: center;">Erreur : Paramètres manquants ou incorrects</div>';
+            document.body.innerHTML = '<div style="padding: 20px; text-align: center;">Erreur : Paramètres manquants</div>';
             throw new Error("Paramètres manquants");
         }
 
@@ -103,10 +191,18 @@
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
 
-        // Ajout des marqueurs
-        L.marker(points.origine).addTo(map).bindPopup('Point d\'origine');
-        L.marker(points.zero).addTo(map).bindPopup('Point zéro');
-        L.marker(points.pivot).addTo(map).bindPopup('Position du pivot');
+        // SUPPRIMÉ : Les marqueurs pour origine et zero
+        // UNIQUEMENT le marqueur pivot (dernière tour) est visible
+        const pivotIcon = L.divIcon({
+            className: 'pivot-marker',
+            html: '',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        L.marker(points.pivot, { icon: pivotIcon })
+            .addTo(map)
+            .bindPopup('Dernière tour du pivot');
 
         // Ligne pointillée rouge si PivCirc = 0
         if (coords.PivCirc === 0) {
@@ -171,24 +267,22 @@
         }
 
         // Gestion des différents scénarios d'arcs
-        let arcs = [];
-        
         if (coords.sens === 0) {
-            arcs.push(drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5));
+            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
         } else if (coords.sens === 1 && coords.PivCirc === 0) {
-            arcs.push(drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5));
-            arcs.push(drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5));
+            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+            drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5);
         } else if (coords.sens === 2 && coords.PivCirc === 0) {
-            arcs.push(drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5));
-            arcs.push(drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.5));
+            drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+            drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.5);
         } else if (coords.sens === 1 && coords.PivCirc === 1) {
-            arcs.push(drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5));
-            arcs.push(drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5));
-            arcs.push(drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4));
+            drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+            drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5);
+            drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
         } else if (coords.sens === 2 && coords.PivCirc === 1) {
-            arcs.push(drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5));
-            arcs.push(drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.5));
-            arcs.push(drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4));
+            drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+            drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.5);
+            drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
         }
 
         // Ajustement de la vue de la carte
@@ -199,7 +293,7 @@
             points.maxAngle
         ]);
         
-        map.fitBounds(bounds, { padding: [50, 50] });
+        map.fitBounds(bounds, { padding: [30, 30] });
         
         setTimeout(() => {
             if (map.getZoom() > 16) {
@@ -207,34 +301,30 @@
             }
         }, 500);
 
-        // Création de la légende
-        function createLegend() {
-            const legend = document.getElementById('legend');
-            const legends = {
-                0: { color: 'lightblue', text: 'Zone irriguée' },
-                1: { color: '#fff941', text: 'Zone à irriguer' },
-                2: { color: 'red', text: 'Direction max' },
-                3: { color: 'blue', text: 'Lignes de référence' }
-            };
+        // Gestion de la légende repliable
+        const legend = document.getElementById('legend');
+        const legendHeader = legend.querySelector('.legend-header');
+        const legendContent = legend.querySelector('.legend-content');
+        const toggleIcon = legend.querySelector('.toggle-icon');
 
-            let legendHTML = '<h4 style="margin: 0 0 10px 0;">Légende</h4>';
-            Object.values(legends).forEach(item => {
-                legendHTML += `
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: ${item.color};"></div>
-                        <span>${item.text}</span>
-                    </div>
-                `;
-            });
-            
-            legend.innerHTML = legendHTML;
-        }
+        legendHeader.addEventListener('click', function() {
+            legend.classList.toggle('collapsed');
+            toggleIcon.textContent = legend.classList.contains('collapsed') ? '+' : '−';
+        });
 
-        createLegend();
+        // Gestion du panneau météo repliable
+        const weatherPanel = document.getElementById('weather-panel');
+        let isWeatherExpanded = false;
+
+        weatherPanel.addEventListener('click', function() {
+            isWeatherExpanded = !isWeatherExpanded;
+            weatherPanel.classList.toggle('weather-expanded', isWeatherExpanded);
+            updateWeatherDisplay();
+        });
 
         // Gestion de la météo
         async function fetchWeather(lat, lon) {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,precipitation_probability&timezone=auto`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
             
             try {
                 const response = await fetch(url);
@@ -243,89 +333,96 @@
                 displayWeather(data);
             } catch (error) {
                 console.error('Erreur météo:', error);
-                document.getElementById('weather-panel').textContent = 'Météo non disponible';
+                weatherPanel.textContent = 'Météo non disponible';
             }
         }
 
         function displayWeather(data) {
             const current = data.current_weather;
-            const weatherPanel = document.getElementById('weather-panel');
+            window.weatherData = {
+                temperature: current.temperature,
+                weatherCode: current.weathercode,
+                time: new Date()
+            };
+            updateWeatherDisplay();
+        }
 
-            function updateTime() {
-                const now = new Date();
-                const date = now.toLocaleDateString('fr-FR');
-                const heure = now.toLocaleTimeString('fr-FR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
+        function updateWeatherDisplay() {
+            if (!window.weatherData) return;
 
-                const templates = {
-                    0: { // Français
-                        date: 'Date', time: 'Heure', temp: 'Température', 
-                        weather: 'Météo', angle: 'Angle actuel'
-                    },
-                    1: { // Anglais
-                        date: 'Date', time: 'Time', temp: 'Temperature',
-                        weather: 'Weather', angle: 'Current angle'
-                    },
-                    2: { // Espagnol
-                        date: 'Fecha', time: 'Hora', temp: 'Temperatura',
-                        weather: 'Tiempo', angle: 'Ángulo actual'
-                    },
-                    3: { // Portugais
-                        date: 'Data', time: 'Hora', temp: 'Temperatura',
-                        weather: 'Tempo', angle: 'Ângulo actual'
-                    },
-                    4: { // Allemand
-                        date: 'Datum', time: 'Uhrzeit', temp: 'Temperatur',
-                        weather: 'Wetter', angle: 'Aktueller Winkel'
-                    },
-                    5: { // Néerlandais
-                        date: 'Datum', time: 'Tijd', temp: 'Temperatuur',
-                        weather: 'Weer', angle: 'Huidige hoek'
-                    },
-                    6: { // Italien
-                        date: 'Data', time: 'Ora', temp: 'Temperatura',
-                        weather: 'Condizioni', angle: 'Angolo attuale'
-                    }
-                };
+            const current = window.weatherData;
+            const now = new Date();
+            const date = now.toLocaleDateString('fr-FR');
+            const heure = now.toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
 
-                const t = templates[coords.lang] || templates[0];
-                const weatherDesc = getWeatherDescription(current.weathercode, coords.lang);
+            const templates = {
+                0: { // Français
+                    temp: 'Temp', angle: 'Angle'
+                },
+                1: { // Anglais
+                    temp: 'Temp', angle: 'Angle'
+                },
+                2: { // Espagnol
+                    temp: 'Temp', angle: 'Ángulo'
+                },
+                3: { // Portugais
+                    temp: 'Temp', angle: 'Ângulo'
+                },
+                4: { // Allemand
+                    temp: 'Temp', angle: 'Winkel'
+                },
+                5: { // Néerlandais
+                    temp: 'Temp', angle: 'Hoek'
+                },
+                6: { // Italien
+                    temp: 'Temp', angle: 'Angolo'
+                }
+            };
 
+            const t = templates[coords.lang] || templates[0];
+            const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
+
+            if (isWeatherExpanded) {
                 weatherPanel.innerHTML = `
-                    <div style="font-weight: bold; margin-bottom: 8px;">Informations Pivot</div>
-                    <p><strong>${t.date}:</strong> ${date}</p>
-                    <p><strong>${t.time}:</strong> ${heure}</p>
-                    <p><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</p>
-                    <p><strong>${t.weather}:</strong> ${weatherDesc}</p>
-                    <p><strong>${t.angle}:</strong> ${coords.ang}°</p>
+                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>
+                    <div><strong>Date:</strong> ${date}</div>
+                    <div><strong>Heure:</strong> ${heure}</div>
+                    <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
+                    <div><strong>Météo:</strong> ${weatherDesc}</div>
+                    <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
+                    <div class="weather-toggle">Cliquer pour réduire</div>
+                `;
+            } else {
+                weatherPanel.innerHTML = `
+                    <div style="font-weight: bold;">${current.temperature.toFixed(1)}°C | ${coords.ang}°</div>
+                    <div style="font-size: 10px; color: #666;">${weatherDesc}</div>
+                    <div class="weather-toggle">Cliquer pour détails</div>
                 `;
             }
-
-            updateTime();
-            setInterval(updateTime, 60000); // Mise à jour toutes les minutes
         }
 
         // Fonction de description météo multilingue
         function getWeatherDescription(code, lang) {
             const descriptions = {
-                0: ['Ciel dégagé', 'Clear sky', 'Cielo despejado', 'Céu limpo', 'Klarer Himmel', 'Onbewolkte hemel', 'Cielo sereno'],
-                1: ['Ciel dégagé', 'Clear sky', 'Cielo despejado', 'Céu limpo', 'Klarer Himmel', 'Onbewolkte hemel', 'Cielo sereno'],
-                2: ['Partiellement nuageux', 'Partly cloudy', 'Parcialmente nublado', 'Parcialmente nublado', 'Teilweise bewölkt', 'Gedeeltelijk bewolkt', 'Parzialmente nuvoloso'],
+                0: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
+                1: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
+                2: ['Nuageux', 'Cloudy', 'Nublado', 'Nublado', 'Bewölkt', 'Bewolkt', 'Nuvoloso'],
                 3: ['Couvert', 'Overcast', 'Cubierto', 'Encoberto', 'Bedeckt', 'Bewolkt', 'Coperto'],
                 45: ['Brouillard', 'Fog', 'Niebla', 'Nevoeiro', 'Nebel', 'Mist', 'Nebbia'],
-                48: ['Brouillard givrant', 'Freezing fog', 'Niebla helada', 'Nevoeiro congelante', 'Gefrierender Nebel', 'IJzelmist', 'Nebbia gelata'],
-                51: ['Bruine légère', 'Light drizzle', 'Llovizna ligera', 'Chuvisco leve', 'Leichter Nieselregen', 'Lichte motregen', 'Pioviggine leggera'],
-                53: ['Bruine modérée', 'Moderate drizzle', 'Llovizna moderada', 'Chuvisco moderado', 'Mäßiger Nieselregen', 'Matige motregen', 'Pioviggine moderata'],
-                55: ['Bruine dense', 'Dense drizzle', 'Llovizna densa', 'Chuvisco denso', 'Dichter Nieselregen', 'Dichte motregen', 'Pioviggine densa'],
-                61: ['Pluie légère', 'Light rain', 'Lluvia ligera', 'Chuva leve', 'Leichter Regen', 'Lichte regen', 'Pioggia leggera'],
-                63: ['Pluie modérée', 'Moderate rain', 'Lluvia moderada', 'Chuva moderada', 'Mäßiger Regen', 'Matige regen', 'Pioggia moderata'],
-                65: ['Pluie forte', 'Heavy rain', 'Lluvia fuerte', 'Chuva forte', 'Starker Regen', 'Zware regen', 'Pioggia forte'],
-                71: ['Neige légère', 'Light snow', 'Nieve ligera', 'Neve leve', 'Leichter Schnee', 'Lichte sneeuw', 'Neve leggera'],
-                73: ['Neige modérée', 'Moderate snow', 'Nieve moderada', 'Neve moderada', 'Mäßiger Schnee', 'Matige sneeuw', 'Neve moderata'],
-                75: ['Neige forte', 'Heavy snow', 'Nieve fuerte', 'Neve forte', 'Starker Schnee', 'Zware sneeuw', 'Neve forte'],
-                95: ['Orage', 'Thunderstorm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
+                48: ['Brouillard', 'Fog', 'Niebla', 'Nevoeiro', 'Nebel', 'Mist', 'Nebbia'],
+                51: ['Bruine', 'Drizzle', 'Llovizna', 'Chuvisco', 'Niesel', 'Motregen', 'Pioggerella'],
+                53: ['Bruine', 'Drizzle', 'Llovizna', 'Chuvisco', 'Niesel', 'Motregen', 'Pioggerella'],
+                55: ['Bruine', 'Drizzle', 'Llovizna', 'Chuvisco', 'Niesel', 'Motregen', 'Pioggerella'],
+                61: ['Pluie', 'Rain', 'Lluvia', 'Chuva', 'Regen', 'Regen', 'Pioggia'],
+                63: ['Pluie', 'Rain', 'Lluvia', 'Chuva', 'Regen', 'Regen', 'Pioggia'],
+                65: ['Pluie', 'Rain', 'Lluvia', 'Chuva', 'Regen', 'Regen', 'Pioggia'],
+                71: ['Neige', 'Snow', 'Nieve', 'Neve', 'Schnee', 'Sneeuw', 'Neve'],
+                73: ['Neige', 'Snow', 'Nieve', 'Neve', 'Schnee', 'Sneeuw', 'Neve'],
+                75: ['Neige', 'Snow', 'Nieve', 'Neve', 'Schnee', 'Sneeuw', 'Neve'],
+                95: ['Orage', 'Storm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
             };
 
             return descriptions[code]?.[lang] || descriptions[code]?.[0] || 'Inconnu';
@@ -333,6 +430,14 @@
 
         // Chargement des données météo
         fetchWeather(coords.LatOri, coords.LonOri);
+        
+        // Mise à jour périodique de l'heure
+        setInterval(() => {
+            if (window.weatherData) {
+                window.weatherData.time = new Date();
+                updateWeatherDisplay();
+            }
+        }, 60000);
     </script>
 </body>
 </html>
