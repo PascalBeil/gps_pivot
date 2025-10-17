@@ -98,14 +98,19 @@
             text-align: right;
             margin-top: 4px;
         }
-        /* Style personnalisé pour le marqueur pivot */
+        /* Style personnalisé pour le marqueur pivot - MAINTENANT VIOLET */
         .pivot-marker {
-            background-color: #ff0000;
+            background-color: #8A2BE2; /* Violet */
             border: 2px solid #ffffff;
             border-radius: 50%;
             width: 20px;
             height: 20px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        /* Style pour l'icône du point de départ */
+        .pivot-icon {
+            background: transparent;
+            border: none;
         }
     </style>
 </head>
@@ -135,8 +140,12 @@
                 <span>Lignes référence</span>
             </div>
             <div class="legend-item">
-                <div class="legend-color" style="background-color: #ff0000;"></div>
+                <div class="legend-color" style="background-color: #8A2BE2;"></div>
                 <span>Dernière tour</span>
+            </div>
+            <div class="legend-item">
+                <div style="width: 12px; height: 12px; margin-right: 6px; display: flex; align-items: center; justify-content: center;">📍</div>
+                <span>Point de départ</span>
             </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
@@ -191,8 +200,29 @@
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
 
-        // SUPPRIMÉ : Les marqueurs pour origine et zero
-        // UNIQUEMENT le marqueur pivot (dernière tour) est visible
+        // Création de l'icône personnalisée pour le point de départ (base64)
+        const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
+            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="14" fill="#4A90E2" stroke="#FFFFFF" stroke-width="2"/>
+                <circle cx="16" cy="16" r="6" fill="#FFFFFF"/>
+                <path d="M16 6 L16 26 M6 16 L26 16" stroke="#FFFFFF" stroke-width="2"/>
+                <path d="M16 6 L12 10 M16 6 L20 10" stroke="#FFFFFF" stroke-width="2"/>
+            </svg>
+        `)}`;
+
+        const startPointIcon = L.divIcon({
+            className: 'pivot-icon',
+            html: `<img src="${pivotIconSVG}" width="24" height="24" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        // Marqueur pour le point de départ (origine)
+        L.marker(points.origine, { icon: startPointIcon })
+            .addTo(map)
+            .bindPopup('Point de départ du pivot');
+
+        // Marqueur pour la dernière tour (pivot) - MAINTENANT VIOLET
         const pivotIcon = L.divIcon({
             className: 'pivot-marker',
             html: '',
