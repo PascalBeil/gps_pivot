@@ -84,12 +84,12 @@
             margin-left: 5px;
         }
         .compact-view {
-            display: none;
-        }
-        .legend.collapsed .compact-view {
             display: block;
             font-size: 10px;
             color: #666;
+        }
+        .legend:not(.collapsed) .compact-view {
+            display: none;
         }
         .weather-toggle {
             cursor: pointer;
@@ -98,7 +98,7 @@
             text-align: right;
             margin-top: 4px;
         }
-        /* Style personnalisé pour le marqueur pivot - MAINTENANT VIOLET */
+        /* Style personnalisé pour le marqueur pivot - VIOLET */
         .pivot-marker {
             background-color: #8A2BE2; /* Violet */
             border: 2px solid #ffffff;
@@ -117,10 +117,10 @@
 <body>
     <div id="map"></div>
     <div id="weather-panel" class="weather-compact">Chargement...</div>
-    <div class="legend" id="legend">
+    <div class="legend collapsed" id="legend">
         <div class="legend-header">
             <span>Légende</span>
-            <span class="toggle-icon">−</span>
+            <span class="toggle-icon">+</span>
         </div>
         <div class="legend-content">
             <div class="legend-item">
@@ -142,10 +142,6 @@
             <div class="legend-item">
                 <div class="legend-color" style="background-color: #8A2BE2;"></div>
                 <span>Dernière tour</span>
-            </div>
-            <div class="legend-item">
-                <div style="width: 12px; height: 12px; margin-right: 6px; display: flex; align-items: center; justify-content: center;">📍</div>
-                <span>Point de départ</span>
             </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
@@ -222,7 +218,7 @@
             .addTo(map)
             .bindPopup('Point de départ du pivot');
 
-        // Marqueur pour la dernière tour (pivot) - MAINTENANT VIOLET
+        // Marqueur pour la dernière tour (pivot) - VIOLET
         const pivotIcon = L.divIcon({
             className: 'pivot-marker',
             html: '',
@@ -338,8 +334,8 @@
         const toggleIcon = legend.querySelector('.toggle-icon');
 
         legendHeader.addEventListener('click', function() {
-            legend.classList.toggle('collapsed');
-            toggleIcon.textContent = legend.classList.contains('collapsed') ? '+' : '−';
+            const isCollapsed = legend.classList.toggle('collapsed');
+            toggleIcon.textContent = isCollapsed ? '+' : '−';
         });
 
         // Gestion du panneau météo repliable
