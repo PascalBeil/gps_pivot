@@ -378,8 +378,8 @@
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // Segment zéro -> pivot (légèrement arrondi)
-            drawRoundedLine(points.zero, points.pivot, points.origine, 'blue', 2, 0.8);
+            // NOUVEAU : Segment zéro -> pivot (ARC ARRONDI VERS L'EXTÉRIEUR)
+            drawOutwardArc(points.zero, points.pivot, points.origine, 'blue', 2, 0.8);
             
             // Segment pivot -> maxAngle (continu bleu)
             L.polyline([points.pivot, points.maxAngle], { 
@@ -388,34 +388,83 @@
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Pivot à MaxAngle');
             
-            console.log("Lignes de référence PivotFlex tracées avec segment arrondi zéro->pivot");
+            console.log("Lignes de référence PivotFlex tracées avec arc arrondi zéro->pivot VERS L'EXTÉRIEUR");
         } 
 
-        // FONCTION POUR DESSINER UNE LIGNE LÉGÈREMENT ARRONDIE
-        function drawRoundedLine(startPoint, endPoint, controlPoint, color = 'blue', weight = 2, opacity = 0.8) {
-            console.log("Dessin d'une ligne arrondie entre", startPoint, "et", endPoint);
+        // NOUVELLE FONCTION : DESSINER UN ARC VERS L'EXTÉRIEUR
+        function drawOutwardArc(startPoint, endPoint, centerPoint, color = 'blue', weight = 2, opacity = 0.8) {
+            console.log("Dessin d'un arc vers l'extérieur entre", startPoint, "et", endPoint);
             
-            // Calcul de points intermédiaires pour créer une courbe de Bézier simple
-            const points = [];
-            const numPoints = 10;
-
-            for (let i = 0; i <= numPoints; i++) {
-                const t = i / numPoints;
-                
-                // Courbe de Bézier quadratique: B(t) = (1-t)^2 * P0 + 2*(1-t)*t * P1 + t^2 * P2
-                // Ici, P0 = startPoint, P1 = controlPoint, P2 = endPoint
-                const lat = Math.pow(1 - t, 2) * startPoint.lat + 2 * (1 - t) * t * controlPoint.lat + Math.pow(t, 2) * endPoint.lat;
-                const lng = Math.pow(1 - t, 2) * startPoint.lng + 2 * (1 - t) * t * controlPoint.lng + Math.pow(t, 2) * endPoint.lng;
-                
-                points.push(L.latLng(lat, lng));
+            // Calcul des distances au centre
+            const distStart = centerPoint.distanceTo(startPoint);
+            const distEnd = centerPoint.distanceTo(endPoint);
+            
+            // Utiliser le rayon le PLUS GRAND pour l'arc extérieur
+            const radius = Math.max(distStart, distEnd) * 1.1; // +10% pour être bien à l'extérieur
+            
+            // Calcul des angles
+            const bearingStart = calculateBearing(centerPoint, startPoint);
+            const bearingEnd = calculateBearing(centerPoint, endPoint);
+            
+            // Déterminer le sens de l'arc (toujours dans le sens horaire pour l'extérieur)
+            let startAngle = bearingStart * Math.PI / 180;
+            let endAngle = bearingEnd * Math.PI / 180;
+            
+            // Ajuster les angles pour aller dans le bon sens
+            if (endAngle < startAngle) {
+                endAngle += 2 * Math.PI;
             }
-
-            // Dessin de la ligne courbe
-            return L.polyline(points, {
+            
+            // Création des points de l'arc
+            const arcPoints = [];
+            const numPoints = 50;
+            
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = startAngle + (endAngle - startAngle) * (i / numPoints);
+                
+                const point = calculateDestinationPoint(centerPoint, radius, angle * 180 / Math.PI);
+                arcPoints.push(point);
+            }
+            
+            // Dessin de l'arc
+            return L.polyline(arcPoints, {
                 color: color,
                 weight: weight,
                 opacity: opacity
-            }).addTo(map).bindPopup('Segment Zéro à Pivot (arrondi)');
+            }).addTo(map).bindPopup('Arc Zéro à Pivot (extérieur)');
+        }
+
+        // FONCTION POUR CALCULER LE CAP ENTRE DEUX POINTS
+        function calculateBearing(from, to) {
+            const lat1 = from.lat * Math.PI / 180;
+            const lat2 = to.lat * Math.PI / 180;
+            const lon1 = from.lng * Math.PI / 180;
+            const lon2 = to.lng * Math.PI / 180;
+            
+            const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) -
+                      Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+            
+            let bearing = Math.atan2(y, x) * 180 / Math.PI;
+            return (bearing + 360) % 360;
+        }
+
+        // FONCTION POUR CALCULER UN POINT DE DESTINATION
+        function calculateDestinationPoint(origin, distance, bearing) {
+            const radius = 6371000; // Rayon de la Terre en mètres
+            const δ = distance / radius; // Distance angulaire
+            const θ = bearing * Math.PI / 180; // Cap en radians
+            
+            const φ1 = origin.lat * Math.PI / 180;
+            const λ1 = origin.lng * Math.PI / 180;
+            
+            const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) +
+                                Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+            
+            const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+                                      Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
+            
+            return L.latLng(φ2 * 180 / Math.PI, λ2 * 180 / Math.PI);
         }
 
         // FONCTION POUR DESSINER UN POLYGONE SIMPLE
@@ -566,6 +615,7 @@
             }
         }, 500);
 
+        // [Le reste du code (légende, météo, etc.) reste identique]
         // Gestion de la légende repliable
         const legend = document.getElementById('legend');
         const legendHeader = legend.querySelector('.legend-header');
