@@ -372,8 +372,29 @@
             console.log("Lignes de référence PivotFlex tracées: origine->flex (pointillés) et flex->pivot (continu)");
         } 
 
-        // FONCTION POUR DESSINER DES ARCS AVEC POINTS INTERMÉDIAIRES
-        function drawFlexArcWithPoints(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
+        // FONCTION SIMPLE POUR DESSINER UN POLYGONE PIVOTFLEX
+        function drawFlexPolygon(color) {
+            console.log("Dessin du polygone PivotFlex avec couleur:", color);
+            
+            // Le vrai polygone : origine -> zéro -> flex -> pivot -> origine
+            const polygon = L.polygon([
+                points.origine,
+                points.zero,
+                points.flex, 
+                points.pivot,
+                points.origine
+            ], {
+                color: 'blue',
+                fillColor: color,
+                fillOpacity: 0.6,
+                weight: 1
+            }).addTo(map).bindPopup('Zone PivotFlex');
+            
+            return polygon;
+        }
+
+        // FONCTION POUR DESSINER UN SECTEUR CIRCULAIRE
+        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
             const toPoint = latlng => map.latLngToLayerPoint(latlng);
             const toLatLng = point => map.layerPointToLatLng(point);
 
@@ -390,7 +411,7 @@
             let angleDiff = angleEnd - angleStart;
             if (angleDiff < 0) angleDiff += 2 * Math.PI;
 
-            const arcPoints = [];
+            const arcPoints = [center];
             const numPoints = 100;
 
             for (let i = 0; i <= numPoints; i++) {
@@ -406,61 +427,39 @@
             }
 
             return L.polygon(arcPoints, {
-                color: 'transparent',
+                color: color,
                 fillColor: color,
                 fillOpacity: opacity,
-                weight: 0
+                weight: 1
             }).addTo(map);
         }
 
-        // FONCTION POUR DESSINER LE POLYGONE COMPLET PIVOTFLEX
-        function drawCompleteFlexPolygon(zeroToPivotColor, pivotToMaxColor) {
-            console.log("Dessin du polygone PivotFlex complet avec couleurs:", zeroToPivotColor, pivotToMaxColor);
-            
-            // 1. Dessiner l'arc entre zéro et pivot
-            if (zeroToPivotColor) {
-                drawFlexArcWithPoints(points.origine, points.zero, points.pivot, zeroToPivotColor, 0.6);
-            }
-            
-            // 2. Si nécessaire, dessiner la zone entre pivot et maxAngle
-            if (pivotToMaxColor) {
-                drawFlexArcWithPoints(points.origine, points.pivot, points.maxAngle, pivotToMaxColor, 0.6);
-            }
-        }
-
-        // FONCTION UNIFIÉE POUR TOUS LES CAS PIVOTFLEX
+        // GESTION DES ZONES PIVOTFLEX - VERSION CORRECTE
         function handlePivotFlexZones() {
             console.log("Gestion des zones PivotFlex - sens:", coords.sens, "PivCirc:", coords.PivCirc);
             
-            switch(coords.sens) {
-                case 0: // Arrêt
-                    // Seulement la zone entre zéro et pivot est irriguée
-                    drawCompleteFlexPolygon('lightblue', null);
-                    break;
-                    
-                case 1: // Sens horaire
-                    if (coords.PivCirc === 0) {
-                        // Pas de cercle complet : zone irriguée entre zéro et pivot, zone à irriguer entre pivot et maxAngle
-                        drawCompleteFlexPolygon('lightblue', '#fff941');
-                    } else {
-                        // Cercle complet : zone à irriguer entre zéro et pivot, zone irriguée entre pivot et maxAngle
-                        drawCompleteFlexPolygon('#fff941', 'lightblue');
-                    }
-                    break;
-                    
-                case 2: // Sens anti-horaire  
-                    if (coords.PivCirc === 0) {
-                        // Pas de cercle complet : zone à irriguer entre zéro et pivot, zone irriguée entre pivot et maxAngle
-                        drawCompleteFlexPolygon('#fff941', 'lightblue');
-                    } else {
-                        // Cercle complet : zone irriguée entre zéro et pivot, zone à irriguer entre pivot et maxAngle
-                        drawCompleteFlexPolygon('lightblue', '#fff941');
-                    }
-                    break;
-                    
-                default:
-                    console.error("Sens inconnu:", coords.sens);
-                    drawCompleteFlexPolygon('lightblue', null);
+            // TOUJOURS dessiner le polygone principal PivotFlex
+            if (coords.sens === 0) {
+                // Arrêt - seulement le polygone PivotFlex en bleu
+                drawFlexPolygon('lightblue');
+            } else if (coords.sens === 1 && coords.PivCirc === 0) {
+                // Sens horaire, pas de cercle complet
+                drawFlexPolygon('lightblue');
+                drawFilledArc(points.origine, points.pivot, points.maxAngle, '#fff941', 0.5);
+            } else if (coords.sens === 2 && coords.PivCirc === 0) {
+                // Sens anti-horaire, pas de cercle complet  
+                drawFlexPolygon('#fff941');
+                drawFilledArc(points.origine, points.pivot, points.maxAngle, 'lightblue', 0.5);
+            } else if (coords.sens === 1 && coords.PivCirc === 1) {
+                // Sens horaire, cercle complet
+                drawFlexPolygon('#fff941');
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
+            } else if (coords.sens === 2 && coords.PivCirc === 1) {
+                // Sens anti-horaire, cercle complet
+                drawFlexPolygon('lightblue');
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
             }
         }
 
@@ -473,48 +472,6 @@
         } else {
             // LOGIQUE SANS PIVOTFLEX (ORIGINALE)
             console.log("Dessin des zones sans PivotFlex - Méthode arcs");
-            
-            // Fonction pour dessiner des arcs remplis (pour mode normal sans PivotFlex)
-            function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
-                const toPoint = latlng => map.latLngToLayerPoint(latlng);
-                const toLatLng = point => map.layerPointToLatLng(point);
-
-                const centerPoint = toPoint(center);
-                const startPointPx = toPoint(startPoint);
-                const endPointPx = toPoint(endPoint);
-
-                const radiusStart = centerPoint.distanceTo(startPointPx);
-                const radiusEnd = centerPoint.distanceTo(endPointPx);
-
-                const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
-                const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
-
-                let angleDiff = angleEnd - angleStart;
-                if (angleDiff < 0) angleDiff += 2 * Math.PI;
-
-                const arcPoints = [center];
-                const numPoints = 100;
-
-                for (let i = 0; i <= numPoints; i++) {
-                    const angle = angleStart + (angleDiff * (i / numPoints));
-                    const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
-                    
-                    const pointPx = L.point({
-                        x: centerPoint.x + radius * Math.cos(angle),
-                        y: centerPoint.y + radius * Math.sin(angle)
-                    });
-
-                    arcPoints.push(toLatLng(pointPx));
-                }
-
-                return L.polygon(arcPoints, {
-                    color: color,
-                    fillColor: color,
-                    fillOpacity: opacity,
-                    weight: 1,
-                    opacity: 0.7
-                }).addTo(map);
-            }
             
             if (coords.sens === 0) {
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
