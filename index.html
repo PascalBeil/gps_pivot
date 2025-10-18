@@ -288,6 +288,7 @@
         console.log("Points calculés:", points);
         console.log("PivotFlex actif:", coords.flexActive === 1);
         console.log("Paramètres Flex disponibles:", coords.hasFlexParams);
+        console.log("PivCirc:", coords.PivCirc);
 
         // Création de l'icône personnalisée pour le point de départ (base64)
         const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
@@ -340,12 +341,15 @@
             document.getElementById('flex-legend-item').style.display = 'flex';
         }
 
-        // CORRECTION : Ligne pointillée rouge si PivCirc = 0 - DOIT TOUJOURS S'AFFICHER QUAND PivCirc = 0
+        // CORRECTION : Ligne pointillée rouge DOIT TOUJOURS S'AFFICHER QUAND PivCirc = 0
+        // Cette ligne doit être tracée APRÈS les autres éléments pour être visible
         if (coords.PivCirc === 0) {
+            console.log("Tracé de la ligne maxAngle (rouge pointillée)");
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
-                dashArray: '5, 5',
-                weight: 2
+                dashArray: '10, 10', // Plus visible
+                weight: 3, // Plus épaisse
+                opacity: 0.8
             }).addTo(map).bindPopup('Direction maximale');
         }
 
