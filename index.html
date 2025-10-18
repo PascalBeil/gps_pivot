@@ -378,8 +378,12 @@
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // NOUVEAU : Segment zéro -> pivot (ARC ARRONDI VERS L'EXTÉRIEUR)
-            drawOutwardArc(points.zero, points.pivot, points.origine, 'blue', 2, 0.8);
+            // Segment zéro -> pivot (continu bleu) - SIMPLE LIGNE DROITE
+            L.polyline([points.zero, points.pivot], { 
+                color: 'blue',
+                weight: 2,
+                opacity: 0.8
+            }).addTo(map).bindPopup('Segment Zéro à Pivot');
             
             // Segment pivot -> maxAngle (continu bleu)
             L.polyline([points.pivot, points.maxAngle], { 
@@ -388,84 +392,8 @@
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Pivot à MaxAngle');
             
-            console.log("Lignes de référence PivotFlex tracées avec arc arrondi zéro->pivot VERS L'EXTÉRIEUR");
+            console.log("Lignes de référence PivotFlex tracées (lignes droites)");
         } 
-
-        // NOUVELLE FONCTION : DESSINER UN ARC VERS L'EXTÉRIEUR
-        function drawOutwardArc(startPoint, endPoint, centerPoint, color = 'blue', weight = 2, opacity = 0.8) {
-            console.log("Dessin d'un arc vers l'extérieur entre", startPoint, "et", endPoint);
-            
-            // Calcul des distances au centre
-            const distStart = centerPoint.distanceTo(startPoint);
-            const distEnd = centerPoint.distanceTo(endPoint);
-            
-            // Utiliser le rayon le PLUS GRAND pour l'arc extérieur
-            const radius = Math.max(distStart, distEnd) * 1.1; // +10% pour être bien à l'extérieur
-            
-            // Calcul des angles
-            const bearingStart = calculateBearing(centerPoint, startPoint);
-            const bearingEnd = calculateBearing(centerPoint, endPoint);
-            
-            // Déterminer le sens de l'arc (toujours dans le sens horaire pour l'extérieur)
-            let startAngle = bearingStart * Math.PI / 180;
-            let endAngle = bearingEnd * Math.PI / 180;
-            
-            // Ajuster les angles pour aller dans le bon sens
-            if (endAngle < startAngle) {
-                endAngle += 2 * Math.PI;
-            }
-            
-            // Création des points de l'arc
-            const arcPoints = [];
-            const numPoints = 50;
-            
-            for (let i = 0; i <= numPoints; i++) {
-                const angle = startAngle + (endAngle - startAngle) * (i / numPoints);
-                
-                const point = calculateDestinationPoint(centerPoint, radius, angle * 180 / Math.PI);
-                arcPoints.push(point);
-            }
-            
-            // Dessin de l'arc
-            return L.polyline(arcPoints, {
-                color: color,
-                weight: weight,
-                opacity: opacity
-            }).addTo(map).bindPopup('Arc Zéro à Pivot (extérieur)');
-        }
-
-        // FONCTION POUR CALCULER LE CAP ENTRE DEUX POINTS
-        function calculateBearing(from, to) {
-            const lat1 = from.lat * Math.PI / 180;
-            const lat2 = to.lat * Math.PI / 180;
-            const lon1 = from.lng * Math.PI / 180;
-            const lon2 = to.lng * Math.PI / 180;
-            
-            const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
-            const x = Math.cos(lat1) * Math.sin(lat2) -
-                      Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-            
-            let bearing = Math.atan2(y, x) * 180 / Math.PI;
-            return (bearing + 360) % 360;
-        }
-
-        // FONCTION POUR CALCULER UN POINT DE DESTINATION
-        function calculateDestinationPoint(origin, distance, bearing) {
-            const radius = 6371000; // Rayon de la Terre en mètres
-            const δ = distance / radius; // Distance angulaire
-            const θ = bearing * Math.PI / 180; // Cap en radians
-            
-            const φ1 = origin.lat * Math.PI / 180;
-            const λ1 = origin.lng * Math.PI / 180;
-            
-            const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) +
-                                Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
-            
-            const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
-                                      Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
-            
-            return L.latLng(φ2 * 180 / Math.PI, λ2 * 180 / Math.PI);
-        }
 
         // FONCTION POUR DESSINER UN POLYGONE SIMPLE
         function drawPolygon(pointList, color) {
@@ -615,7 +543,6 @@
             }
         }, 500);
 
-        // [Le reste du code (légende, météo, etc.) reste identique]
         // Gestion de la légende repliable
         const legend = document.getElementById('legend');
         const legendHeader = legend.querySelector('.legend-header');
