@@ -121,6 +121,19 @@
             height: 16px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
+        .error-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            text-align: center;
+            max-width: 400px;
+        }
     </style>
 </head>
 <body>
@@ -161,36 +174,88 @@
     </div>
     
     <script>
-        // Fonction pour récupérer les paramètres d'URL - MAINTENANT 15 PARAMÈTRES
+        // Fonction pour récupérer les paramètres d'URL - Version robuste
         function getQueryParams() {
-            const params = new URLSearchParams(window.location.search);
-            const values = params.get('p')?.split(',').map(Number);
-
-            // Attendre 15 paramètres maintenant
-            return values && values.length === 15 ? {
-                LatOri: values[0],
-                LonOri: values[1],
-                LatZero: values[2],
-                LonZero: values[3],
-                LatMaxAngle: values[4],
-                LonMaxAngle: values[5],
-                LatPiv: values[6],
-                LonPiv: values[7],
-                PivCirc: values[8],
-                sens: values[9],
-                lang: values[10],
-                ang: values[11],
-                flexActive: values[12],  // Toujours présent
-                LatFlex: values[13],     // Toujours présent
-                LonFlex: values[14]      // Toujours présent
-            } : null;
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const paramString = params.get('p');
+                
+                if (!paramString) {
+                    console.error("Paramètre 'p' manquant dans l'URL");
+                    return null;
+                }
+                
+                const values = paramString.split(',').map(Number);
+                console.log("Paramètres reçus:", values, "Nombre:", values.length);
+                
+                // Accepter 12 paramètres (ancien format) ou 15 paramètres (nouveau format)
+                if (values.length === 12) {
+                    console.log("Format ancien (12 paramètres) détecté");
+                    return {
+                        LatOri: values[0],
+                        LonOri: values[1],
+                        LatZero: values[2],
+                        LonZero: values[3],
+                        LatMaxAngle: values[4],
+                        LonMaxAngle: values[5],
+                        LatPiv: values[6],
+                        LonPiv: values[7],
+                        PivCirc: values[8],
+                        sens: values[9],
+                        lang: values[10],
+                        ang: values[11],
+                        flexActive: 0,  // Valeur par défaut
+                        LatFlex: values[2],  // Par défaut = LatZero
+                        LonFlex: values[3]   // Par défaut = LonZero
+                    };
+                } else if (values.length === 15) {
+                    console.log("Format nouveau (15 paramètres) détecté");
+                    return {
+                        LatOri: values[0],
+                        LonOri: values[1],
+                        LatZero: values[2],
+                        LonZero: values[3],
+                        LatMaxAngle: values[4],
+                        LonMaxAngle: values[5],
+                        LatPiv: values[6],
+                        LonPiv: values[7],
+                        PivCirc: values[8],
+                        sens: values[9],
+                        lang: values[10],
+                        ang: values[11],
+                        flexActive: values[12],
+                        LatFlex: values[13],
+                        LonFlex: values[14]
+                    };
+                } else {
+                    console.error("Nombre de paramètres incorrect:", values.length, "attendu: 12 ou 15");
+                    return null;
+                }
+            } catch (error) {
+                console.error("Erreur lors du parsing des paramètres:", error);
+                return null;
+            }
         }
 
         const coords = getQueryParams();
         
         if (!coords) {
-            document.body.innerHTML = '<div style="padding: 20px; text-align: center;">Erreur : Paramètres manquants</div>';
-            throw new Error("Paramètres manquants");
+            // Afficher un message d'erreur plus informatif
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-panel';
+            errorDiv.innerHTML = `
+                <h3>Erreur de paramètres</h3>
+                <p>L'URL ne contient pas les paramètres attendus.</p>
+                <p><strong>Format attendu:</strong></p>
+                <p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang,flexActive,LatFlex,LonFlex</p>
+                <p><strong>Exemple:</strong></p>
+                <p>?p=48.8566,2.3522,48.8576,2.3532,48.8586,2.3542,48.8596,2.3552,0,1,0,45,1,48.8580,2.3545</p>
+                <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                    Vérifiez la console du navigateur (F12) pour plus de détails.
+                </p>
+            `;
+            document.body.appendChild(errorDiv);
+            throw new Error("Paramètres manquants ou incorrects");
         }
 
         // Initialisation de la carte
@@ -213,6 +278,9 @@
             pivot: L.latLng(coords.LatPiv, coords.LonPiv),
             flex: L.latLng(coords.LatFlex, coords.LonFlex)
         };
+
+        console.log("Points calculés:", points);
+        console.log("PivotFlex actif:", coords.flexActive === 1);
 
         // Création de l'icône personnalisée pour le point de départ (base64)
         const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
