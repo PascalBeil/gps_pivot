@@ -378,22 +378,71 @@
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // Segment zéro -> pivot (continu bleu)
-            L.polyline([points.zero, points.pivot], { 
-                color: 'blue',
-                weight: 2,
-                opacity: 0.8
-            }).addTo(map).bindPopup('Segment Zéro à Pivot');
+            // NOUVEAU : Segment zéro -> pivot (ARC ARRONDI au lieu d'une ligne droite)
+            drawArc(points.zero, points.pivot, points.origine, 'blue', 2, 0.8);
             
-            // Segment pivot -> maxAngle (continu bleu) - NOUVEAU
+            // Segment pivot -> maxAngle (continu bleu)
             L.polyline([points.pivot, points.maxAngle], { 
                 color: 'blue',
                 weight: 2,
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Pivot à MaxAngle');
             
-            console.log("Lignes de référence PivotFlex tracées");
+            console.log("Lignes de référence PivotFlex tracées avec arc arrondi zéro->pivot");
         } 
+
+        // NOUVELLE FONCTION : DESSINER UN ARC ARRONDI ENTRE DEUX POINTS
+        function drawArc(startPoint, endPoint, centerPoint, color = 'blue', weight = 2, opacity = 0.8) {
+            console.log("Dessin d'un arc arrondi entre", startPoint, "et", endPoint);
+            
+            const toPoint = latlng => map.latLngToLayerPoint(latlng);
+            const toLatLng = point => map.layerPointToLatLng(point);
+
+            const centerPx = toPoint(centerPoint);
+            const startPx = toPoint(startPoint);
+            const endPx = toPoint(endPoint);
+
+            // Calcul des angles
+            const angleStart = Math.atan2(startPx.y - centerPx.y, startPx.x - centerPx.x);
+            const angleEnd = Math.atan2(endPx.y - centerPx.y, endPx.x - centerPx.x);
+
+            // Calcul de la différence d'angle (dans le sens le plus court)
+            let angleDiff = angleEnd - angleStart;
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+            // Si l'angle est trop grand, on prend le sens inverse
+            if (angleDiff > Math.PI) {
+                angleDiff = 2 * Math.PI - angleDiff;
+                [angleStart, angleEnd] = [angleEnd, angleStart];
+            }
+
+            // Calcul du rayon (moyenne des distances)
+            const radiusStart = centerPx.distanceTo(startPx);
+            const radiusEnd = centerPx.distanceTo(endPx);
+            const radius = (radiusStart + radiusEnd) / 2;
+
+            // Création des points de l'arc
+            const arcPoints = [];
+            const numPoints = 50; // Plus de points pour un arc plus lisse
+
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = angleStart + (angleDiff * (i / numPoints));
+                
+                const pointPx = L.point({
+                    x: centerPx.x + radius * Math.cos(angle),
+                    y: centerPx.y + radius * Math.sin(angle)
+                });
+
+                arcPoints.push(toLatLng(pointPx));
+            }
+
+            // Dessin de l'arc
+            return L.polyline(arcPoints, {
+                color: color,
+                weight: weight,
+                opacity: opacity
+            }).addTo(map).bindPopup('Arc Zéro à Pivot');
+        }
 
         // FONCTION POUR DESSINER UN POLYGONE SIMPLE
         function drawPolygon(pointList, color) {
