@@ -340,7 +340,7 @@
             document.getElementById('flex-legend-item').style.display = 'flex';
         }
 
-        // Ligne pointillée rouge si PivCirc = 0
+        // CORRECTION : Ligne pointillée rouge si PivCirc = 0 - DOIT TOUJOURS S'AFFICHER QUAND PivCirc = 0
         if (coords.PivCirc === 0) {
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
@@ -349,7 +349,7 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // CORRECTION : Lignes de référence bleues - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
+        // Lignes de référence bleues - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
         if (coords.hasFlexParams && coords.flexActive === 1) {
             // AVEC PIVOTFLEX : Deux segments
             L.polyline([points.zero, points.flex], { 
