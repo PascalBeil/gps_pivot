@@ -372,28 +372,7 @@
             console.log("Lignes de référence PivotFlex tracées: origine->flex (pointillés) et flex->pivot (continu)");
         } 
 
-        // FONCTION SIMPLE POUR DESSINER LE POLYGONE PIVOTFLEX
-        function drawFlexPolygon(color) {
-            console.log("Dessin du polygone PivotFlex avec couleur:", color);
-            
-            // Le vrai polygone : origine -> zéro -> flex -> pivot -> origine
-            const polygon = L.polygon([
-                points.origine,
-                points.zero,
-                points.flex, 
-                points.pivot,
-                points.origine
-            ], {
-                color: 'transparent',
-                fillColor: color,
-                fillOpacity: 0.6,
-                weight: 0
-            }).addTo(map);
-            
-            return polygon;
-        }
-
-        // FONCTION POUR DESSINER UN SECTEUR CIRCULAIRE (uniquement pour mode sans PivotFlex)
+        // FONCTION POUR DESSINER UN SECTEUR CIRCULAIRE
         function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
             const toPoint = latlng => map.latLngToLayerPoint(latlng);
             const toLatLng = point => map.layerPointToLatLng(point);
@@ -427,48 +406,76 @@
             }
 
             return L.polygon(arcPoints, {
-                color: color,
+                color: 'transparent',
                 fillColor: color,
                 fillOpacity: opacity,
-                weight: 1
+                weight: 0
             }).addTo(map);
         }
 
-        // GESTION DES ZONES PIVOTFLEX - VERSION SIMPLIFIÉE
+        // FONCTION POUR DESSINER LA ZONE PIVOTFLEX COMPLÈTE
+        function drawCompleteFlexZone(zeroToPivotColor, pivotToMaxColor) {
+            console.log("Dessin de la zone PivotFlex complète");
+            
+            // 1. TOUJOURS dessiner l'arc entre zéro et pivot (comme en mode normal)
+            drawFilledArc(points.origine, points.zero, points.pivot, zeroToPivotColor, 0.6);
+            
+            // 2. Si nécessaire, dessiner la zone entre pivot et maxAngle
+            if (pivotToMaxColor) {
+                drawFilledArc(points.origine, points.pivot, points.maxAngle, pivotToMaxColor, 0.6);
+            }
+            
+            // 3. Remplir l'espace entre l'arc et les segments flex avec un polygone
+            const flexPolygon = L.polygon([
+                points.origine,
+                points.zero,
+                points.pivot,
+                points.flex,
+                points.origine
+            ], {
+                color: 'transparent',
+                fillColor: zeroToPivotColor,
+                fillOpacity: 0.6,
+                weight: 0
+            }).addTo(map);
+        }
+
+        // GESTION DES ZONES PIVOTFLEX - VERSION CORRECTE
         function handlePivotFlexZones() {
             console.log("Gestion des zones PivotFlex - sens:", coords.sens, "PivCirc:", coords.PivCirc);
             
-            // EN MODE PIVOTFLEX, ON REMPLIT UNIQUEMENT LE POLYGONE
-            // La logique des couleurs dépend du sens et de PivCirc
-            
             if (coords.sens === 0) {
-                // Arrêt - polygone en bleu (irrigué)
-                drawFlexPolygon('lightblue');
+                // Arrêt - zone entre zéro et pivot en bleu
+                drawCompleteFlexZone('lightblue', null);
             } else if (coords.sens === 1) {
                 // Sens horaire
                 if (coords.PivCirc === 0) {
-                    drawFlexPolygon('lightblue'); // Zone irriguée
+                    // Pas de cercle complet : zone irriguée entre zéro et pivot, zone à irriguer entre pivot et maxAngle
+                    drawCompleteFlexZone('lightblue', '#fff941');
                 } else {
-                    drawFlexPolygon('#fff941'); // Zone à irriguer
+                    // Cercle complet : zone à irriguer entre zéro et pivot, zone irriguée entre pivot et maxAngle
+                    drawCompleteFlexZone('#fff941', 'lightblue');
                 }
             } else if (coords.sens === 2) {
                 // Sens anti-horaire  
                 if (coords.PivCirc === 0) {
-                    drawFlexPolygon('#fff941'); // Zone à irriguer
+                    // Pas de cercle complet : zone à irriguer entre zéro et pivot, zone irriguée entre pivot et maxAngle
+                    drawCompleteFlexZone('#fff941', 'lightblue');
                 } else {
-                    drawFlexPolygon('lightblue'); // Zone irriguée
+                    // Cercle complet : zone irriguée entre zéro et pivot, zone à irriguer entre pivot et maxAngle
+                    drawCompleteFlexZone('lightblue', '#fff941');
                 }
             }
         }
 
         // Gestion des différents scénarios
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ - UNIQUEMENT LE POLYGONE
-            console.log("Mode PivotFlex activé - Remplissage du polygone uniquement");
+            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ
+            console.log("Mode PivotFlex activé");
             handlePivotFlexZones();
             
         } else {
-            // LOGIQUE SANS PIVOTFLEX (ORIGINALE) - ARCS CIRCULAIRES
+            // LOGIQUE SANS PIVOTFLEX (ORIGINALE)
             console.log("Dessin des zones sans PivotFlex - Méthode arcs");
             
             if (coords.sens === 0) {
