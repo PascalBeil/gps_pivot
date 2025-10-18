@@ -165,7 +165,7 @@
                 <div class="legend-color" style="background-color: #8A2BE2;"></div>
                 <span>Dernière tour</span>
             </div>
-            <div class="legend-item">
+            <div class="legend-item" id="flex-legend-item" style="display: none;">
                 <div class="legend-color" style="background-color: #FF6B00;"></div>
                 <span>Point de flexion</span>
             </div>
@@ -190,7 +190,7 @@
                 
                 // Accepter 12 paramètres (ancien format) ou 15 paramètres (nouveau format)
                 if (values.length === 12) {
-                    console.log("Format ancien (12 paramètres) détecté");
+                    console.log("Format ancien (12 paramètres) détecté - PivotFlex désactivé");
                     return {
                         LatOri: values[0],
                         LonOri: values[1],
@@ -204,9 +204,8 @@
                         sens: values[9],
                         lang: values[10],
                         ang: values[11],
-                        flexActive: 0,  // Valeur par défaut
-                        LatFlex: values[2],  // Par défaut = LatZero
-                        LonFlex: values[3]   // Par défaut = LonZero
+                        flexActive: 0,  // DÉSACTIVÉ
+                        hasFlexParams: false  // Indique qu'il n'y a pas de paramètres flex
                     };
                 } else if (values.length === 15) {
                     console.log("Format nouveau (15 paramètres) détecté");
@@ -225,7 +224,8 @@
                         ang: values[11],
                         flexActive: values[12],
                         LatFlex: values[13],
-                        LonFlex: values[14]
+                        LonFlex: values[14],
+                        hasFlexParams: true  // Indique qu'il y a des paramètres flex
                     };
                 } else {
                     console.error("Nombre de paramètres incorrect:", values.length, "attendu: 12 ou 15");
@@ -247,9 +247,11 @@
                 <h3>Erreur de paramètres</h3>
                 <p>L'URL ne contient pas les paramètres attendus.</p>
                 <p><strong>Format attendu:</strong></p>
+                <p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang</p>
+                <p><strong>Ou avec PivotFlex:</strong></p>
                 <p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang,flexActive,LatFlex,LonFlex</p>
-                <p><strong>Exemple:</strong></p>
-                <p>?p=48.8566,2.3522,48.8576,2.3532,48.8586,2.3542,48.8596,2.3552,0,1,0,45,1,48.8580,2.3545</p>
+                <p><strong>Exemple sans PivotFlex:</strong></p>
+                <p>?p=48.8566,2.3522,48.8576,2.3532,48.8586,2.3542,48.8596,2.3552,0,1,0,45</p>
                 <p style="margin-top: 15px; font-size: 12px; color: #666;">
                     Vérifiez la console du navigateur (F12) pour plus de détails.
                 </p>
@@ -275,12 +277,17 @@
             origine: L.latLng(coords.LatOri, coords.LonOri),
             zero: L.latLng(coords.LatZero, coords.LonZero),
             maxAngle: L.latLng(coords.LatMaxAngle, coords.LonMaxAngle),
-            pivot: L.latLng(coords.LatPiv, coords.LonPiv),
-            flex: L.latLng(coords.LatFlex, coords.LonFlex)
+            pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
+
+        // Ajouter le point de flexion seulement si les paramètres flex sont présents ET actifs
+        if (coords.hasFlexParams && coords.flexActive === 1) {
+            points.flex = L.latLng(coords.LatFlex, coords.LonFlex);
+        }
 
         console.log("Points calculés:", points);
         console.log("PivotFlex actif:", coords.flexActive === 1);
+        console.log("Paramètres Flex disponibles:", coords.hasFlexParams);
 
         // Création de l'icône personnalisée pour le point de départ (base64)
         const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
@@ -316,8 +323,8 @@
             .addTo(map)
             .bindPopup('Dernière tour du pivot');
 
-        // Marqueur pour le point de flexion - ORANGE (uniquement si actif)
-        if (coords.flexActive === 1) {
+        // Marqueur pour le point de flexion - ORANGE (uniquement si paramètres flex présents ET actifs)
+        if (coords.hasFlexParams && coords.flexActive === 1) {
             const flexIcon = L.divIcon({
                 className: 'flex-marker',
                 html: '',
@@ -328,6 +335,9 @@
             L.marker(points.flex, { icon: flexIcon })
                 .addTo(map)
                 .bindPopup('Point de flexion du pivotflex');
+
+            // Afficher l'entrée de légende pour le point de flexion
+            document.getElementById('flex-legend-item').style.display = 'flex';
         }
 
         // Ligne pointillée rouge si PivCirc = 0
@@ -340,7 +350,7 @@
         }
 
         // Lignes de référence bleues - ADAPTÉES AVEC PIVOTFLEX
-        if (coords.flexActive === 1) {
+        if (coords.hasFlexParams && coords.flexActive === 1) {
             // AVEC PIVOTFLEX : Deux segments
             L.polyline([points.zero, points.flex], { 
                 color: 'blue', 
@@ -403,7 +413,7 @@
         }
 
         // Gestion des différents scénarios d'arcs - ADAPTÉE POUR PIVOTFLEX
-        if (coords.flexActive === 1) {
+        if (coords.hasFlexParams && coords.flexActive === 1) {
             // LOGIQUE AVEC PIVOTFLEX ACTIVÉ
             if (coords.sens === 0) {
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
@@ -443,9 +453,9 @@
             }
         }
 
-        // Ajustement de la vue de la carte - AMÉLIORÉ POUR INCLURE LE POINT DE FLEXION
+        // Ajustement de la vue de la carte - AMÉLIORÉ POUR INCLURE LE POINT DE FLEXION SEULEMENT SI ACTIF
         const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
-        if (coords.flexActive === 1) {
+        if (coords.hasFlexParams && coords.flexActive === 1) {
             boundsPoints.push(points.flex);
         }
         
@@ -541,25 +551,42 @@
 
             const t = templates[coords.lang] || templates[0];
             const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
-            const flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
+            
+            // Afficher le statut PivotFlex seulement si les paramètres sont présents
+            let flexStatus = '';
+            if (coords.hasFlexParams) {
+                flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
+            }
 
             if (isWeatherExpanded) {
-                weatherPanel.innerHTML = `
+                let displayContent = `
                     <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>
                     <div><strong>Date:</strong> ${date}</div>
                     <div><strong>Heure:</strong> ${heure}</div>
                     <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
                     <div><strong>Météo:</strong> ${weatherDesc}</div>
                     <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
-                    <div><strong>${t.flex}:</strong> ${flexStatus}</div>
-                    <div class="weather-toggle">Cliquer pour réduire</div>
                 `;
+                
+                if (coords.hasFlexParams) {
+                    displayContent += `<div><strong>${t.flex}:</strong> ${flexStatus}</div>`;
+                }
+                
+                displayContent += `<div class="weather-toggle">Cliquer pour réduire</div>`;
+                
+                weatherPanel.innerHTML = displayContent;
             } else {
-                weatherPanel.innerHTML = `
+                let displayContent = `
                     <div style="font-weight: bold;">${current.temperature.toFixed(1)}°C | ${coords.ang}°</div>
-                    <div style="font-size: 10px; color: #666;">${weatherDesc} | Flex: ${flexStatus}</div>
-                    <div class="weather-toggle">Cliquer pour détails</div>
-                `;
+                    <div style="font-size: 10px; color: #666;">${weatherDesc}`;
+                
+                if (coords.hasFlexParams) {
+                    displayContent += ` | Flex: ${flexStatus}`;
+                }
+                
+                displayContent += `</div><div class="weather-toggle">Cliquer pour détails</div>`;
+                
+                weatherPanel.innerHTML = displayContent;
             }
         }
 
