@@ -388,18 +388,11 @@
             console.log("Lignes de référence PivotFlex tracées: origine->flex (pointillés), flex->pivot (continu), zéro->pivot (continu)");
         } 
 
-        // FONCTION POUR DESSINER LE POLYGONE PIVOTFLEX - CORRIGÉE
-        function drawFlexPolygon(color) {
-            console.log("Dessin du polygone PivotFlex avec couleur:", color);
+        // FONCTION POUR DESSINER UN POLYGONE SIMPLE
+        function drawPolygon(pointList, color) {
+            console.log("Dessin du polygone avec couleur:", color);
             
-            // CORRECTION : Ordre cohérent autour du polygone
-            const polygon = L.polygon([
-                points.origine,
-                points.zero,
-                points.pivot,  // CORRECTION : pivot avant flex
-                points.flex,   // CORRECTION : flex après pivot
-                points.origine
-            ], {
+            const polygon = L.polygon(pointList, {
                 color: 'transparent',
                 fillColor: color,
                 fillOpacity: 0.6,
@@ -450,31 +443,50 @@
             }).addTo(map);
         }
 
-        // GESTION DES ZONES PIVOTFLEX - VERSION CORRIGÉE
+        // GESTION DES ZONES PIVOTFLEX - NOUVELLE LOGIQUE SIMPLIFIÉE
         function handlePivotFlexZones() {
             console.log("Gestion des zones PivotFlex - sens:", coords.sens, "PivCirc:", coords.PivCirc);
             
-            // CORRECTION SIMPLIFIÉE : En mode PivotFlex, on remplit le polygone avec la couleur appropriée
-            let zoneColor = 'lightblue'; // Par défaut irrigué
+            // DÉFINITION DES DEUX POLYGONES
+            const polygone1 = [points.origine, points.zero, points.pivot, points.flex, points.origine];
+            const polygone2 = [points.origine, points.pivot, points.maxAngle, points.origine];
+            
+            let polygone1Color, polygone2Color;
             
             if (coords.sens === 0) {
                 // Arrêt - tout irrigué
-                zoneColor = 'lightblue';
+                polygone1Color = 'lightblue';
+                polygone2Color = 'lightblue';
             } else if (coords.sens === 1) {
                 // Sens horaire
-                zoneColor = (coords.PivCirc === 0) ? 'lightblue' : '#fff941';
+                if (coords.PivCirc === 0) {
+                    polygone1Color = 'lightblue';  // irrigué
+                    polygone2Color = '#fff941';    // à irriguer
+                } else {
+                    polygone1Color = '#fff941';    // à irriguer  
+                    polygone2Color = 'lightblue';  // irrigué
+                }
             } else if (coords.sens === 2) {
-                // Sens anti-horaire  
-                zoneColor = (coords.PivCirc === 0) ? '#fff941' : 'lightblue';
+                // Sens anti-horaire
+                if (coords.PivCirc === 0) {
+                    polygone1Color = '#fff941';    // à irriguer
+                    polygone2Color = 'lightblue';  // irrigué
+                } else {
+                    polygone1Color = 'lightblue';  // irrigué
+                    polygone2Color = '#fff941';    // à irriguer
+                }
             }
             
-            console.log("Couleur du polygone PivotFlex:", zoneColor);
-            drawFlexPolygon(zoneColor);
+            console.log("Couleurs - Polygone1:", polygone1Color, "Polygone2:", polygone2Color);
+            
+            // DESSIN DES POLYGONES
+            drawPolygon(polygone1, polygone1Color);
+            drawPolygon(polygone2, polygone2Color);
         }
 
-        // Gestion des différents scénarios - CORRECTION COMPLÈTE
+        // Gestion des différents scénarios
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ
+            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ - NOUVELLE APPROCHE
             console.log("=== MODE PIVOTFLEX ACTIVÉ ===");
             handlePivotFlexZones();
             
