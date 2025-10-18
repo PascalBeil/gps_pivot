@@ -352,9 +352,17 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // CORRECTION : Lignes de référence bleues - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
+        // SEGMENTS DE RÉFÉRENCE - TOUJOURS VISIBLES
+        // Segment origine -> zéro (bleu continu)
+        L.polyline([points.origine, points.zero], { 
+            color: 'blue',
+            weight: 2,
+            opacity: 0.8
+        }).addTo(map).bindPopup('Segment Origine à Zéro');
+
+        // CORRECTION : Lignes de référence PivotFlex - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // Segment 1 - ORIGINE -> FLEX (pointillés bleus)
+            // Segment origine -> flex (pointillés bleus)
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
                 dashArray: '5, 5',
@@ -362,7 +370,7 @@
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
-            // Segment 2 - FLEX -> PIVOT (continu bleu)
+            // Segment flex -> pivot (continu bleu)
             L.polyline([points.flex, points.pivot], { 
                 color: 'blue',
                 weight: 2,
