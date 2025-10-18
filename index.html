@@ -378,14 +378,21 @@
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // Segment zéro -> pivot (continu bleu) pour fermer le polygone
+            // Segment zéro -> pivot (continu bleu)
             L.polyline([points.zero, points.pivot], { 
                 color: 'blue',
                 weight: 2,
                 opacity: 0.8
             }).addTo(map).bindPopup('Segment Zéro à Pivot');
             
-            console.log("Lignes de référence PivotFlex tracées: origine->flex (pointillés), flex->pivot (continu), zéro->pivot (continu)");
+            // Segment pivot -> maxAngle (continu bleu) - NOUVEAU
+            L.polyline([points.pivot, points.maxAngle], { 
+                color: 'blue',
+                weight: 2,
+                opacity: 0.8
+            }).addTo(map).bindPopup('Segment Pivot à MaxAngle');
+            
+            console.log("Lignes de référence PivotFlex tracées");
         } 
 
         // FONCTION POUR DESSINER UN POLYGONE SIMPLE
@@ -443,13 +450,13 @@
             }).addTo(map);
         }
 
-        // GESTION DES ZONES PIVOTFLEX - NOUVELLE LOGIQUE SIMPLIFIÉE
+        // GESTION DES ZONES PIVOTFLEX - CORRECTION AVEC DEUX POLYGONES DISTINCTS
         function handlePivotFlexZones() {
             console.log("Gestion des zones PivotFlex - sens:", coords.sens, "PivCirc:", coords.PivCirc);
             
-            // DÉFINITION DES DEUX POLYGONES
+            // DÉFINITION DES DEUX POLYGONES DISTINCTS
             const polygone1 = [points.origine, points.zero, points.pivot, points.flex, points.origine];
-            const polygone2 = [points.origine, points.pivot, points.maxAngle, points.origine];
+            const polygone2 = [points.origine, points.flex, points.pivot, points.maxAngle, points.origine];
             
             let polygone1Color, polygone2Color;
             
@@ -486,7 +493,7 @@
 
         // Gestion des différents scénarios
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ - NOUVELLE APPROCHE
+            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ - DEUX POLYGONES DISTINCTS
             console.log("=== MODE PIVOTFLEX ACTIVÉ ===");
             handlePivotFlexZones();
             
