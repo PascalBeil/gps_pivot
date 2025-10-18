@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pivot Irrifrance</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map { 
+            height: 100vh; 
+            width: 100%;
+        }
+        #weather-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            max-width: 180px;
+            font-size: 12px;
+            line-height: 1.3;
+            backdrop-filter: blur(3px);
+            border: 1px solid #ddd;
+        }
+        .weather-compact {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .weather-expanded {
+            max-width: 220px;
+        }
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 8px;
+            border-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            max-width: 150px;
+            font-size: 11px;
+            border: 1px solid #ddd;
+        }
+        .legend.collapsed {
+            width: auto;
+            padding: 4px 8px;
+        }
+        .legend-header {
+            font-weight: bold;
+            margin-bottom: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .legend-content {
+            max-height: 200px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .legend.collapsed .legend-content {
+            max-height: 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 3px 0;
+        }
+        .legend-color {
+            width: 12px;
+            height: 8px;
+            margin-right: 6px;
+            border: 1px solid #666;
+            flex-shrink: 0;
+        }
+        .toggle-icon {
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        .compact-view {
+            display: block;
+            font-size: 10px;
+            color: #666;
+        }
+        .legend:not(.collapsed) .compact-view {
+            display: none;
+        }
+        .weather-toggle {
+            cursor: pointer;
+            font-size: 10px;
+            color: #0066cc;
+            text-align: right;
+            margin-top: 4px;
+        }
+        /* Style personnalisé pour le marqueur pivot - VIOLET */
+        .pivot-marker {
+            background-color: #8A2BE2; /* Violet */
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        /* Style pour l'icône du point de départ */
+        .pivot-icon {
+            background: transparent;
+            border: none;
+        }
+        /* Style pour le point de flexion */
+        .flex-marker {
+            background-color: #FF6B00; /* Orange */
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="weather-panel" class="weather-compact">Chargement...</div>
+    <div class="legend collapsed" id="legend">
+        <div class="legend-header">
+            <span>Légende</span>
+            <span class="toggle-icon">+</span>
+        </div>
+        <div class="legend-content">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: lightblue;"></div>
+                <span>Zone irriguée</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #fff941;"></div>
+                <span>Zone à irriguer</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: red;"></div>
+                <span>Direction max</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: blue;"></div>
+                <span>Lignes référence</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #8A2BE2;"></div>
+                <span>Dernière tour</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF6B00;"></div>
+                <span>Point de flexion</span>
+            </div>
+        </div>
+        <div class="compact-view">Légende (cliquer pour développer)</div>
+    </div>
+    
+    <script>
+        // Fonction pour récupérer les paramètres d'URL - MAINTENANT 15 PARAMÈTRES
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            const values = params.get('p')?.split(',').map(Number);
+
+            // Attendre 15 paramètres maintenant
+            return values && values.length === 15 ? {
+                LatOri: values[0],
+                LonOri: values[1],
+                LatZero: values[2],
+                LonZero: values[3],
+                LatMaxAngle: values[4],
+                LonMaxAngle: values[5],
+                LatPiv: values[6],
+                LonPiv: values[7],
+                PivCirc: values[8],
+                sens: values[9],
+                lang: values[10],
+                ang: values[11],
+                flexActive: values[12],  // Toujours présent
+                LatFlex: values[13],     // Toujours présent
+                LonFlex: values[14]      // Toujours présent
+            } : null;
+        }
+
+        const coords = getQueryParams();
+        
+        if (!coords) {
+            document.body.innerHTML = '<div style="padding: 20px; text-align: center;">Erreur : Paramètres manquants</div>';
+            throw new Error("Paramètres manquants");
+        }
+
+        // Initialisation de la carte
+        const map = L.map('map', { 
+            minZoom: 0, 
+            maxZoom: 22 
+        }).setView([coords.LatOri, coords.LonOri], 16);
+
+        // Couches de carte
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics',
+            maxZoom: 22
+        }).addTo(map);
+
+        // Définition des points géographiques
+        const points = {
+            origine: L.latLng(coords.LatOri, coords.LonOri),
+            zero: L.latLng(coords.LatZero, coords.LonZero),
+            maxAngle: L.latLng(coords.LatMaxAngle, coords.LonMaxAngle),
+            pivot: L.latLng(coords.LatPiv, coords.LonPiv),
+            flex: L.latLng(coords.LatFlex, coords.LonFlex)
+        };
+
+        // Création de l'icône personnalisée pour le point de départ (base64)
+        const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
+            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="14" fill="#4A90E2" stroke="#FFFFFF" stroke-width="2"/>
+                <circle cx="16" cy="16" r="6" fill="#FFFFFF"/>
+                <path d="M16 6 L16 26 M6 16 L26 16" stroke="#FFFFFF" stroke-width="2"/>
+                <path d="M16 6 L12 10 M16 6 L20 10" stroke="#FFFFFF" stroke-width="2"/>
+            </svg>
+        `)}`;
+
+        const startPointIcon = L.divIcon({
+            className: 'pivot-icon',
+            html: `<img src="${pivotIconSVG}" width="24" height="24" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        // Marqueur pour le point de départ (origine)
+        L.marker(points.origine, { icon: startPointIcon })
+            .addTo(map)
+            .bindPopup('Point de départ du pivot');
+
+        // Marqueur pour la dernière tour (pivot) - VIOLET
+        const pivotIcon = L.divIcon({
+            className: 'pivot-marker',
+            html: '',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        L.marker(points.pivot, { icon: pivotIcon })
+            .addTo(map)
+            .bindPopup('Dernière tour du pivot');
+
+        // Marqueur pour le point de flexion - ORANGE (uniquement si actif)
+        if (coords.flexActive === 1) {
+            const flexIcon = L.divIcon({
+                className: 'flex-marker',
+                html: '',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            L.marker(points.flex, { icon: flexIcon })
+                .addTo(map)
+                .bindPopup('Point de flexion du pivotflex');
+        }
+
+        // Ligne pointillée rouge si PivCirc = 0
+        if (coords.PivCirc === 0) {
+            L.polyline([points.origine, points.maxAngle], { 
+                color: 'red', 
+                dashArray: '5, 5',
+                weight: 2
+            }).addTo(map).bindPopup('Direction maximale');
+        }
+
+        // Lignes de référence bleues - ADAPTÉES AVEC PIVOTFLEX
+        if (coords.flexActive === 1) {
+            // AVEC PIVOTFLEX : Deux segments
+            L.polyline([points.zero, points.flex], { 
+                color: 'blue', 
+                dashArray: '5, 5',
+                weight: 2 
+            }).addTo(map).bindPopup('Axe de référence - Segment 1');
+            
+            L.polyline([points.flex, points.pivot], { 
+                color: 'blue',
+                weight: 2 
+            }).addTo(map).bindPopup('Axe de référence - Segment 2 (Flex)');
+        } else {
+            // SANS PIVOTFLEX : Segment unique
+            L.polyline([points.zero, points.pivot], { 
+                color: 'blue', 
+                dashArray: '5, 5',
+                weight: 2 
+            }).addTo(map).bindPopup('Axe de référence');
+        }
+
+        // Fonction pour dessiner des arcs remplis - AMÉLIORÉE POUR PIVOTFLEX
+        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
+            const toPoint = latlng => map.latLngToLayerPoint(latlng);
+            const toLatLng = point => map.layerPointToLatLng(point);
+
+            const centerPoint = toPoint(center);
+            const startPointPx = toPoint(startPoint);
+            const endPointPx = toPoint(endPoint);
+
+            const radiusStart = centerPoint.distanceTo(startPointPx);
+            const radiusEnd = centerPoint.distanceTo(endPointPx);
+
+            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
+            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+
+            let angleDiff = angleEnd - angleStart;
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+            const arcPoints = [center];
+            const numPoints = 100;
+
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = angleStart + (angleDiff * (i / numPoints));
+                const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
+                
+                const pointPx = L.point({
+                    x: centerPoint.x + radius * Math.cos(angle),
+                    y: centerPoint.y + radius * Math.sin(angle)
+                });
+
+                arcPoints.push(toLatLng(pointPx));
+            }
+
+            return L.polygon(arcPoints, {
+                color: color,
+                fillColor: color,
+                fillOpacity: opacity,
+                weight: 1
+            }).addTo(map);
+        }
+
+        // Gestion des différents scénarios d'arcs - ADAPTÉE POUR PIVOTFLEX
+        if (coords.flexActive === 1) {
+            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ
+            if (coords.sens === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+            } else if (coords.sens === 1 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5);
+            } else if (coords.sens === 2 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.5);
+            } else if (coords.sens === 1 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+                drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5);
+                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
+            } else if (coords.sens === 2 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+                drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.5);
+                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
+            }
+        } else {
+            // LOGIQUE SANS PIVOTFLEX (ORIGINALE)
+            if (coords.sens === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+            } else if (coords.sens === 1 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.5);
+            } else if (coords.sens === 2 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.5);
+            } else if (coords.sens === 1 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
+                drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.5);
+                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
+            } else if (coords.sens === 2 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
+                drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.5);
+                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
+            }
+        }
+
+        // Ajustement de la vue de la carte - AMÉLIORÉ POUR INCLURE LE POINT DE FLEXION
+        const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
+        if (coords.flexActive === 1) {
+            boundsPoints.push(points.flex);
+        }
+        
+        const bounds = L.latLngBounds(boundsPoints);
+        map.fitBounds(bounds, { padding: [30, 30] });
+        
+        setTimeout(() => {
+            if (map.getZoom() > 16) {
+                map.setZoom(16);
+            }
+        }, 500);
+
+        // Gestion de la légende repliable
+        const legend = document.getElementById('legend');
+        const legendHeader = legend.querySelector('.legend-header');
+        const legendContent = legend.querySelector('.legend-content');
+        const toggleIcon = legend.querySelector('.toggle-icon');
+
+        legendHeader.addEventListener('click', function() {
+            const isCollapsed = legend.classList.toggle('collapsed');
+            toggleIcon.textContent = isCollapsed ? '+' : '−';
+        });
+
+        // Gestion du panneau météo repliable
+        const weatherPanel = document.getElementById('weather-panel');
+        let isWeatherExpanded = false;
+
+        weatherPanel.addEventListener('click', function() {
+            isWeatherExpanded = !isWeatherExpanded;
+            weatherPanel.classList.toggle('weather-expanded', isWeatherExpanded);
+            updateWeatherDisplay();
+        });
+
+        // Gestion de la météo
+        async function fetchWeather(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Erreur réseau');
+                const data = await response.json();
+                displayWeather(data);
+            } catch (error) {
+                console.error('Erreur météo:', error);
+                weatherPanel.textContent = 'Météo non disponible';
+            }
+        }
+
+        function displayWeather(data) {
+            const current = data.current_weather;
+            window.weatherData = {
+                temperature: current.temperature,
+                weatherCode: current.weathercode,
+                time: new Date()
+            };
+            updateWeatherDisplay();
+        }
+
+        function updateWeatherDisplay() {
+            if (!window.weatherData) return;
+
+            const current = window.weatherData;
+            const now = new Date();
+            const date = now.toLocaleDateString('fr-FR');
+            const heure = now.toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+
+            const templates = {
+                0: { // Français
+                    temp: 'Temp', angle: 'Angle', flex: 'PivotFlex'
+                },
+                1: { // Anglais
+                    temp: 'Temp', angle: 'Angle', flex: 'PivotFlex'
+                },
+                2: { // Espagnol
+                    temp: 'Temp', angle: 'Ángulo', flex: 'PivotFlex'
+                },
+                3: { // Portugais
+                    temp: 'Temp', angle: 'Ângulo', flex: 'PivotFlex'
+                },
+                4: { // Allemand
+                    temp: 'Temp', angle: 'Winkel', flex: 'PivotFlex'
+                },
+                5: { // Néerlandais
+                    temp: 'Temp', angle: 'Hoek', flex: 'PivotFlex'
+                },
+                6: { // Italien
+                    temp: 'Temp', angle: 'Angolo', flex: 'PivotFlex'
+                }
+            };
+
+            const t = templates[coords.lang] || templates[0];
+            const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
+            const flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
+
+            if (isWeatherExpanded) {
+                weatherPanel.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>
+                    <div><strong>Date:</strong> ${date}</div>
+                    <div><strong>Heure:</strong> ${heure}</div>
+                    <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
+                    <div><strong>Météo:</strong> ${weatherDesc}</div>
+                    <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
+                    <div><strong>${t.flex}:</strong> ${flexStatus}</div>
+                    <div class="weather-toggle">Cliquer pour réduire</div>
+                `;
+            } else {
+                weatherPanel.innerHTML = `
+                    <div style="font-weight: bold;">${current.temperature.toFixed(1)}°C | ${coords.ang}°</div>
+                    <div style="font-size: 10px; color: #666;">${weatherDesc} | Flex: ${flexStatus}</div>
+                    <div class="weather-toggle">Cliquer pour détails</div>
+                `;
+            }
+        }
+
+        // Fonction de description météo multilingue
+        function getWeatherDescription(code, lang) {
+            const descriptions = {
+                0: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
+                1: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
+                2: ['Nuageux', 'Cloudy', 'Nublado', 'Nublado', 'Bewölkt', 'Bewolkt', 'Nuvoloso'],
+                3: ['Couvert', 'Overcast', 'Cubierto', 'Encoberto', 'Bedeckt', 'Bewolkt', 'Coperto'],
+                45: ['Brouillard', 'Fog', 'Niebla', 'Nevoeiro', 'Nebel', 'Mist', 'Nebbia'],
+                48: ['Brouillard', 'Fog', 'Niebla', 'Nevoeiro', 'Nebel', 'Mist', 'Nebbia'],
+                51: ['Bruine', 'Drizzle', 'Llovizna', 'Chuvisco', 'Niesel', 'Motregen', 'Pioggerella'],
+                53: ['Bruine', 'Drizzle', 'Llovizna', 'Chuvisco', 'Niesel', 'Motregen', 'Pioggerella'],
+                55: ['Bruine', 'Drizzle', 'Llovizna', 'Chuvisco', 'Niesel', 'Motregen', 'Pioggerella'],
+                61: ['Pluie', 'Rain', 'Lluvia', 'Chuva', 'Regen', 'Regen', 'Pioggia'],
+                63: ['Pluie', 'Rain', 'Lluvia', 'Chuva', 'Regen', 'Regen', 'Pioggia'],
+                65: ['Pluie', 'Rain', 'Lluvia', 'Chuva', 'Regen', 'Regen', 'Pioggia'],
+                71: ['Neige', 'Snow', 'Nieve', 'Neve', 'Schnee', 'Sneeuw', 'Neve'],
+                73: ['Neige', 'Snow', 'Nieve', 'Neve', 'Schnee', 'Sneeuw', 'Neve'],
+                75: ['Neige', 'Snow', 'Nieve', 'Neve', 'Schnee', 'Sneeuw', 'Neve'],
+                95: ['Orage', 'Storm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
+            };
+
+            return descriptions[code]?.[lang] || descriptions[code]?.[0] || 'Inconnu';
+        }
+
+        // Chargement des données météo
+        fetchWeather(coords.LatOri, coords.LonOri);
+        
+        // Mise à jour périodique de l'heure
+        setInterval(() => {
+            if (window.weatherData) {
+                window.weatherData.time = new Date();
+                updateWeatherDisplay();
+            }
+        }, 60000);
+    </script>
+</body>
+</html>
