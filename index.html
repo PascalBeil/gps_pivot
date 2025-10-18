@@ -349,7 +349,7 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // Lignes de référence bleues - ADAPTÉES AVEC PIVOTFLEX
+        // CORRECTION : Lignes de référence bleues - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
         if (coords.hasFlexParams && coords.flexActive === 1) {
             // AVEC PIVOTFLEX : Deux segments
             L.polyline([points.zero, points.flex], { 
@@ -362,14 +362,8 @@
                 color: 'blue',
                 weight: 2 
             }).addTo(map).bindPopup('Axe de référence - Segment 2 (Flex)');
-        } else {
-            // SANS PIVOTFLEX : Segment unique
-            L.polyline([points.zero, points.pivot], { 
-                color: 'blue', 
-                dashArray: '5, 5',
-                weight: 2 
-            }).addTo(map).bindPopup('Axe de référence');
-        }
+        } 
+        // PAS DE LIGNE DE RÉFÉRENCE QUAND PIVOTFLEX EST DÉSACTIVÉ
 
         // Fonction pour dessiner des arcs remplis - AMÉLIORÉE POUR PIVOTFLEX
         function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
