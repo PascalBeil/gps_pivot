@@ -372,7 +372,7 @@
             console.log("Lignes de référence PivotFlex tracées: origine->flex (pointillés) et flex->pivot (continu)");
         } 
 
-        // FONCTION SIMPLE POUR DESSINER UN POLYGONE PIVOTFLEX
+        // FONCTION SIMPLE POUR DESSINER LE POLYGONE PIVOTFLEX
         function drawFlexPolygon(color) {
             console.log("Dessin du polygone PivotFlex avec couleur:", color);
             
@@ -384,16 +384,16 @@
                 points.pivot,
                 points.origine
             ], {
-                color: 'blue',
+                color: 'transparent',
                 fillColor: color,
                 fillOpacity: 0.6,
-                weight: 1
-            }).addTo(map).bindPopup('Zone PivotFlex');
+                weight: 0
+            }).addTo(map);
             
             return polygon;
         }
 
-        // FONCTION POUR DESSINER UN SECTEUR CIRCULAIRE
+        // FONCTION POUR DESSINER UN SECTEUR CIRCULAIRE (uniquement pour mode sans PivotFlex)
         function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 1) {
             const toPoint = latlng => map.latLngToLayerPoint(latlng);
             const toLatLng = point => map.layerPointToLatLng(point);
@@ -434,43 +434,41 @@
             }).addTo(map);
         }
 
-        // GESTION DES ZONES PIVOTFLEX - VERSION CORRECTE
+        // GESTION DES ZONES PIVOTFLEX - VERSION SIMPLIFIÉE
         function handlePivotFlexZones() {
             console.log("Gestion des zones PivotFlex - sens:", coords.sens, "PivCirc:", coords.PivCirc);
             
-            // TOUJOURS dessiner le polygone principal PivotFlex
+            // EN MODE PIVOTFLEX, ON REMPLIT UNIQUEMENT LE POLYGONE
+            // La logique des couleurs dépend du sens et de PivCirc
+            
             if (coords.sens === 0) {
-                // Arrêt - seulement le polygone PivotFlex en bleu
+                // Arrêt - polygone en bleu (irrigué)
                 drawFlexPolygon('lightblue');
-            } else if (coords.sens === 1 && coords.PivCirc === 0) {
-                // Sens horaire, pas de cercle complet
-                drawFlexPolygon('lightblue');
-                drawFilledArc(points.origine, points.pivot, points.maxAngle, '#fff941', 0.5);
-            } else if (coords.sens === 2 && coords.PivCirc === 0) {
-                // Sens anti-horaire, pas de cercle complet  
-                drawFlexPolygon('#fff941');
-                drawFilledArc(points.origine, points.pivot, points.maxAngle, 'lightblue', 0.5);
-            } else if (coords.sens === 1 && coords.PivCirc === 1) {
-                // Sens horaire, cercle complet
-                drawFlexPolygon('#fff941');
-                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.5);
-                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
-            } else if (coords.sens === 2 && coords.PivCirc === 1) {
-                // Sens anti-horaire, cercle complet
-                drawFlexPolygon('lightblue');
-                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.5);
-                drawFilledArc(points.origine, points.zero, points.maxAngle, 'red', 0.4);
+            } else if (coords.sens === 1) {
+                // Sens horaire
+                if (coords.PivCirc === 0) {
+                    drawFlexPolygon('lightblue'); // Zone irriguée
+                } else {
+                    drawFlexPolygon('#fff941'); // Zone à irriguer
+                }
+            } else if (coords.sens === 2) {
+                // Sens anti-horaire  
+                if (coords.PivCirc === 0) {
+                    drawFlexPolygon('#fff941'); // Zone à irriguer
+                } else {
+                    drawFlexPolygon('lightblue'); // Zone irriguée
+                }
             }
         }
 
         // Gestion des différents scénarios
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ
-            console.log("Mode PivotFlex activé");
+            // LOGIQUE AVEC PIVOTFLEX ACTIVÉ - UNIQUEMENT LE POLYGONE
+            console.log("Mode PivotFlex activé - Remplissage du polygone uniquement");
             handlePivotFlexZones();
             
         } else {
-            // LOGIQUE SANS PIVOTFLEX (ORIGINALE)
+            // LOGIQUE SANS PIVOTFLEX (ORIGINALE) - ARCS CIRCULAIRES
             console.log("Dessin des zones sans PivotFlex - Méthode arcs");
             
             if (coords.sens === 0) {
