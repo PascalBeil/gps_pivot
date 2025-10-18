@@ -353,19 +353,20 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // Lignes de référence bleues - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
+        // CORRECTION : Lignes de référence bleues - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // AVEC PIVOTFLEX : Deux segments
+            // CORRECTION : La ligne bleue discontinue doit partir du point ZERO jusqu'au point FLEX
             L.polyline([points.zero, points.flex], { 
                 color: 'blue', 
                 dashArray: '5, 5',
                 weight: 2 
-            }).addTo(map).bindPopup('Axe de référence - Segment 1');
+            }).addTo(map).bindPopup('Axe de référence - Segment Zero à Flex');
             
+            // La deuxième partie (flex à pivot) reste en trait continu
             L.polyline([points.flex, points.pivot], { 
                 color: 'blue',
                 weight: 2 
-            }).addTo(map).bindPopup('Axe de référence - Segment 2 (Flex)');
+            }).addTo(map).bindPopup('Axe de référence - Segment Flex à Pivot');
         } 
         // PAS DE LIGNE DE RÉFÉRENCE QUAND PIVOTFLEX EST DÉSACTIVÉ
 
