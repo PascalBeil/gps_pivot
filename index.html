@@ -413,57 +413,60 @@
             }).addTo(map);
         }
 
-        // FONCTION POUR DESSINER LA ZONE PIVOTFLEX COMPLÈTE
-        function drawCompleteFlexZone(zeroToPivotColor, pivotToMaxColor) {
-            console.log("Dessin de la zone PivotFlex complète");
+        // FONCTION POUR DESSINER LE POLYGONE PIVOTFLEX
+        function drawFlexPolygon(color) {
+            console.log("Dessin du polygone PivotFlex avec couleur:", color);
             
-            // 1. TOUJOURS dessiner l'arc entre zéro et pivot (comme en mode normal)
-            drawFilledArc(points.origine, points.zero, points.pivot, zeroToPivotColor, 0.6);
-            
-            // 2. Si nécessaire, dessiner la zone entre pivot et maxAngle
-            if (pivotToMaxColor) {
-                drawFilledArc(points.origine, points.pivot, points.maxAngle, pivotToMaxColor, 0.6);
-            }
-            
-            // 3. Remplir l'espace entre l'arc et les segments flex avec un polygone
-            const flexPolygon = L.polygon([
+            // Le vrai polygone : origine -> zéro -> flex -> pivot -> origine
+            const polygon = L.polygon([
                 points.origine,
                 points.zero,
+                points.flex, 
                 points.pivot,
-                points.flex,
                 points.origine
             ], {
                 color: 'transparent',
-                fillColor: zeroToPivotColor,
+                fillColor: color,
                 fillOpacity: 0.6,
                 weight: 0
             }).addTo(map);
+            
+            return polygon;
         }
 
-        // GESTION DES ZONES PIVOTFLEX - VERSION CORRECTE
+        // GESTION DES ZONES PIVOTFLEX
         function handlePivotFlexZones() {
             console.log("Gestion des zones PivotFlex - sens:", coords.sens, "PivCirc:", coords.PivCirc);
             
             if (coords.sens === 0) {
                 // Arrêt - zone entre zéro et pivot en bleu
-                drawCompleteFlexZone('lightblue', null);
+                drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.6);
+                drawFlexPolygon('lightblue');
             } else if (coords.sens === 1) {
                 // Sens horaire
                 if (coords.PivCirc === 0) {
                     // Pas de cercle complet : zone irriguée entre zéro et pivot, zone à irriguer entre pivot et maxAngle
-                    drawCompleteFlexZone('lightblue', '#fff941');
+                    drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.6);
+                    drawFilledArc(points.origine, points.pivot, points.maxAngle, '#fff941', 0.6);
+                    drawFlexPolygon('lightblue');
                 } else {
                     // Cercle complet : zone à irriguer entre zéro et pivot, zone irriguée entre pivot et maxAngle
-                    drawCompleteFlexZone('#fff941', 'lightblue');
+                    drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
+                    drawFilledArc(points.origine, points.pivot, points.maxAngle, 'lightblue', 0.6);
+                    drawFlexPolygon('#fff941');
                 }
             } else if (coords.sens === 2) {
                 // Sens anti-horaire  
                 if (coords.PivCirc === 0) {
                     // Pas de cercle complet : zone à irriguer entre zéro et pivot, zone irriguée entre pivot et maxAngle
-                    drawCompleteFlexZone('#fff941', 'lightblue');
+                    drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
+                    drawFilledArc(points.origine, points.pivot, points.maxAngle, 'lightblue', 0.6);
+                    drawFlexPolygon('#fff941');
                 } else {
                     // Cercle complet : zone irriguée entre zéro et pivot, zone à irriguer entre pivot et maxAngle
-                    drawCompleteFlexZone('lightblue', '#fff941');
+                    drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.6);
+                    drawFilledArc(points.origine, points.pivot, points.maxAngle, '#fff941', 0.6);
+                    drawFlexPolygon('lightblue');
                 }
             }
         }
