@@ -353,25 +353,23 @@
         }
 
         // CORRECTION : Lignes de référence bleues - UNIQUEMENT SI PIVOTFLEX EST ACTIVÉ
-        // Ces lignes doivent uniquement relier zero->flex et flex->pivot
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // Ligne bleue discontinue : ZERO -> FLEX
-            L.polyline([points.zero, points.flex], { 
+            // CORRECTION : Segment 1 - ORIGINE -> FLEX (pointillés bleus)
+            L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
                 dashArray: '5, 5',
                 weight: 2,
                 opacity: 0.8
-            }).addTo(map).bindPopup('Axe de référence - Segment Zero à Flex');
+            }).addTo(map).bindPopup('Segment Origine à Flex');
             
-            // Ligne bleue continue : FLEX -> PIVOT
+            // Segment 2 - FLEX -> PIVOT (continu bleu)
             L.polyline([points.flex, points.pivot], { 
                 color: 'blue',
                 weight: 2,
                 opacity: 0.8
-            }).addTo(map).bindPopup('Axe de référence - Segment Flex à Pivot');
+            }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // IMPORTANT : NE PAS tracer de ligne entre FLEX et ORIGINE
-            console.log("Lignes de référence PivotFlex tracées: zero->flex (pointillés) et flex->pivot (continu)");
+            console.log("Lignes de référence PivotFlex tracées: origine->flex (pointillés) et flex->pivot (continu)");
         } 
 
         // Fonction pour dessiner des arcs remplis
@@ -416,7 +414,7 @@
             }).addTo(map);
         }
 
-        // Gestion des différents scénarios d'arcs - SIMPLIFIÉE
+        // Gestion des différents scénarios d'arcs
         if (coords.hasFlexParams && coords.flexActive === 1) {
             // LOGIQUE AVEC PIVOTFLEX ACTIVÉ
             console.log("Dessin des arcs avec PivotFlex activé");
