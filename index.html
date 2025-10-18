@@ -387,16 +387,16 @@
             console.log("Lignes de référence PivotFlex tracées: origine->flex (pointillés), flex->pivot (continu), zéro->pivot (continu)");
         } 
 
-        // FONCTION POUR DESSINER LE POLYGONE PIVOTFLEX
+        // FONCTION POUR DESSINER LE POLYGONE PIVOTFLEX - CORRIGÉE
         function drawFlexPolygon(color) {
             console.log("Dessin du polygone PivotFlex avec couleur:", color);
             
-            // Le vrai polygone : origine -> zéro -> flex -> pivot -> origine
+            // CORRECTION : Ordre cohérent autour du polygone
             const polygon = L.polygon([
                 points.origine,
                 points.zero,
-                points.flex, 
-                points.pivot,
+                points.pivot,  // CORRECTION : pivot avant flex
+                points.flex,   // CORRECTION : flex après pivot
                 points.origine
             ], {
                 color: 'transparent',
