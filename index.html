@@ -134,43 +134,10 @@
             text-align: center;
             max-width: 400px;
         }
-        .map-selector {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 6px 10px;
-            border-radius: 6px;
-            z-index: 1000;
-            font-family: Arial, sans-serif;
-            font-size: 11px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            border: 1px solid #ddd;
-        }
-        .map-selector select {
-            margin-left: 5px;
-            padding: 2px 5px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            font-size: 11px;
-            background: white;
-        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-
-    <!-- Sélecteur simplifié pour les meilleures cartes satellites -->
-    <div class="map-selector">
-        <label for="map-style">Carte:</label>
-        <select id="map-style">
-            <option value="esri">Esri World Imagery</option>
-            <option value="google">Google Satellite (via OSM)</option>
-            <option value="arcgis">ArcGIS World Imagery</option>
-            <option value="sentinel">Sentinel-2</option>
-        </select>
-    </div>
-
     <div id="weather-panel" class="weather-compact">Chargement...</div>
     <div class="legend collapsed" id="legend">
         <div class="legend-header">
@@ -293,64 +260,18 @@
             throw new Error("Paramètres manquants ou incorrects");
         }
 
-        // Initialisation de la carte avec zoom maximum étendu
+        // Initialisation de la carte
         const map = L.map('map', { 
             minZoom: 0, 
-            maxZoom: 20  // Zoom maximum augmenté
+            maxZoom: 22 
         }).setView([coords.LatOri, coords.LonOri], 16);
 
-        // DÉFINITION DES MEILLEURES CARTES SATELLITES GRATUITES
-        const baseMaps = {
-            "Esri World Imagery": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© Esri, Maxar, Earthstar Geographics',
-                maxZoom: 20
-            }),
-            "Google Satellite (via OSM)": L.tileLayer('http://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-                attribution: '© Google',
-                maxZoom: 20
-            }),
-            "ArcGIS World Imagery": L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© ArcGIS',
-                maxZoom: 20
-            }),
-            "Sentinel-2": L.tileLayer('https://tiles.maps.eox.at/wms?service=WMS&request=GetMap&version=1.1.1&layers=s2cloudless-2021_3857&styles=&format=image%2Fjpeg&transparent=false&height=256&width=256&srs=EPSG%3A3857&bbox={bbox-epsg-3857}', {
-                attribution: '© Sentinel-2, EOX',
-                maxZoom: 20
-            })
-        };
+        // Couches de carte
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics',
+            maxZoom: 22
+        }).addTo(map);
 
-        // Ajouter la carte Esri par défaut
-        baseMaps["Esri World Imagery"].addTo(map);
-
-        // Gestion du changement de carte
-        document.getElementById('map-style').addEventListener('change', function(e) {
-            const selectedStyle = e.target.value;
-            
-            // Retirer toutes les couches de tuiles existantes
-            map.eachLayer(function(layer) {
-                if (layer instanceof L.TileLayer) {
-                    map.removeLayer(layer);
-                }
-            });
-            
-            // Ajouter la nouvelle couche sélectionnée
-            switch(selectedStyle) {
-                case 'esri':
-                    baseMaps["Esri World Imagery"].addTo(map);
-                    break;
-                case 'google':
-                    baseMaps["Google Satellite (via OSM)"].addTo(map);
-                    break;
-                case 'arcgis':
-                    baseMaps["ArcGIS World Imagery"].addTo(map);
-                    break;
-                case 'sentinel':
-                    baseMaps["Sentinel-2"].addTo(map);
-                    break;
-            }
-        });
-
-        // [Le reste du code reste identique...]
         // Définition des points géographiques
         const points = {
             origine: L.latLng(coords.LatOri, coords.LonOri),
@@ -617,8 +538,8 @@
         map.fitBounds(bounds, { padding: [30, 30] });
         
         setTimeout(() => {
-            if (map.getZoom() > 18) {
-                map.setZoom(18);
+            if (map.getZoom() > 16) {
+                map.setZoom(16);
             }
         }, 500);
 
