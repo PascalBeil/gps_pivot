@@ -134,10 +134,43 @@
             text-align: center;
             max-width: 400px;
         }
+        .map-selector {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 6px 10px;
+            border-radius: 6px;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border: 1px solid #ddd;
+        }
+        .map-selector select {
+            margin-left: 5px;
+            padding: 2px 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 11px;
+            background: white;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    
+    <!-- Sélecteur de carte -->
+    <div class="map-selector">
+        <label for="map-style">Carte:</label>
+        <select id="map-style">
+            <option value="voyager">CartoDB Voyager</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="satellite">Satellite Esri</option>
+            <option value="topo">OpenTopoMap</option>
+        </select>
+    </div>
+
     <div id="weather-panel" class="weather-compact">Chargement...</div>
     <div class="legend collapsed" id="legend">
         <div class="legend-header">
@@ -263,14 +296,59 @@
         // Initialisation de la carte
         const map = L.map('map', { 
             minZoom: 0, 
-            maxZoom: 22 
+            maxZoom: 20  // Zoom maximum augmenté
         }).setView([coords.LatOri, coords.LonOri], 16);
 
-        // Couches de carte
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri, Maxar, Earthstar Geographics',
-            maxZoom: 22
-        }).addTo(map);
+        // DÉFINITION DES CARTES - CartoDB Voyager par défaut
+        const baseMaps = {
+            "CartoDB Voyager": L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors, © CartoDB',
+                maxZoom: 20
+            }),
+            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }),
+            "Satellite Esri": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri, Maxar, Earthstar Geographics',
+                maxZoom: 19
+            }),
+            "OpenTopoMap": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors, © OpenTopoMap',
+                maxZoom: 17
+            })
+        };
+
+        // Ajouter la carte par défaut (CartoDB Voyager)
+        baseMaps["CartoDB Voyager"].addTo(map);
+
+        // Gestion du changement de carte
+        document.getElementById('map-style').addEventListener('change', function(e) {
+            const selectedStyle = e.target.value;
+            
+            // Retirer toutes les couches de tuiles existantes
+            map.eachLayer(function(layer) {
+                if (layer instanceof L.TileLayer) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Ajouter la nouvelle couche sélectionnée
+            switch(selectedStyle) {
+                case 'voyager':
+                    baseMaps["CartoDB Voyager"].addTo(map);
+                    break;
+                case 'osm':
+                    baseMaps["OpenStreetMap"].addTo(map);
+                    break;
+                case 'satellite':
+                    baseMaps["Satellite Esri"].addTo(map);
+                    break;
+                case 'topo':
+                    baseMaps["OpenTopoMap"].addTo(map);
+                    break;
+            }
+        });
 
         // Définition des points géographiques
         const points = {
