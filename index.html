@@ -157,7 +157,8 @@
         Résolution: <span id="resolution-info"></span><br>
         Zoom calculé: <span id="zoom-info"></span><br>
         DPI: <span id="dpi-info"></span><br>
-        Taille écran: <span id="screen-size-info"></span>
+        Taille écran: <span id="screen-size-info"></span><br>
+        Type: <span id="screen-type-info"></span>
     </div>
 
     <div id="weather-panel" class="weather-compact">Chargement...</div>
@@ -196,8 +197,8 @@
     </div>
     
     <script>
-        // Fonction pour estimer la taille d'écran en pouces
-        function estimateScreenSize() {
+        // Fonction pour détecter précisément les écrans 11.6" 1920x1080
+        function detectScreenType() {
             const screenWidth = window.screen.width;
             const screenHeight = window.screen.height;
             const pixelRatio = window.devicePixelRatio || 1;
@@ -206,87 +207,96 @@
             const effectiveWidth = screenWidth * pixelRatio;
             const effectiveHeight = screenHeight * pixelRatio;
             
-            // Estimation de la diagonale en pouces basée sur la densité de pixels typique
-            // Cette estimation est approximative mais fonctionne bien dans la plupart des cas
-            let estimatedDiagonal;
+            // Détection spécifique des écrans 11.6" 1920x1080
+            // Ces écrans ont typiquement une haute densité de pixels
+            const is116InchFHD = 
+                (effectiveWidth === 1920 && effectiveHeight === 1080) ||
+                (effectiveWidth === 1080 && effectiveHeight === 1920) || // orientation portrait
+                (Math.abs(effectiveWidth - 1920) < 50 && Math.abs(effectiveHeight - 1080) < 50);
             
-            if (pixelRatio >= 3) {
-                // Très haute densité (smartphones récents)
-                estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 450;
-            } else if (pixelRatio >= 2) {
-                // Haute densité (smartphones, tablettes)
-                estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 250;
-            } else if (effectiveWidth <= 1024 && effectiveHeight <= 768) {
-                // Petits écrans basse résolution
-                estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 150;
-            } else {
-                // Par défaut pour les écrans standard
-                estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 100;
-            }
+            // Estimation de la diagonale
+            const estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 
+                                   (pixelRatio >= 2 ? 200 : 100);
             
-            return Math.round(estimatedDiagonal * 10) / 10;
+            return {
+                is116InchFHD: is116InchFHD,
+                estimatedDiagonal: Math.round(estimatedDiagonal * 10) / 10,
+                effectiveWidth: effectiveWidth,
+                effectiveHeight: effectiveHeight,
+                pixelRatio: pixelRatio
+            };
         }
 
-        // Fonction pour détecter la résolution et calculer le zoom optimal
+        // Fonction pour calculer le zoom optimal
         function calculateOptimalZoom() {
+            const screenInfo = detectScreenType();
             const screenWidth = window.screen.width;
             const screenHeight = window.screen.height;
-            const pixelRatio = window.devicePixelRatio || 1;
-            const estimatedSize = estimateScreenSize();
+            const pixelRatio = screenInfo.pixelRatio;
             
-            // Calcul de la résolution effective
-            const effectiveWidth = screenWidth * pixelRatio;
-            const effectiveHeight = screenHeight * pixelRatio;
+            let deviceType, baseZoom, screenType;
             
-            // Détection du type d'appareil basé sur la taille estimée ET la résolution
-            let deviceType, baseZoom;
-            
-            if (estimatedSize <= 7) {
-                // Écrans très petits (7 pouces et moins) - ZOOM RAPPROCHÉ
-                deviceType = "Très petit écran (" + estimatedSize + " pouces)";
-                baseZoom = 19; // Zoom très rapproché pour voir les détails
-            } else if (estimatedSize <= 10) {
-                // Petits écrans (tablettes petites)
-                deviceType = "Petit écran (" + estimatedSize + " pouces)";
+            // DÉTECTION SPÉCIFIQUE POUR ÉCRAN 11.6" FHD
+            if (screenInfo.is116InchFHD) {
+                deviceType = "Écran 11.6\" FHD Optimisé";
+                screenType = "11.6\" FHD";
+                baseZoom = 18; // Zoom rapproché pour bien voir les détails du pivot
+            } else if (screenInfo.estimatedDiagonal <= 7) {
+                deviceType = "Très petit écran (" + screenInfo.estimatedDiagonal + " pouces)";
+                screenType = "≤7\"";
+                baseZoom = 19;
+            } else if (screenInfo.estimatedDiagonal <= 10) {
+                deviceType = "Petit écran (" + screenInfo.estimatedDiagonal + " pouces)";
+                screenType = "8-10\"";
                 baseZoom = 18;
-            } else if (estimatedSize <= 13) {
-                // Écrans moyens (laptops)
-                deviceType = "Écran moyen (" + estimatedSize + " pouces)";
+            } else if (screenInfo.estimatedDiagonal <= 13) {
+                deviceType = "Écran compact (" + screenInfo.estimatedDiagonal + " pouces)";
+                screenType = "11-13\"";
                 baseZoom = 17;
-            } else if (estimatedSize <= 24) {
-                // Écrans standards (moniteurs)
-                deviceType = "Écran standard (" + estimatedSize + " pouces)";
+            } else if (screenInfo.estimatedDiagonal <= 15) {
+                deviceType = "Écran standard (" + screenInfo.estimatedDiagonal + " pouces)";
+                screenType = "14-15\"";
                 baseZoom = 16;
-            } else {
-                // Grands écrans
-                deviceType = "Grand écran (" + estimatedSize + " pouces)";
+            } else if (screenInfo.estimatedDiagonal <= 24) {
+                deviceType = "Grand écran (" + screenInfo.estimatedDiagonal + " pouces)";
+                screenType = "16-24\"";
                 baseZoom = 15;
+            } else {
+                deviceType = "Très grand écran (" + screenInfo.estimatedDiagonal + " pouces)";
+                screenType = ">24\"";
+                baseZoom = 14;
             }
             
-            // Ajustement supplémentaire basé sur la densité de pixels
+            // Ajustement pour haute densité de pixels (écrans FHD sur petites diagonales)
             const densityAdjustment = Math.log2(pixelRatio);
-            let optimalZoom = Math.min(22, Math.max(15, baseZoom + Math.round(densityAdjustment)));
+            let optimalZoom = Math.min(22, Math.max(14, baseZoom + Math.round(densityAdjustment)));
             
-            // Pour les très petits écrans, on force un zoom encore plus rapproché si nécessaire
-            if (estimatedSize <= 7 && optimalZoom < 18) {
-                optimalZoom = 19;
+            // Ajustement spécial pour écran 11.6" FHD - on veut un bon compromis vue/détail
+            if (screenInfo.is116InchFHD) {
+                optimalZoom = 18; // Forcer le zoom optimal pour ce type d'écran
             }
             
             // Debug info
             if (document.getElementById('debug-panel').style.display !== 'none') {
                 document.getElementById('resolution-info').textContent = 
-                    `${screenWidth}x${screenHeight} (${effectiveWidth}x${effectiveHeight} effective)`;
+                    `${screenWidth}x${screenHeight} (${screenInfo.effectiveWidth}x${screenInfo.effectiveHeight} effective)`;
                 document.getElementById('zoom-info').textContent = 
                     `${optimalZoom} (base: ${baseZoom}, ajustement: ${densityAdjustment.toFixed(2)})`;
                 document.getElementById('dpi-info').textContent = 
                     `Ratio: ${pixelRatio}`;
                 document.getElementById('screen-size-info').textContent = 
-                    `${estimatedSize} pouces - ${deviceType}`;
+                    `${screenInfo.estimatedDiagonal} pouces`;
+                document.getElementById('screen-type-info').textContent = 
+                    `${screenType} - ${deviceType}`;
             }
             
-            console.log(`Détection écran: ${deviceType}, Taille estimée: ${estimatedSize}", Zoom optimal: ${optimalZoom}`);
+            console.log(`Détection écran: ${deviceType}, Résolution: ${screenInfo.effectiveWidth}x${screenInfo.effectiveHeight}, Zoom optimal: ${optimalZoom}`);
             
-            return optimalZoom;
+            return {
+                optimalZoom: optimalZoom,
+                screenType: screenType,
+                is116InchFHD: screenInfo.is116InchFHD
+            };
         }
 
         // Fonction pour récupérer les paramètres d'URL
@@ -371,8 +381,9 @@
             throw new Error("Paramètres manquants ou incorrects");
         }
 
-        // Calcul du zoom optimal basé sur la taille d'écran
-        const optimalZoom = calculateOptimalZoom();
+        // Calcul du zoom optimal avec détection avancée
+        const screenConfig = calculateOptimalZoom();
+        const optimalZoom = screenConfig.optimalZoom;
         
         // Initialisation de la carte avec le zoom optimal
         const map = L.map('map', { 
@@ -400,9 +411,11 @@
             points.flex = L.latLng(coords.LatFlex, coords.LonFlex);
         }
 
+        console.log("Configuration écran:", screenConfig);
         console.log("Points calculés:", points);
-        console.log("Zoom optimal calculé:", optimalZoom);
+        console.log("Zoom optimal:", optimalZoom);
 
+        // [Le reste du code reste identique pour les marqueurs, polygones, etc.]
         // Création de l'icône personnalisée pour le point de départ
         const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
             <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -602,7 +615,7 @@
             }
         }
 
-        // Ajustement fin de la vue - OPTIMISÉ POUR PETITS ÉCRANS
+        // AJUSTEMENT FINAL OPTIMISÉ POUR 11.6" FHD
         const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
         if (coords.hasFlexParams && coords.flexActive === 1) {
             boundsPoints.push(points.flex);
@@ -610,33 +623,31 @@
         
         const bounds = L.latLngBounds(boundsPoints);
         
-        // Pour les petits écrans, on utilise un padding réduit et on favorise le zoom rapproché
+        // Ajustement intelligent selon le type d'écran
         setTimeout(() => {
-            const currentZoom = map.getZoom();
-            const boundsZoom = map.getBoundsZoom(bounds, false); // false = pas de padding
+            const boundsZoom = map.getBoundsZoom(bounds, false);
+            let finalZoom, padding;
             
-            // Pour les petits écrans, on privilégie un zoom plus rapproché
-            const estimatedSize = estimateScreenSize();
-            let finalZoom;
-            
-            if (estimatedSize <= 7) {
-                // Écran de 7 pouces : zoom très rapproché, quitte à ne pas tout voir d'un coup
+            if (screenConfig.is116InchFHD) {
+                // Pour 11.6" FHD : bon compromis entre vue complète et détails
+                finalZoom = Math.min(optimalZoom, boundsZoom);
+                padding = [15, 15]; // Padding modéré
+            } else if (screenConfig.screenType === "≤7\"") {
+                // Très petits écrans : priorité au zoom rapproché
                 finalZoom = Math.max(optimalZoom, boundsZoom - 1);
-            } else if (estimatedSize <= 10) {
-                // Petits écrans : bon compromis
-                finalZoom = Math.min(optimalZoom, boundsZoom);
+                padding = [10, 10];
             } else {
-                // Écrans normaux : vue complète
+                // Autres écrans : équilibre
                 finalZoom = Math.min(optimalZoom, boundsZoom);
+                padding = [20, 20];
             }
             
-            // Application du zoom final avec un petit padding pour les petits écrans
-            const padding = estimatedSize <= 7 ? [10, 10] : [20, 20];
             map.fitBounds(bounds, { padding: padding, maxZoom: finalZoom });
             
-            console.log(`Ajustement final - Taille: ${estimatedSize}", Zoom: ${finalZoom}`);
+            console.log(`Ajustement final - Type: ${screenConfig.screenType}, Zoom: ${finalZoom}`);
         }, 200);
 
+        // [Le reste du code (légende, météo, etc.) reste identique]
         // Gestion de la légende repliable
         const legend = document.getElementById('legend');
         const legendHeader = legend.querySelector('.legend-header');
