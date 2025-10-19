@@ -134,42 +134,10 @@
             text-align: center;
             max-width: 400px;
         }
-        .map-selector {
-            position: absolute;
-            top: 50px; /* Déplacé sous le panneau météo */
-            right: 10px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 6px 10px;
-            border-radius: 6px;
-            z-index: 1000;
-            font-family: Arial, sans-serif;
-            font-size: 11px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            border: 1px solid #ddd;
-        }
-        .map-selector select {
-            margin-left: 5px;
-            padding: 2px 5px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            font-size: 11px;
-            background: white;
-        }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    
-    <!-- Sélecteur de carte -->
-    <div class="map-selector">
-        <label for="map-style">Carte:</label>
-        <select id="map-style">
-            <option value="satellite">Satellite Esri</option>
-            <option value="voyager">CartoDB Voyager</option>
-            <option value="osm">OpenStreetMap</option>
-            <option value="topo">OpenTopoMap</option>
-        </select>
-    </div>
 
     <div id="weather-panel" class="weather-compact">Chargement...</div>
     <div class="legend collapsed" id="legend">
@@ -299,56 +267,11 @@
             maxZoom: 22
         }).setView([coords.LatOri, coords.LonOri], 16);
 
-        // DÉFINITION DES CARTES - Esri World Imagery par défaut
-        const baseMaps = {
-            "Satellite Esri": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '© Esri, Maxar, Earthstar Geographics',
-                maxZoom: 22
-            }),
-            "CartoDB Voyager": L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap contributors, © CartoDB',
-                maxZoom: 20
-            }),
-            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-            }),
-            "OpenTopoMap": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors, © OpenTopoMap',
-                maxZoom: 17
-            })
-        };
-
-        // Ajouter la carte par défaut (Esri World Imagery)
-        baseMaps["Satellite Esri"].addTo(map);
-
-        // Gestion du changement de carte
-        document.getElementById('map-style').addEventListener('change', function(e) {
-            const selectedStyle = e.target.value;
-            
-            // Retirer toutes les couches de tuiles existantes
-            map.eachLayer(function(layer) {
-                if (layer instanceof L.TileLayer) {
-                    map.removeLayer(layer);
-                }
-            });
-            
-            // Ajouter la nouvelle couche sélectionnée
-            switch(selectedStyle) {
-                case 'satellite':
-                    baseMaps["Satellite Esri"].addTo(map);
-                    break;
-                case 'voyager':
-                    baseMaps["CartoDB Voyager"].addTo(map);
-                    break;
-                case 'osm':
-                    baseMaps["OpenStreetMap"].addTo(map);
-                    break;
-                case 'topo':
-                    baseMaps["OpenTopoMap"].addTo(map);
-                    break;
-            }
-        });
+        // Carte Esri World Imagery
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics',
+            maxZoom: 22
+        }).addTo(map);
 
         // Définition des points géographiques
         const points = {
