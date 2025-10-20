@@ -660,14 +660,6 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // SEGMENTS DE RÉFÉRENCE - PLUS ÉPAIS ET PLUS VISIBLES
-        L.polyline([points.origine, points.zero], { 
-            color: 'blue',
-            weight: 3, // Épaissi
-            opacity: 0.9,
-            lineCap: 'round'
-        }).addTo(map).bindPopup('Segment Origine à Zéro');
-
         // =============================================================================
         // FONCTION POUR CRÉER UN SEGMENT ARRONDI VERS L'EXTÉRIEUR
         // =============================================================================
@@ -740,38 +732,48 @@
             return curvePoints;
         }
 
-        // Lignes de référence PivotFlex - PLUS VISIBLES
+        // Lignes de référence PivotFlex - AVEC SEGMENTS ARRONDIS
         if (coords.hasFlexParams && coords.flexActive === 1) {
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
-                dashArray: '6, 6', // Plus visible
-                weight: 3, // Épaissi
+                dashArray: '6, 6',
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
             L.polyline([points.flex, points.pivot], { 
                 color: 'blue',
-                weight: 3, // Épaissi
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            L.polyline([points.zero, points.pivot], { 
+            // SEGMENT ARRONDI entre zéro et pivot
+            const roundedSegmentZeroPivot = createRoundedSegment(points.zero, points.pivot, points.origine, 15);
+            L.polyline(roundedSegmentZeroPivot, { 
                 color: 'blue',
-                weight: 3, // Épaissi
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
-            }).addTo(map).bindPopup('Segment Zéro à Pivot');
+            }).addTo(map).bindPopup('Arc arrondi Zéro à Pivot');
             
-            // SEGMENT ARRONDI entre pivot et maxAngle - POUR EFFET CIRCULAIRE
-            const roundedArc = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
-            L.polyline(roundedArc, { 
+            // SEGMENT ARRONDI entre pivot et maxAngle
+            const roundedSegmentPivotMaxAngle = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
+            L.polyline(roundedSegmentPivotMaxAngle, { 
                 color: 'blue',
-                weight: 3, // Épaissi
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Arc arrondi Pivot à MaxAngle');
+        } else {
+            // Mode pivot standard - segment zéro-pivot droit
+            L.polyline([points.origine, points.zero], { 
+                color: 'blue',
+                weight: 3,
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Origine à Zéro');
         }
 
         // =============================================================================
@@ -780,16 +782,16 @@
 
         function drawPolygon(pointList, color) {
             // BORDURES AMÉLIORÉES MAIS SUBTILES
-            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900'; // Couleurs légèrement plus foncées
-            const borderWeight = 1.5; // Épaisseur subtile - pas trop grosse !
-            const borderOpacity = 0.9; // Opacité légèrement réduite
+            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900';
+            const borderWeight = 1.5;
+            const borderOpacity = 0.9;
             
             return L.polygon(pointList, {
                 color: borderColor,
                 fillColor: color,
                 fillOpacity: 0.6,
-                weight: borderWeight, // BORDURE SUBTILE
-                opacity: borderOpacity, // BORDURE LÉGÈREMENT TRANSPARENTE
+                weight: borderWeight,
+                opacity: borderOpacity,
                 lineJoin: 'round'
             }).addTo(map);
         }
@@ -825,28 +827,27 @@
                 arcPoints.push(toLatLng(pointPx));
             }
 
-            // BORDURES AMÉLIORÉES MAIS SUBTILES POUR LES ARCS AUSSI
             const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900';
-            const borderWeight = 1.5; // Épaisseur subtile
-            const borderOpacity = 0.9; // Opacité légèrement réduite
+            const borderWeight = 1.5;
+            const borderOpacity = 0.9;
             
             return L.polygon(arcPoints, {
                 color: borderColor,
                 fillColor: color,
                 fillOpacity: opacity,
-                weight: borderWeight, // BORDURE SUBTILE
-                opacity: borderOpacity, // BORDURE LÉGÈREMENT TRANSPARENTE
+                weight: borderWeight,
+                opacity: borderOpacity,
                 lineJoin: 'round'
             }).addTo(map);
         }
 
         function handlePivotFlexZones() {
-            // Créer l'arc arrondi pour le segment pivot->maxAngle
-            const roundedArc = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
+            // Créer les arcs arrondis pour les deux segments
+            const roundedSegmentZeroPivot = createRoundedSegment(points.zero, points.pivot, points.origine, 15);
+            const roundedSegmentPivotMaxAngle = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
             
-            const polygone1 = [points.origine, points.zero, points.pivot, points.flex, points.origine];
-            // Utiliser l'arc arrondi dans le polygone2 au lieu du segment droit
-            const polygone2 = [points.origine, points.flex, ...roundedArc, points.origine];
+            const polygone1 = [points.origine, ...roundedSegmentZeroPivot, points.flex, points.origine];
+            const polygone2 = [points.origine, points.flex, ...roundedSegmentPivotMaxAngle, points.origine];
             
             let polygone1Color, polygone2Color;
             
