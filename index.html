@@ -103,8 +103,8 @@
             background-color: #8A2BE2; /* Violet */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         /* Style pour l'icône du point de départ */
@@ -737,14 +737,14 @@
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
                 dashArray: '6, 6',
-                weight: 4,
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
             L.polyline([points.flex, points.pivot], { 
                 color: 'blue',
-                weight: 4,
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
@@ -753,7 +753,7 @@
             const roundedSegmentZeroPivot = createRoundedSegment(points.zero, points.pivot, points.origine, 15);
             L.polyline(roundedSegmentZeroPivot, { 
                 color: 'blue',
-                weight: 4,
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Arc arrondi Zéro à Pivot');
@@ -762,7 +762,7 @@
             const roundedSegmentPivotMaxAngle = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
             L.polyline(roundedSegmentPivotMaxAngle, { 
                 color: 'blue',
-                weight: 4,
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Arc arrondi Pivot à MaxAngle');
@@ -770,7 +770,7 @@
             // Mode pivot standard - segment zéro-pivot droit
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
-                weight: 4,
+                weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
@@ -782,21 +782,21 @@
 
         function drawPolygon(pointList, color) {
             // BORDURES AMÉLIORÉES MAIS SUBTILES
-            const borderColor = color === 'blue' ? '#0066cc' : '#cc9900';
-            const borderWeight = 4.0;
+            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900';
+            const borderWeight = 1.5;
             const borderOpacity = 0.9;
             
             return L.polygon(pointList, {
                 color: borderColor,
                 fillColor: color,
-                fillOpacity: 0.9,
+                fillOpacity: 0.6,
                 weight: borderWeight,
                 opacity: borderOpacity,
                 lineJoin: 'round'
             }).addTo(map);
         }
 
-        function drawFilledArc(center, startPoint, endPoint, color = 'blue', opacity = 0.9) {
+        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 0.6) {
             const toPoint = latlng => map.latLngToLayerPoint(latlng);
             const toLatLng = point => map.layerPointToLatLng(point);
 
@@ -827,8 +827,8 @@
                 arcPoints.push(toLatLng(pointPx));
             }
 
-            const borderColor = color === 'blue' ? '#0066cc' : '#cc9900';
-            const borderWeight = 4.0;
+            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900';
+            const borderWeight = 1.5;
             const borderOpacity = 0.9;
             
             return L.polygon(arcPoints, {
@@ -870,19 +870,19 @@
             handlePivotFlexZones();
         } else {
             if (coords.sens === 0) {
-                drawFilledArc(points.origine, points.pivot, points.zero, 'blue', 0.9);
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
             } else if (coords.sens === 1 && coords.PivCirc === 0) {
-                drawFilledArc(points.origine, points.pivot, points.zero, 'blue', 0.9);
-                drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.9);
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.6);
             } else if (coords.sens === 2 && coords.PivCirc === 0) {
-                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.9);
-                drawFilledArc(points.origine, points.maxAngle, points.pivot, 'blue', 0.9);
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.6);
             } else if (coords.sens === 1 && coords.PivCirc === 1) {
-                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.9);
-                drawFilledArc(points.origine, points.zero, points.pivot, 'blue', 0.9);
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
+                drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.6);
             } else if (coords.sens === 2 && coords.PivCirc === 1) {
-                drawFilledArc(points.origine, points.pivot, points.zero, 'blue', 0.9);
-                drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.9);
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+                drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
             }
         }
 
@@ -1099,6 +1099,3 @@
     </script>
 </body>
 </html>
-
-
-
