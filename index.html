@@ -777,18 +777,18 @@
         }
 
         // =============================================================================
-        // POLYGONES AVEC BORDURES VISIBLES MAIS SUBTILES
+        // POLYGONES AVEC BORDURES VISIBLES ET COHÉRENTES
         // =============================================================================
 
         function drawPolygon(pointList, color) {
-            // BORDURES AMÉLIORÉES MAIS SUBTILES
-            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900';
-            const borderWeight = 1.5;
-            const borderOpacity = 0.9;
+            // BORDURES AMÉLIORÉES - COULEURS FIXES POUR TOUS LES POLYGONES
+            const borderColor = '#0044aa'; // BLEU FONCÉ FIXE pour TOUTES les bordures
+            const borderWeight = 2; // Épaisseur augmentée pour mieux voir
+            const borderOpacity = 1.0; // Opacité maximale
             
             return L.polygon(pointList, {
-                color: borderColor,
-                fillColor: color,
+                color: borderColor, // TOUJOURS BLEU FONCÉ
+                fillColor: color,   // Remplissage change selon la zone
                 fillOpacity: 0.6,
                 weight: borderWeight,
                 opacity: borderOpacity,
@@ -827,12 +827,13 @@
                 arcPoints.push(toLatLng(pointPx));
             }
 
-            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900';
-            const borderWeight = 1.5;
-            const borderOpacity = 0.9;
+            // BORDURES AMÉLIORÉES - COULEUR FIXE BLEUE
+            const borderColor = '#0044aa'; // BLEU FONCÉ FIXE
+            const borderWeight = 2; // Épaisseur augmentée
+            const borderOpacity = 1.0; // Opacité maximale
             
             return L.polygon(arcPoints, {
-                color: borderColor,
+                color: borderColor, // TOUJOURS BLEU FONCÉ
                 fillColor: color,
                 fillOpacity: opacity,
                 weight: borderWeight,
