@@ -668,7 +668,47 @@
             lineCap: 'round'
         }).addTo(map).bindPopup('Segment Origine à Zéro');
 
-        // Lignes de référence PivotFlex - PLUS VISIBLES
+        // =============================================================================
+        // FONCTION POUR CRÉER UN ARC ARRONDI ENTRE DEUX POINTS
+        // =============================================================================
+
+        function createRoundedArc(startPoint, endPoint, centerPoint, numPoints = 20) {
+            // Calculer la distance entre les points pour déterminer le rayon de courbure
+            const distance = startPoint.distanceTo(endPoint);
+            const radius = distance * 0.3; // Rayon = 30% de la distance pour une courbe douce
+            
+            // Calculer les angles
+            const startAngle = Math.atan2(startPoint.lat - centerPoint.lat, startPoint.lng - centerPoint.lng);
+            const endAngle = Math.atan2(endPoint.lat - centerPoint.lat, endPoint.lng - centerPoint.lng);
+            
+            // Calculer le point de contrôle pour la courbe (point milieu sur l'arc de cercle)
+            const midAngle = (startAngle + endAngle) / 2;
+            const controlPoint = L.latLng(
+                centerPoint.lat + Math.cos(midAngle) * radius,
+                centerPoint.lng + Math.sin(midAngle) * radius
+            );
+            
+            // Générer les points de la courbe
+            const arcPoints = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                
+                // Interpolation quadratique de Bézier
+                const lat = Math.pow(1 - t, 2) * startPoint.lat + 
+                           2 * (1 - t) * t * controlPoint.lat + 
+                           Math.pow(t, 2) * endPoint.lat;
+                
+                const lng = Math.pow(1 - t, 2) * startPoint.lng + 
+                           2 * (1 - t) * t * controlPoint.lng + 
+                           Math.pow(t, 2) * endPoint.lng;
+                
+                arcPoints.push(L.latLng(lat, lng));
+            }
+            
+            return arcPoints;
+        }
+
+        // Lignes de référence PivotFlex - AVEC ARC ARRONDI
         if (coords.hasFlexParams && coords.flexActive === 1) {
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
@@ -692,12 +732,14 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Zéro à Pivot');
             
-            L.polyline([points.pivot, points.maxAngle], { 
+            // SEGMENT ARRONDI entre pivot et maxAngle - POUR EFFET CIRCULAIRE
+            const roundedArc = createRoundedArc(points.pivot, points.maxAngle, points.origine, 30);
+            L.polyline(roundedArc, { 
                 color: 'blue',
                 weight: 3, // Épaissi
                 opacity: 0.9,
                 lineCap: 'round'
-            }).addTo(map).bindPopup('Segment Pivot à MaxAngle');
+            }).addTo(map).bindPopup('Arc circulaire Pivot à MaxAngle');
         }
 
         // =============================================================================
@@ -767,8 +809,12 @@
         }
 
         function handlePivotFlexZones() {
+            // Créer l'arc arrondi pour le segment pivot->maxAngle
+            const roundedArc = createRoundedArc(points.pivot, points.maxAngle, points.origine, 30);
+            
             const polygone1 = [points.origine, points.zero, points.pivot, points.flex, points.origine];
-            const polygone2 = [points.origine, points.flex, points.pivot, points.maxAngle, points.origine];
+            // Utiliser l'arc arrondi dans le polygone2 au lieu du segment droit
+            const polygone2 = [points.origine, points.flex, ...roundedArc, points.origine];
             
             let polygone1Color, polygone2Color;
             
