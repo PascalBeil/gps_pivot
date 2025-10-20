@@ -213,7 +213,7 @@
     </div>
 
     <!-- Indicateur de sauvegarde du zoom -->
-    <div id="zoom-save-indicator" class="zoom-save-indicator">Zoom sauvegardé</div>
+    <div id="zoom-save-indicator" class="zoom-save-indicator">Position sauvegardée</div>
 
     <div id="weather-panel" class="weather-compact">Chargement météo...</div>
     <div class="legend collapsed" id="legend">
@@ -302,19 +302,28 @@
         }
 
         // =============================================================================
-        // GESTION DE LA SAUVEGARDE DU ZOOM
+        // GESTION DE LA SAUVEGARDE DU ZOOM ET DE LA POSITION
         // =============================================================================
 
         const ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
+        const CENTER_STORAGE_KEY = 'pivot_irrifrance_map_center';
 
-        function saveZoomLevel(zoom) {
+        function saveMapState() {
             try {
+                const zoom = map.getZoom();
+                const center = map.getCenter();
+                
                 localStorage.setItem(ZOOM_STORAGE_KEY, zoom.toString());
-                console.log(`✅ Zoom sauvegardé: ${zoom}`);
+                localStorage.setItem(CENTER_STORAGE_KEY, JSON.stringify({
+                    lat: center.lat,
+                    lng: center.lng
+                }));
+                
+                console.log(`✅ Position sauvegardée: ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)} | Zoom: ${zoom}`);
                 showZoomSaveIndicator();
                 updateDebugPanel();
             } catch (error) {
-                console.error('❌ Erreur sauvegarde zoom:', error);
+                console.error('❌ Erreur sauvegarde position:', error);
             }
         }
 
@@ -328,8 +337,23 @@
             }
         }
 
+        function getSavedCenter() {
+            try {
+                const savedCenter = localStorage.getItem(CENTER_STORAGE_KEY);
+                if (savedCenter) {
+                    const center = JSON.parse(savedCenter);
+                    return L.latLng(center.lat, center.lng);
+                }
+                return null;
+            } catch (error) {
+                console.error('❌ Erreur récupération centre:', error);
+                return null;
+            }
+        }
+
         function showZoomSaveIndicator() {
             const indicator = document.getElementById('zoom-save-indicator');
+            indicator.textContent = 'Position sauvegardée';
             indicator.classList.add('show');
             setTimeout(() => {
                 indicator.classList.remove('show');
@@ -456,11 +480,21 @@
         // =============================================================================
 
         const savedZoom = getSavedZoomLevel();
+        const savedCenter = getSavedCenter();
         const optimalZoom = calculateOptimalZoom();
-        const initialZoom = savedZoom !== null ? Math.min(savedZoom, 19) : optimalZoom;
         
-        console.log(`🎯 Zoom initial: ${initialZoom} (sauvegardé: ${savedZoom}, optimal: ${optimalZoom})`);
-
+        let initialZoom, initialCenter;
+        
+        if (savedZoom !== null && savedCenter !== null) {
+            initialZoom = Math.min(savedZoom, 19);
+            initialCenter = savedCenter;
+            console.log(`🎯 Restauration position: ${savedCenter.lat.toFixed(6)}, ${savedCenter.lng.toFixed(6)} | Zoom: ${initialZoom}`);
+        } else {
+            initialZoom = optimalZoom;
+            initialCenter = [coords.LatOri, coords.LonOri];
+            console.log(`🎯 Nouvelle position: ${coords.LatOri}, ${coords.LonOri} | Zoom: ${initialZoom}`);
+        }
+        
         const map = L.map('map', { 
             minZoom: 10, 
             maxZoom: 19,
@@ -468,7 +502,7 @@
             fadeAnimation: true,
             zoomAnimation: true,
             markerZoomAnimation: true
-        }).setView([coords.LatOri, coords.LonOri], initialZoom);
+        }).setView(initialCenter, initialZoom);
 
         // =============================================================================
         // COUCHE ESRI AVEC GESTION DES ERREURS
@@ -514,10 +548,11 @@
         esriLayer.addTo(map);
 
         // =============================================================================
-        // GESTIONNAIRES D'ÉVÉNEMENTS POUR LA CARTE
+        // GESTIONNAIRES D'ÉVÉNEMENTS POUR LA CARTE - SAUVEGARDE POSITION
         // =============================================================================
 
-        let zoomSaveTimeout;
+        let saveStateTimeout;
+
         map.on('zoomstart', function() {
             showLoadingIndicator();
         });
@@ -531,21 +566,18 @@
                 return;
             }
             
-            clearTimeout(zoomSaveTimeout);
-            zoomSaveTimeout = setTimeout(() => {
-                saveZoomLevel(currentZoom);
-                updateDebugPanel();
+            clearTimeout(saveStateTimeout);
+            saveStateTimeout = setTimeout(() => {
+                saveMapState();
             }, 500);
             
             setTimeout(hideLoadingIndicator, 1000);
         });
 
         map.on('moveend', function() {
-            const currentZoom = map.getZoom();
-            clearTimeout(zoomSaveTimeout);
-            zoomSaveTimeout = setTimeout(() => {
-                saveZoomLevel(currentZoom);
-                updateDebugPanel();
+            clearTimeout(saveStateTimeout);
+            saveStateTimeout = setTimeout(() => {
+                saveMapState();
             }, 1000);
         });
 
@@ -614,7 +646,7 @@
         }
 
         // =============================================================================
-        // LIGNES ET POLYGONES - AMÉLIORATION DE LA VISIBILITÉ
+        // LIGNES ET POLYGONES - AMÉLIORATION DE LA VISIBILITÉ (BORDURES SUBTILES)
         // =============================================================================
 
         // LIGNE MAX ANGLE - PLUS ÉPAISSE ET PLUS VISIBLE
@@ -669,17 +701,22 @@
         }
 
         // =============================================================================
-        // POLYGONES AVEC BORDURES VISIBLES
+        // POLYGONES AVEC BORDURES VISIBLES MAIS SUBTILES
         // =============================================================================
 
         function drawPolygon(pointList, color) {
-            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900'; // Bordure contrastée
+            // BORDURES AMÉLIORÉES MAIS SUBTILES
+            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900'; // Couleurs légèrement plus foncées
+            const borderWeight = 1.5; // Épaisseur subtile - pas trop grosse !
+            const borderOpacity = 0.9; // Opacité légèrement réduite
+            
             return L.polygon(pointList, {
-                color: borderColor, // BORDURE AJOUTÉE
+                color: borderColor,
                 fillColor: color,
                 fillOpacity: 0.6,
-                weight: 2, // Épaisseur de la bordure
-                opacity: 0.8
+                weight: borderWeight, // BORDURE SUBTILE
+                opacity: borderOpacity, // BORDURE LÉGÈREMENT TRANSPARENTE
+                lineJoin: 'round'
             }).addTo(map);
         }
 
@@ -714,13 +751,18 @@
                 arcPoints.push(toLatLng(pointPx));
             }
 
-            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900'; // Bordure contrastée
+            // BORDURES AMÉLIORÉES MAIS SUBTILES POUR LES ARCS AUSSI
+            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900';
+            const borderWeight = 1.5; // Épaisseur subtile
+            const borderOpacity = 0.9; // Opacité légèrement réduite
+            
             return L.polygon(arcPoints, {
-                color: borderColor, // BORDURE AJOUTÉE
+                color: borderColor,
                 fillColor: color,
                 fillOpacity: opacity,
-                weight: 2, // Épaisseur de la bordure
-                opacity: 0.8
+                weight: borderWeight, // BORDURE SUBTILE
+                opacity: borderOpacity, // BORDURE LÉGÈREMENT TRANSPARENTE
+                lineJoin: 'round'
             }).addTo(map);
         }
 
@@ -765,22 +807,22 @@
             }
         }
 
-        // Ajustement final
-        const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
-        if (coords.hasFlexParams && coords.flexActive === 1) {
-            boundsPoints.push(points.flex);
-        }
-        
-        const bounds = L.latLngBounds(boundsPoints);
-        
-        if (!savedZoom) {
+        // Ajustement final seulement si pas de position sauvegardée
+        if (!savedCenter) {
+            const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
+            if (coords.hasFlexParams && coords.flexActive === 1) {
+                boundsPoints.push(points.flex);
+            }
+            
+            const bounds = L.latLngBounds(boundsPoints);
+            
             setTimeout(() => {
                 const boundsZoom = map.getBoundsZoom(bounds, false);
                 let finalZoom = Math.min(optimalZoom, boundsZoom);
                 finalZoom = Math.min(finalZoom, 19);
                 
                 map.fitBounds(bounds, { padding: [15, 15], maxZoom: finalZoom });
-                saveZoomLevel(finalZoom);
+                saveMapState();
                 
                 console.log(`🎯 Ajustement final - Zoom: ${finalZoom}`);
             }, 200);
@@ -956,13 +998,14 @@
             }
         });
 
-        function resetSavedZoom() {
+        function resetSavedPosition() {
             localStorage.removeItem(ZOOM_STORAGE_KEY);
-            console.log('🗑️ Zoom réinitialisé');
+            localStorage.removeItem(CENTER_STORAGE_KEY);
+            console.log('🗑️ Position réinitialisée');
             location.reload();
         }
 
-        window.resetSavedZoom = resetSavedZoom;
+        window.resetSavedPosition = resetSavedPosition;
         updateDebugPanel();
 
         // Mise à jour périodique de l'heure dans la météo
