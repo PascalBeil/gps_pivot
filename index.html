@@ -215,7 +215,7 @@
     <!-- Indicateur de sauvegarde du zoom -->
     <div id="zoom-save-indicator" class="zoom-save-indicator">Zoom sauvegardé</div>
 
-    <div id="weather-panel" class="weather-compact">Chargement...</div>
+    <div id="weather-panel" class="weather-compact">Chargement météo...</div>
     <div class="legend collapsed" id="legend">
         <div class="legend-header">
             <span>Légende</span>
@@ -252,7 +252,7 @@
     
     <script>
         // =============================================================================
-        // AMÉLIORATIONS POUR LE CHARGEMENT DES TUILES
+        // CORRECTIONS POUR LA MÉTÉO ET LA VISIBILITÉ DES LIGNES
         // =============================================================================
 
         // Variables pour le suivi des tuiles
@@ -286,8 +286,6 @@
         function setupTileTracking() {
             tilesLoaded = 0;
             tilesError = 0;
-            
-            // Mettre à jour le debug panel
             updateTileDebugInfo();
         }
 
@@ -370,7 +368,7 @@
             }
             
             const densityAdjustment = Math.log2(pixelRatio);
-            let optimalZoom = Math.min(19, Math.max(14, baseZoom + Math.round(densityAdjustment))); // LIMITE À 19
+            let optimalZoom = Math.min(19, Math.max(14, baseZoom + Math.round(densityAdjustment)));
             
             console.log(`📐 Écran: ${Math.round(estimatedDiagonal)}", Zoom optimal: ${optimalZoom}`);
             
@@ -392,8 +390,6 @@
                     map ? map.getZoom() : 'N/A';
                 document.getElementById('max-zoom-info').textContent = 
                     '19 (limité)';
-                document.getElementById('screen-size-info').textContent = 
-                    `${Math.round(estimatedDiagonal)} pouces`;
             }
         }
 
@@ -456,19 +452,18 @@
         }
 
         // =============================================================================
-        // INITIALISATION DE LA CARTE AVEC GESTION AMÉLIORÉE DES TUILES
+        // INITIALISATION DE LA CARTE
         // =============================================================================
 
         const savedZoom = getSavedZoomLevel();
         const optimalZoom = calculateOptimalZoom();
-        const initialZoom = savedZoom !== null ? Math.min(savedZoom, 19) : optimalZoom; // LIMITE À 19
+        const initialZoom = savedZoom !== null ? Math.min(savedZoom, 19) : optimalZoom;
         
         console.log(`🎯 Zoom initial: ${initialZoom} (sauvegardé: ${savedZoom}, optimal: ${optimalZoom})`);
 
-        // Initialisation de la carte avec limite de zoom
         const map = L.map('map', { 
             minZoom: 10, 
-            maxZoom: 19, // LIMITE MAXIMUM FIXÉE À 19
+            maxZoom: 19,
             zoomControl: true,
             fadeAnimation: true,
             zoomAnimation: true,
@@ -476,23 +471,15 @@
         }).setView([coords.LatOri, coords.LonOri], initialZoom);
 
         // =============================================================================
-        // COUCHE ESRI AVEC GESTION DES ERREURS AMÉLIORÉE
+        // COUCHE ESRI AVEC GESTION DES ERREURS
         // =============================================================================
 
-        // Couche Esri principale avec gestion d'erreur
         const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '© Esri, Maxar, Earthstar Geographics',
-            maxZoom: 19, // Correspond au maxZoom de la carte
-            minZoom: 0,
-            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', // Tuile transparente en cas d'erreur
-            crossOrigin: true
-        });
-
-        // Couche de fallback (OpenStreetMap) en cas de problèmes
-        const osmFallback = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
             maxZoom: 19,
-            minZoom: 0
+            minZoom: 0,
+            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            crossOrigin: true
         });
 
         // Gestionnaires d'événements pour les tuiles
@@ -501,22 +488,15 @@
             setupTileTracking();
         });
 
-        esriLayer.on('load', function() {
-            tilesLoaded++;
-            updateTileDebugInfo();
-        });
-
         esriLayer.on('tileerror', function(e) {
             tilesError++;
             console.warn('❌ Erreur tuile:', e);
             updateTileDebugInfo();
             
-            // Afficher un message si trop d'erreurs
             if (tilesError > 3) {
                 showTileError('Résolution satellite non disponible à ce zoom');
             }
             
-            // Cacher le loader après un délai
             clearTimeout(tileLoadTimeout);
             tileLoadTimeout = setTimeout(hideLoadingIndicator, 1000);
         });
@@ -525,14 +505,12 @@
             tilesLoaded++;
             updateTileDebugInfo();
             
-            // Cacher le loader si suffisamment de tuiles sont chargées
             if (tilesLoaded >= 4) {
                 clearTimeout(tileLoadTimeout);
                 tileLoadTimeout = setTimeout(hideLoadingIndicator, 500);
             }
         });
 
-        // Ajouter la couche principale
         esriLayer.addTo(map);
 
         // =============================================================================
@@ -547,7 +525,6 @@
         map.on('zoomend', function() {
             const currentZoom = map.getZoom();
             
-            // Empêcher le zoom au-delà de 19
             if (currentZoom > 19) {
                 map.setZoom(19);
                 showTileError('Zoom maximum atteint (limite technique)');
@@ -560,7 +537,6 @@
                 updateDebugPanel();
             }, 500);
             
-            // Cacher le loader après le zoom
             setTimeout(hideLoadingIndicator, 1000);
         });
 
@@ -573,18 +549,10 @@
             }, 1000);
         });
 
-        // Empêcher le zoom excessif avec la molette
-        map.on('zoomlevelschange', function() {
-            if (map.getZoom() > 19) {
-                map.setZoom(19);
-            }
-        });
-
         // =============================================================================
-        // SUITE DU CODE (marqueurs, polygones, etc.)
+        // POINTS ET MARQUEURS - AMÉLIORATION DE LA VISIBILITÉ
         // =============================================================================
 
-        // [Le reste du code pour les points, marqueurs, polygones reste identique...]
         const points = {
             origine: L.latLng(coords.LatOri, coords.LonOri),
             zero: L.latLng(coords.LatZero, coords.LonZero),
@@ -596,7 +564,7 @@
             points.flex = L.latLng(coords.LatFlex, coords.LonFlex);
         }
 
-        // Création de l'icône personnalisée
+        // Création de l'icône personnalisée - PLUS VISIBLE
         const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
             <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="16" cy="16" r="14" fill="#4A90E2" stroke="#FFFFFF" stroke-width="2"/>
@@ -608,49 +576,110 @@
 
         const startPointIcon = L.divIcon({
             className: 'pivot-icon',
-            html: `<img src="${pivotIconSVG}" width="24" height="24" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">`,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12]
+            html: `<img src="${pivotIconSVG}" width="28" height="28" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
         });
 
-        // Marqueurs
-        L.marker(points.origine, { icon: startPointIcon }).addTo(map).bindPopup('Point de départ du pivot');
+        // Marqueurs - PLUS VISIBLES
+        L.marker(points.origine, { 
+            icon: startPointIcon,
+            zIndexOffset: 1000
+        }).addTo(map).bindPopup('Point de départ du pivot');
 
         const pivotIcon = L.divIcon({
             className: 'pivot-marker',
             html: '',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            iconSize: [24, 24], // Agrandi
+            iconAnchor: [12, 12]
         });
 
-        L.marker(points.pivot, { icon: pivotIcon }).addTo(map).bindPopup('Dernière tour du pivot');
+        L.marker(points.pivot, { 
+            icon: pivotIcon,
+            zIndexOffset: 900
+        }).addTo(map).bindPopup('Dernière tour du pivot');
 
         if (coords.hasFlexParams && coords.flexActive === 1) {
             const flexIcon = L.divIcon({
                 className: 'flex-marker',
                 html: '',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
+                iconSize: [20, 20], // Agrandi
+                iconAnchor: [10, 10]
             });
-            L.marker(points.flex, { icon: flexIcon }).addTo(map).bindPopup('Point de flexion du pivotflex');
+            L.marker(points.flex, { 
+                icon: flexIcon,
+                zIndexOffset: 800
+            }).addTo(map).bindPopup('Point de flexion du pivotflex');
             document.getElementById('flex-legend-item').style.display = 'flex';
         }
 
-        // Lignes et polygones
+        // =============================================================================
+        // LIGNES ET POLYGONES - AMÉLIORATION DE LA VISIBILITÉ
+        // =============================================================================
+
+        // LIGNE MAX ANGLE - PLUS ÉPAISSE ET PLUS VISIBLE
         if (coords.PivCirc === 0) {
             L.polyline([points.origine, points.maxAngle], { 
-                color: 'red', dashArray: '10, 10', weight: 3, opacity: 0.8 
+                color: 'red', 
+                dashArray: '8, 8', // Plus visible
+                weight: 4, // Épaissi
+                opacity: 0.9,
+                lineCap: 'round'
             }).addTo(map).bindPopup('Direction maximale');
         }
 
+        // SEGMENTS DE RÉFÉRENCE - PLUS ÉPAIS ET PLUS VISIBLES
         L.polyline([points.origine, points.zero], { 
-            color: 'blue', weight: 2, opacity: 0.8 
+            color: 'blue',
+            weight: 3, // Épaissi
+            opacity: 0.9,
+            lineCap: 'round'
         }).addTo(map).bindPopup('Segment Origine à Zéro');
 
-        // [Les fonctions drawPolygon, drawFilledArc, handlePivotFlexZones restent identiques...]
+        // Lignes de référence PivotFlex - PLUS VISIBLES
+        if (coords.hasFlexParams && coords.flexActive === 1) {
+            L.polyline([points.origine, points.flex], { 
+                color: 'blue', 
+                dashArray: '6, 6', // Plus visible
+                weight: 3, // Épaissi
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Origine à Flex');
+            
+            L.polyline([points.flex, points.pivot], { 
+                color: 'blue',
+                weight: 3, // Épaissi
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Flex à Pivot');
+            
+            L.polyline([points.zero, points.pivot], { 
+                color: 'blue',
+                weight: 3, // Épaissi
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Zéro à Pivot');
+            
+            L.polyline([points.pivot, points.maxAngle], { 
+                color: 'blue',
+                weight: 3, // Épaissi
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Pivot à MaxAngle');
+        }
+
+        // =============================================================================
+        // POLYGONES AVEC BORDURES VISIBLES
+        // =============================================================================
+
         function drawPolygon(pointList, color) {
+            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900'; // Bordure contrastée
             return L.polygon(pointList, {
-                color: 'transparent', fillColor: color, fillOpacity: 0.6, weight: 0
+                color: borderColor, // BORDURE AJOUTÉE
+                fillColor: color,
+                fillOpacity: 0.6,
+                weight: 2, // Épaisseur de la bordure
+                opacity: 0.8
             }).addTo(map);
         }
 
@@ -685,8 +714,13 @@
                 arcPoints.push(toLatLng(pointPx));
             }
 
+            const borderColor = color === 'lightblue' ? '#0066cc' : '#cc9900'; // Bordure contrastée
             return L.polygon(arcPoints, {
-                color: 'transparent', fillColor: color, fillOpacity: opacity, weight: 0
+                color: borderColor, // BORDURE AJOUTÉE
+                fillColor: color,
+                fillOpacity: opacity,
+                weight: 2, // Épaisseur de la bordure
+                opacity: 0.8
             }).addTo(map);
         }
 
@@ -742,10 +776,7 @@
         if (!savedZoom) {
             setTimeout(() => {
                 const boundsZoom = map.getBoundsZoom(bounds, false);
-                const estimatedDiagonal = Math.sqrt(Math.pow(window.screen.width, 2) + Math.pow(window.screen.height, 2)) / (window.devicePixelRatio >= 2 ? 200 : 100);
                 let finalZoom = Math.min(optimalZoom, boundsZoom);
-                
-                // Ne pas dépasser 19
                 finalZoom = Math.min(finalZoom, 19);
                 
                 map.fitBounds(bounds, { padding: [15, 15], maxZoom: finalZoom });
@@ -756,10 +787,152 @@
         }
 
         // =============================================================================
-        // MÉTÉO ET INTERFACE
+        // MÉTÉO - CORRECTION COMPLÈTE
         // =============================================================================
 
-        // [Le code météo et interface reste identique...]
+        const weatherPanel = document.getElementById('weather-panel');
+        let isWeatherExpanded = false;
+
+        // Fonction COMPLÈTE pour la météo
+        async function fetchWeather(lat, lon) {
+            console.log('🌤️ Chargement météo pour:', lat, lon);
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                const data = await response.json();
+                console.log('✅ Données météo reçues:', data);
+                displayWeather(data);
+            } catch (error) {
+                console.error('❌ Erreur météo:', error);
+                weatherPanel.innerHTML = `
+                    <div style="font-weight: bold;">Météo non disponible</div>
+                    <div style="font-size: 10px; color: #666;">Service temporairement indisponible</div>
+                    <div class="weather-toggle">Cliquer pour détails</div>
+                `;
+            }
+        }
+
+        function displayWeather(data) {
+            if (!data.current_weather) {
+                console.error('❌ Données météo incomplètes');
+                return;
+            }
+            
+            const current = data.current_weather;
+            window.weatherData = {
+                temperature: current.temperature,
+                weatherCode: current.weathercode,
+                time: new Date(current.time)
+            };
+            updateWeatherDisplay();
+        }
+
+        function updateWeatherDisplay() {
+            if (!window.weatherData) {
+                console.log('⏳ Données météo non encore chargées');
+                return;
+            }
+
+            const current = window.weatherData;
+            const now = new Date();
+            const date = now.toLocaleDateString('fr-FR');
+            const heure = now.toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+
+            const templates = {
+                0: { temp: 'Température', angle: 'Angle', flex: 'PivotFlex' },
+                1: { temp: 'Temperature', angle: 'Angle', flex: 'PivotFlex' },
+                2: { temp: 'Temperatura', angle: 'Ángulo', flex: 'PivotFlex' },
+                3: { temp: 'Temperatura', angle: 'Ângulo', flex: 'PivotFlex' },
+                4: { temp: 'Temperatur', angle: 'Winkel', flex: 'PivotFlex' },
+                5: { temp: 'Temperatuur', angle: 'Hoek', flex: 'PivotFlex' },
+                6: { temp: 'Temperatura', angle: 'Angolo', flex: 'PivotFlex' }
+            };
+
+            const t = templates[coords.lang] || templates[0];
+            const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
+            
+            let flexStatus = '';
+            if (coords.hasFlexParams) {
+                flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
+            }
+
+            if (isWeatherExpanded) {
+                let displayContent = `
+                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>
+                    <div><strong>Date:</strong> ${date}</div>
+                    <div><strong>Heure:</strong> ${heure}</div>
+                    <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
+                    <div><strong>Météo:</strong> ${weatherDesc}</div>
+                    <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
+                `;
+                
+                if (coords.hasFlexParams) {
+                    displayContent += `<div><strong>${t.flex}:</strong> ${flexStatus}</div>`;
+                }
+                
+                displayContent += `<div class="weather-toggle">Cliquer pour réduire</div>`;
+                
+                weatherPanel.innerHTML = displayContent;
+            } else {
+                let displayContent = `
+                    <div style="font-weight: bold;">${current.temperature.toFixed(1)}°C | ${coords.ang}°</div>
+                    <div style="font-size: 10px; color: #666;">${weatherDesc}`;
+                
+                if (coords.hasFlexParams) {
+                    displayContent += ` | Flex: ${flexStatus}`;
+                }
+                
+                displayContent += `</div><div class="weather-toggle">Cliquer pour détails</div>`;
+                
+                weatherPanel.innerHTML = displayContent;
+            }
+        }
+
+        // Fonction de description météo multilingue
+        function getWeatherDescription(code, lang) {
+            const descriptions = {
+                0: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
+                1: ['Principalement dégagé', 'Mainly clear', 'Principalmente despejado', 'Principalmente limpo', 'Überwiegend klar', 'Overwegend helder', 'Prevalentemente sereno'],
+                2: ['Partiellement nuageux', 'Partly cloudy', 'Parcialmente nublado', 'Parcialmente nublado', 'Teilweise bewölkt', 'Gedeeltelijk bewolkt', 'Parzialmente nuvoloso'],
+                3: ['Couvert', 'Overcast', 'Cubierto', 'Nublado', 'Bedeckt', 'Bewolkt', 'Nuvoloso'],
+                45: ['Brouillard', 'Fog', 'Niebla', 'Nevoeiro', 'Nebel', 'Mist', 'Nebbia'],
+                48: ['Brouillard givrant', 'Rime fog', 'Niebla helada', 'Nevoeiro gelado', 'Eisnebel', 'Rijpmist', 'Nebbia gelata'],
+                51: ['Bruine légère', 'Light drizzle', 'Llovizna ligera', 'Garoa leve', 'Leichter Nieselregen', 'Lichte motregen', 'Pioggerella leggera'],
+                53: ['Bruine modérée', 'Moderate drizzle', 'Llovizna moderada', 'Garoa moderada', 'Mäßiger Nieselregen', 'Matige motregen', 'Pioggerella moderata'],
+                55: ['Bruine dense', 'Dense drizzle', 'Llovizna densa', 'Garoa densa', 'Dichter Nieselregen', 'Dichte motregen', 'Pioggerella fitta'],
+                61: ['Pluie légère', 'Slight rain', 'Lluvia ligera', 'Chuva leve', 'Leichter Regen', 'Lichte regen', 'Pioggia leggera'],
+                63: ['Pluie modérée', 'Moderate rain', 'Lluvia moderada', 'Chuva moderada', 'Mäßiger Regen', 'Matige regen', 'Pioggia moderata'],
+                65: ['Pluie forte', 'Heavy rain', 'Lluvia intensa', 'Chuva forte', 'Starker Regen', 'Zware regen', 'Pioggia forte'],
+                71: ['Neige légère', 'Slight snow', 'Nieve ligera', 'Neve leve', 'Leichter Schneefall', 'Lichte sneeuw', 'Neve leggera'],
+                73: ['Neige modérée', 'Moderate snow', 'Nieve moderada', 'Neve moderada', 'Mäßiger Schneefall', 'Matige sneeuw', 'Neve moderata'],
+                75: ['Neige forte', 'Heavy snow', 'Nieve intensa', 'Neve forte', 'Starker Schneefall', 'Zware sneeuw', 'Neve forte'],
+                95: ['Orage', 'Thunderstorm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
+            };
+
+            return descriptions[code]?.[lang] || descriptions[code]?.[0] || 'Conditions inconnues';
+        }
+
+        // Gestion du clic sur le panneau météo
+        weatherPanel.addEventListener('click', function() {
+            isWeatherExpanded = !isWeatherExpanded;
+            weatherPanel.classList.toggle('weather-expanded', isWeatherExpanded);
+            updateWeatherDisplay();
+        });
+
+        // CHARGEMENT DE LA MÉTÉO - APPELLÉ APRÈS LA CRÉATION DE LA CARTE
+        setTimeout(() => {
+            fetchWeather(coords.LatOri, coords.LonOri);
+        }, 1000);
+
+        // =============================================================================
+        // LÉGENDE ET INTERFACE
+        // =============================================================================
+
         const legend = document.getElementById('legend');
         const legendHeader = legend.querySelector('.legend-header');
         const toggleIcon = legend.querySelector('.toggle-icon');
@@ -769,48 +942,10 @@
             toggleIcon.textContent = isCollapsed ? '+' : '−';
         });
 
-        const weatherPanel = document.getElementById('weather-panel');
-        let isWeatherExpanded = false;
+        // =============================================================================
+        // DEBUG ET UTILITAIRES
+        // =============================================================================
 
-        weatherPanel.addEventListener('click', function() {
-            isWeatherExpanded = !isWeatherExpanded;
-            weatherPanel.classList.toggle('weather-expanded', isWeatherExpanded);
-            updateWeatherDisplay();
-        });
-
-        async function fetchWeather(lat, lon) {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
-            
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Erreur réseau');
-                const data = await response.json();
-                displayWeather(data);
-            } catch (error) {
-                console.error('Erreur météo:', error);
-                weatherPanel.textContent = 'Météo non disponible';
-            }
-        }
-
-        function displayWeather(data) {
-            const current = data.current_weather;
-            window.weatherData = {
-                temperature: current.temperature,
-                weatherCode: current.weathercode,
-                time: new Date()
-            };
-            updateWeatherDisplay();
-        }
-
-        function updateWeatherDisplay() {
-            if (!window.weatherData) return;
-            // [Code météo identique...]
-        }
-
-        // Chargement des données météo
-        fetchWeather(coords.LatOri, coords.LonOri);
-
-        // Debug
         document.addEventListener('keydown', function(e) {
             if (e.key === 'F2') {
                 e.preventDefault();
@@ -829,6 +964,16 @@
 
         window.resetSavedZoom = resetSavedZoom;
         updateDebugPanel();
+
+        // Mise à jour périodique de l'heure dans la météo
+        setInterval(() => {
+            if (window.weatherData) {
+                window.weatherData.time = new Date();
+                updateWeatherDisplay();
+            }
+        }, 60000);
+
+        console.log('✅ Application Pivot Irrifrance initialisée avec succès');
     </script>
 </body>
 </html>
