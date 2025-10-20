@@ -175,7 +175,8 @@
         DPI: <span id="dpi-info"></span><br>
         Taille écran: <span id="screen-size-info"></span><br>
         Type: <span id="screen-type-info"></span><br>
-        Zoom sauvegardé: <span id="saved-zoom-info"></span>
+        Zoom sauvegardé: <span id="saved-zoom-info"></span><br>
+        Zoom utilisé: <span id="used-zoom-info"></span>
     </div>
 
     <!-- Indicateur de sauvegarde du zoom -->
@@ -218,7 +219,7 @@
     
     <script>
         // =============================================================================
-        // GESTION DE LA SAUVEGARDE DU ZOOM
+        // GESTION DE LA SAUVEGARDE DU ZOOM - VERSION CORRIGÉE
         // =============================================================================
 
         // Clé pour le localStorage
@@ -228,17 +229,15 @@
         function saveZoomLevel(zoom) {
             try {
                 localStorage.setItem(ZOOM_STORAGE_KEY, zoom.toString());
-                console.log(`Zoom sauvegardé: ${zoom}`);
+                console.log(`✅ Zoom sauvegardé: ${zoom}`);
                 
                 // Afficher l'indicateur visuel
                 showZoomSaveIndicator();
                 
                 // Mettre à jour le debug panel
-                if (document.getElementById('debug-panel').style.display !== 'none') {
-                    document.getElementById('saved-zoom-info').textContent = zoom;
-                }
+                updateDebugPanel();
             } catch (error) {
-                console.error('Erreur lors de la sauvegarde du zoom:', error);
+                console.error('❌ Erreur lors de la sauvegarde du zoom:', error);
             }
         }
 
@@ -248,7 +247,7 @@
                 const savedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
                 return savedZoom ? parseInt(savedZoom) : null;
             } catch (error) {
-                console.error('Erreur lors de la récupération du zoom:', error);
+                console.error('❌ Erreur lors de la récupération du zoom:', error);
                 return null;
             }
         }
@@ -263,11 +262,11 @@
         }
 
         // =============================================================================
-        // DÉTECTION DE L'ÉCRAN ET CALCUL DU ZOOM
+        // DÉTECTION DE L'ÉCRAN SIMPLIFIÉE - PRIORITÉ À LA SAUVEGARDE
         // =============================================================================
 
-        // Fonction pour détecter précisément les écrans 11.6" 1920x1080
-        function detectScreenType() {
+        // Fonction simplifiée pour calculer le zoom optimal de base
+        function calculateOptimalZoom() {
             const screenWidth = window.screen.width;
             const screenHeight = window.screen.height;
             const pixelRatio = window.devicePixelRatio || 1;
@@ -276,62 +275,30 @@
             const effectiveWidth = screenWidth * pixelRatio;
             const effectiveHeight = screenHeight * pixelRatio;
             
-            // Détection spécifique des écrans 11.6" 1920x1080
-            const is116InchFHD = 
-                (effectiveWidth === 1920 && effectiveHeight === 1080) ||
-                (effectiveWidth === 1080 && effectiveHeight === 1920) ||
-                (Math.abs(effectiveWidth - 1920) < 50 && Math.abs(effectiveHeight - 1080) < 50);
-            
-            // Estimation de la diagonale
+            // Estimation simple de la diagonale
             const estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 
                                    (pixelRatio >= 2 ? 200 : 100);
             
-            return {
-                is116InchFHD: is116InchFHD,
-                estimatedDiagonal: Math.round(estimatedDiagonal * 10) / 10,
-                effectiveWidth: effectiveWidth,
-                effectiveHeight: effectiveHeight,
-                pixelRatio: pixelRatio
-            };
-        }
-
-        // Fonction pour calculer le zoom optimal
-        function calculateOptimalZoom() {
-            const screenInfo = detectScreenType();
-            const screenWidth = window.screen.width;
-            const screenHeight = window.screen.height;
-            const pixelRatio = screenInfo.pixelRatio;
+            let deviceType, baseZoom;
             
-            let deviceType, baseZoom, screenType;
-            
-            // DÉTECTION SPÉCIFIQUE POUR ÉCRAN 11.6" FHD
-            if (screenInfo.is116InchFHD) {
-                deviceType = "Écran 11.6\" FHD Optimisé";
-                screenType = "11.6\" FHD";
-                baseZoom = 18;
-            } else if (screenInfo.estimatedDiagonal <= 7) {
-                deviceType = "Très petit écran (" + screenInfo.estimatedDiagonal + " pouces)";
-                screenType = "≤7\"";
+            // Logique simplifiée - la sauvegarde aura priorité
+            if (estimatedDiagonal <= 7) {
+                deviceType = "Très petit écran (" + Math.round(estimatedDiagonal) + " pouces)";
                 baseZoom = 19;
-            } else if (screenInfo.estimatedDiagonal <= 10) {
-                deviceType = "Petit écran (" + screenInfo.estimatedDiagonal + " pouces)";
-                screenType = "8-10\"";
+            } else if (estimatedDiagonal <= 10) {
+                deviceType = "Petit écran (" + Math.round(estimatedDiagonal) + " pouces)";
                 baseZoom = 18;
-            } else if (screenInfo.estimatedDiagonal <= 13) {
-                deviceType = "Écran compact (" + screenInfo.estimatedDiagonal + " pouces)";
-                screenType = "11-13\"";
+            } else if (estimatedDiagonal <= 13) {
+                deviceType = "Écran moyen (" + Math.round(estimatedDiagonal) + " pouces)";
                 baseZoom = 17;
-            } else if (screenInfo.estimatedDiagonal <= 15) {
-                deviceType = "Écran standard (" + screenInfo.estimatedDiagonal + " pouces)";
-                screenType = "14-15\"";
+            } else if (estimatedDiagonal <= 15) {
+                deviceType = "Écran standard (" + Math.round(estimatedDiagonal) + " pouces)";
                 baseZoom = 16;
-            } else if (screenInfo.estimatedDiagonal <= 24) {
-                deviceType = "Grand écran (" + screenInfo.estimatedDiagonal + " pouces)";
-                screenType = "16-24\"";
+            } else if (estimatedDiagonal <= 24) {
+                deviceType = "Grand écran (" + Math.round(estimatedDiagonal) + " pouces)";
                 baseZoom = 15;
             } else {
-                deviceType = "Très grand écran (" + screenInfo.estimatedDiagonal + " pouces)";
-                screenType = ">24\"";
+                deviceType = "Très grand écran (" + Math.round(estimatedDiagonal) + " pouces)";
                 baseZoom = 14;
             }
             
@@ -339,34 +306,38 @@
             const densityAdjustment = Math.log2(pixelRatio);
             let optimalZoom = Math.min(22, Math.max(14, baseZoom + Math.round(densityAdjustment)));
             
-            // Ajustement spécial pour écran 11.6" FHD
-            if (screenInfo.is116InchFHD) {
-                optimalZoom = 18;
-            }
+            console.log(`📐 Détection écran: ${deviceType}, Résolution: ${effectiveWidth}x${effectiveHeight}, Zoom optimal: ${optimalZoom}`);
             
-            // Debug info
+            return optimalZoom;
+        }
+
+        // Mettre à jour le panel de debug
+        function updateDebugPanel() {
             if (document.getElementById('debug-panel').style.display !== 'none') {
+                const screenWidth = window.screen.width;
+                const screenHeight = window.screen.height;
+                const pixelRatio = window.devicePixelRatio || 1;
+                const effectiveWidth = screenWidth * pixelRatio;
+                const effectiveHeight = screenHeight * pixelRatio;
+                const estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / (pixelRatio >= 2 ? 200 : 100);
+                
                 document.getElementById('resolution-info').textContent = 
-                    `${screenWidth}x${screenHeight} (${screenInfo.effectiveWidth}x${screenInfo.effectiveHeight} effective)`;
+                    `${screenWidth}x${screenHeight} (${effectiveWidth}x${effectiveHeight} effective)`;
                 document.getElementById('zoom-info').textContent = 
-                    `${optimalZoom} (base: ${baseZoom}, ajustement: ${densityAdjustment.toFixed(2)})`;
+                    `${calculateOptimalZoom()}`;
                 document.getElementById('dpi-info').textContent = 
                     `Ratio: ${pixelRatio}`;
                 document.getElementById('screen-size-info').textContent = 
-                    `${screenInfo.estimatedDiagonal} pouces`;
+                    `${Math.round(estimatedDiagonal)} pouces`;
                 document.getElementById('screen-type-info').textContent = 
-                    `${screenType} - ${deviceType}`;
+                    `Détection basique`;
                 document.getElementById('saved-zoom-info').textContent = 
                     getSavedZoomLevel() || 'Aucun';
+                if (window.currentMapZoom) {
+                    document.getElementById('used-zoom-info').textContent = 
+                        window.currentMapZoom;
+                }
             }
-            
-            console.log(`Détection écran: ${deviceType}, Résolution: ${screenInfo.effectiveWidth}x${screenInfo.effectiveHeight}, Zoom optimal: ${optimalZoom}`);
-            
-            return {
-                optimalZoom: optimalZoom,
-                screenType: screenType,
-                is116InchFHD: screenInfo.is116InchFHD
-            };
         }
 
         // =============================================================================
@@ -380,15 +351,15 @@
                 const paramString = params.get('p');
                 
                 if (!paramString) {
-                    console.error("Paramètre 'p' manquant dans l'URL");
+                    console.error("❌ Paramètre 'p' manquant dans l'URL");
                     return null;
                 }
                 
                 const values = paramString.split(',').map(Number);
-                console.log("Paramètres reçus:", values, "Nombre:", values.length);
+                console.log("📋 Paramètres reçus:", values, "Nombre:", values.length);
                 
                 if (values.length === 12) {
-                    console.log("Format ancien (12 paramètres) détecté - PivotFlex désactivé");
+                    console.log("🔧 Format ancien (12 paramètres) détecté - PivotFlex désactivé");
                     return {
                         LatOri: values[0],
                         LonOri: values[1],
@@ -406,7 +377,7 @@
                         hasFlexParams: false
                     };
                 } else if (values.length === 15) {
-                    console.log("Format nouveau (15 paramètres) détecté");
+                    console.log("🔧 Format nouveau (15 paramètres) détecté");
                     return {
                         LatOri: values[0],
                         LonOri: values[1],
@@ -426,11 +397,11 @@
                         hasFlexParams: true
                     };
                 } else {
-                    console.error("Nombre de paramètres incorrect:", values.length, "attendu: 12 ou 15");
+                    console.error("❌ Nombre de paramètres incorrect:", values.length, "attendu: 12 ou 15");
                     return null;
                 }
             } catch (error) {
-                console.error("Erreur lors du parsing des paramètres:", error);
+                console.error("❌ Erreur lors du parsing des paramètres:", error);
                 return null;
             }
         }
@@ -456,27 +427,30 @@
         }
 
         // =============================================================================
-        // INITIALISATION DE LA CARTE AVEC SAUVEGARDE DU ZOOM
+        // INITIALISATION DE LA CARTE - PRIORITÉ ABSOLUE À LA SAUVEGARDE
         // =============================================================================
 
-        // Calcul du zoom optimal avec détection avancée
-        const screenConfig = calculateOptimalZoom();
-        
-        // Récupérer le zoom sauvegardé ou utiliser le zoom optimal
+        // Récupérer le zoom sauvegardé en PREMIER
         const savedZoom = getSavedZoomLevel();
-        const initialZoom = savedZoom || screenConfig.optimalZoom;
+        const optimalZoom = calculateOptimalZoom();
         
-        console.log(`Zoom initial: ${initialZoom} (sauvegardé: ${savedZoom}, optimal: ${screenConfig.optimalZoom})`);
+        // DÉCISION FINALE : Sauvegarde > Optimisé
+        const initialZoom = savedZoom !== null ? savedZoom : optimalZoom;
+        
+        console.log(`🎯 Zoom initial: ${initialZoom} (sauvegardé: ${savedZoom}, optimal: ${optimalZoom})`);
+        window.currentMapZoom = initialZoom;
 
-        // Initialisation de la carte avec le zoom sauvegardé ou optimal
+        // Initialisation de la carte avec le zoom DÉFINITIF
         const map = L.map('map', { 
             minZoom: 10, 
             maxZoom: 22,
             zoomControl: true
         }).setView([coords.LatOri, coords.LonOri], initialZoom);
 
-        // Sauvegarder le zoom initial
-        saveZoomLevel(initialZoom);
+        // Sauvegarder le zoom initial (au cas où)
+        if (savedZoom === null) {
+            saveZoomLevel(initialZoom);
+        }
 
         // =============================================================================
         // GESTIONNAIRES D'ÉVÉNEMENTS POUR LA SAUVEGARDE DU ZOOM
@@ -486,20 +460,24 @@
         let zoomSaveTimeout;
         map.on('zoomend', function() {
             const currentZoom = map.getZoom();
+            window.currentMapZoom = currentZoom;
             
             // Délai pour éviter les sauvegardes trop fréquentes
             clearTimeout(zoomSaveTimeout);
             zoomSaveTimeout = setTimeout(() => {
                 saveZoomLevel(currentZoom);
+                updateDebugPanel();
             }, 500);
         });
 
-        // Sauvegarder aussi lors du déplacement (au cas où)
+        // Sauvegarder aussi lors du déplacement
         map.on('moveend', function() {
             const currentZoom = map.getZoom();
+            window.currentMapZoom = currentZoom;
             clearTimeout(zoomSaveTimeout);
             zoomSaveTimeout = setTimeout(() => {
                 saveZoomLevel(currentZoom);
+                updateDebugPanel();
             }, 1000);
         });
 
@@ -526,9 +504,8 @@
             points.flex = L.latLng(coords.LatFlex, coords.LonFlex);
         }
 
-        console.log("Configuration écran:", screenConfig);
-        console.log("Points calculés:", points);
-        console.log("Zoom initial:", initialZoom);
+        console.log("📍 Points calculés:", points);
+        console.log("🎯 Zoom initial:", initialZoom);
 
         // [Le reste du code pour les marqueurs, polygones, etc. reste identique...]
         // Création de l'icône personnalisée pour le point de départ
@@ -730,7 +707,7 @@
             }
         }
 
-        // AJUSTEMENT FINAL OPTIMISÉ (seulement si pas de zoom sauvegardé)
+        // AJUSTEMENT FINAL OPTIMISÉ (uniquement si AUCUN zoom sauvegardé)
         const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
         if (coords.hasFlexParams && coords.flexActive === 1) {
             boundsPoints.push(points.flex);
@@ -738,27 +715,31 @@
         
         const bounds = L.latLngBounds(boundsPoints);
         
-        // Ajustement intelligent selon le type d'écran (uniquement si pas de zoom sauvegardé)
-        if (!savedZoom) {
+        // Ajustement intelligent UNIQUEMENT si pas de zoom sauvegardé
+        if (savedZoom === null) {
             setTimeout(() => {
                 const boundsZoom = map.getBoundsZoom(bounds, false);
+                
+                // Pour les petits écrans : priorité au zoom rapproché
+                const estimatedDiagonal = Math.sqrt(Math.pow(window.screen.width, 2) + Math.pow(window.screen.height, 2)) / (window.devicePixelRatio >= 2 ? 200 : 100);
                 let finalZoom, padding;
                 
-                if (screenConfig.is116InchFHD) {
-                    finalZoom = Math.min(initialZoom, boundsZoom);
-                    padding = [15, 15];
-                } else if (screenConfig.screenType === "≤7\"") {
-                    finalZoom = Math.max(initialZoom, boundsZoom - 1);
+                if (estimatedDiagonal <= 7) {
+                    finalZoom = Math.max(optimalZoom, boundsZoom - 1);
                     padding = [10, 10];
+                } else if (estimatedDiagonal <= 13) {
+                    finalZoom = Math.min(optimalZoom, boundsZoom);
+                    padding = [15, 15];
                 } else {
-                    finalZoom = Math.min(initialZoom, boundsZoom);
+                    finalZoom = Math.min(optimalZoom, boundsZoom);
                     padding = [20, 20];
                 }
                 
                 map.fitBounds(bounds, { padding: padding, maxZoom: finalZoom });
                 saveZoomLevel(finalZoom); // Sauvegarder le zoom après ajustement
+                window.currentMapZoom = finalZoom;
                 
-                console.log(`Ajustement final - Type: ${screenConfig.screenType}, Zoom: ${finalZoom}`);
+                console.log(`🎯 Ajustement final - Zoom: ${finalZoom}`);
             }, 200);
         }
 
@@ -913,21 +894,22 @@
                 e.preventDefault();
                 const debugPanel = document.getElementById('debug-panel');
                 debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
-                
-                // Mettre à jour les infos de zoom sauvegardé
-                document.getElementById('saved-zoom-info').textContent = getSavedZoomLevel() || 'Aucun';
+                updateDebugPanel();
             }
         });
 
         // Fonction pour réinitialiser le zoom (utile pour le debug)
         function resetSavedZoom() {
             localStorage.removeItem(ZOOM_STORAGE_KEY);
-            console.log('Zoom sauvegardé réinitialisé');
+            console.log('🗑️ Zoom sauvegardé réinitialisé');
             location.reload();
         }
 
-        // Exposer la fonction reset pour le debug (optionnel)
+        // Exposer la fonction reset pour le debug
         window.resetSavedZoom = resetSavedZoom;
+
+        // Mettre à jour le debug panel au chargement
+        updateDebugPanel();
     </script>
 </body>
 </html>
