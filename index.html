@@ -147,6 +147,22 @@
             z-index: 1000;
             max-width: 300px;
         }
+        .zoom-save-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .zoom-save-indicator.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -158,8 +174,12 @@
         Zoom calculé: <span id="zoom-info"></span><br>
         DPI: <span id="dpi-info"></span><br>
         Taille écran: <span id="screen-size-info"></span><br>
-        Type: <span id="screen-type-info"></span>
+        Type: <span id="screen-type-info"></span><br>
+        Zoom sauvegardé: <span id="saved-zoom-info"></span>
     </div>
+
+    <!-- Indicateur de sauvegarde du zoom -->
+    <div id="zoom-save-indicator" class="zoom-save-indicator">Zoom sauvegardé</div>
 
     <div id="weather-panel" class="weather-compact">Chargement...</div>
     <div class="legend collapsed" id="legend">
@@ -197,6 +217,55 @@
     </div>
     
     <script>
+        // =============================================================================
+        // GESTION DE LA SAUVEGARDE DU ZOOM
+        // =============================================================================
+
+        // Clé pour le localStorage
+        const ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
+
+        // Sauvegarder le niveau de zoom
+        function saveZoomLevel(zoom) {
+            try {
+                localStorage.setItem(ZOOM_STORAGE_KEY, zoom.toString());
+                console.log(`Zoom sauvegardé: ${zoom}`);
+                
+                // Afficher l'indicateur visuel
+                showZoomSaveIndicator();
+                
+                // Mettre à jour le debug panel
+                if (document.getElementById('debug-panel').style.display !== 'none') {
+                    document.getElementById('saved-zoom-info').textContent = zoom;
+                }
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde du zoom:', error);
+            }
+        }
+
+        // Récupérer le niveau de zoom sauvegardé
+        function getSavedZoomLevel() {
+            try {
+                const savedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
+                return savedZoom ? parseInt(savedZoom) : null;
+            } catch (error) {
+                console.error('Erreur lors de la récupération du zoom:', error);
+                return null;
+            }
+        }
+
+        // Afficher l'indicateur de sauvegarde
+        function showZoomSaveIndicator() {
+            const indicator = document.getElementById('zoom-save-indicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        // =============================================================================
+        // DÉTECTION DE L'ÉCRAN ET CALCUL DU ZOOM
+        // =============================================================================
+
         // Fonction pour détecter précisément les écrans 11.6" 1920x1080
         function detectScreenType() {
             const screenWidth = window.screen.width;
@@ -208,10 +277,9 @@
             const effectiveHeight = screenHeight * pixelRatio;
             
             // Détection spécifique des écrans 11.6" 1920x1080
-            // Ces écrans ont typiquement une haute densité de pixels
             const is116InchFHD = 
                 (effectiveWidth === 1920 && effectiveHeight === 1080) ||
-                (effectiveWidth === 1080 && effectiveHeight === 1920) || // orientation portrait
+                (effectiveWidth === 1080 && effectiveHeight === 1920) ||
                 (Math.abs(effectiveWidth - 1920) < 50 && Math.abs(effectiveHeight - 1080) < 50);
             
             // Estimation de la diagonale
@@ -240,7 +308,7 @@
             if (screenInfo.is116InchFHD) {
                 deviceType = "Écran 11.6\" FHD Optimisé";
                 screenType = "11.6\" FHD";
-                baseZoom = 18; // Zoom rapproché pour bien voir les détails du pivot
+                baseZoom = 18;
             } else if (screenInfo.estimatedDiagonal <= 7) {
                 deviceType = "Très petit écran (" + screenInfo.estimatedDiagonal + " pouces)";
                 screenType = "≤7\"";
@@ -267,13 +335,13 @@
                 baseZoom = 14;
             }
             
-            // Ajustement pour haute densité de pixels (écrans FHD sur petites diagonales)
+            // Ajustement pour haute densité de pixels
             const densityAdjustment = Math.log2(pixelRatio);
             let optimalZoom = Math.min(22, Math.max(14, baseZoom + Math.round(densityAdjustment)));
             
-            // Ajustement spécial pour écran 11.6" FHD - on veut un bon compromis vue/détail
+            // Ajustement spécial pour écran 11.6" FHD
             if (screenInfo.is116InchFHD) {
-                optimalZoom = 18; // Forcer le zoom optimal pour ce type d'écran
+                optimalZoom = 18;
             }
             
             // Debug info
@@ -288,6 +356,8 @@
                     `${screenInfo.estimatedDiagonal} pouces`;
                 document.getElementById('screen-type-info').textContent = 
                     `${screenType} - ${deviceType}`;
+                document.getElementById('saved-zoom-info').textContent = 
+                    getSavedZoomLevel() || 'Aucun';
             }
             
             console.log(`Détection écran: ${deviceType}, Résolution: ${screenInfo.effectiveWidth}x${screenInfo.effectiveHeight}, Zoom optimal: ${optimalZoom}`);
@@ -298,6 +368,10 @@
                 is116InchFHD: screenInfo.is116InchFHD
             };
         }
+
+        // =============================================================================
+        // FONCTIONS PRINCIPALES
+        // =============================================================================
 
         // Fonction pour récupérer les paramètres d'URL
         function getQueryParams() {
@@ -381,16 +455,57 @@
             throw new Error("Paramètres manquants ou incorrects");
         }
 
+        // =============================================================================
+        // INITIALISATION DE LA CARTE AVEC SAUVEGARDE DU ZOOM
+        // =============================================================================
+
         // Calcul du zoom optimal avec détection avancée
         const screenConfig = calculateOptimalZoom();
-        const optimalZoom = screenConfig.optimalZoom;
         
-        // Initialisation de la carte avec le zoom optimal
+        // Récupérer le zoom sauvegardé ou utiliser le zoom optimal
+        const savedZoom = getSavedZoomLevel();
+        const initialZoom = savedZoom || screenConfig.optimalZoom;
+        
+        console.log(`Zoom initial: ${initialZoom} (sauvegardé: ${savedZoom}, optimal: ${screenConfig.optimalZoom})`);
+
+        // Initialisation de la carte avec le zoom sauvegardé ou optimal
         const map = L.map('map', { 
             minZoom: 10, 
             maxZoom: 22,
             zoomControl: true
-        }).setView([coords.LatOri, coords.LonOri], optimalZoom);
+        }).setView([coords.LatOri, coords.LonOri], initialZoom);
+
+        // Sauvegarder le zoom initial
+        saveZoomLevel(initialZoom);
+
+        // =============================================================================
+        // GESTIONNAIRES D'ÉVÉNEMENTS POUR LA SAUVEGARDE DU ZOOM
+        // =============================================================================
+
+        // Sauvegarder le zoom quand l'utilisateur zoome
+        let zoomSaveTimeout;
+        map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
+            
+            // Délai pour éviter les sauvegardes trop fréquentes
+            clearTimeout(zoomSaveTimeout);
+            zoomSaveTimeout = setTimeout(() => {
+                saveZoomLevel(currentZoom);
+            }, 500);
+        });
+
+        // Sauvegarder aussi lors du déplacement (au cas où)
+        map.on('moveend', function() {
+            const currentZoom = map.getZoom();
+            clearTimeout(zoomSaveTimeout);
+            zoomSaveTimeout = setTimeout(() => {
+                saveZoomLevel(currentZoom);
+            }, 1000);
+        });
+
+        // =============================================================================
+        // CONFIGURATION DE LA CARTE ET DES POINTS
+        // =============================================================================
 
         // Carte Esri World Imagery
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -413,9 +528,9 @@
 
         console.log("Configuration écran:", screenConfig);
         console.log("Points calculés:", points);
-        console.log("Zoom optimal:", optimalZoom);
+        console.log("Zoom initial:", initialZoom);
 
-        // [Le reste du code reste identique pour les marqueurs, polygones, etc.]
+        // [Le reste du code pour les marqueurs, polygones, etc. reste identique...]
         // Création de l'icône personnalisée pour le point de départ
         const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
             <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -615,7 +730,7 @@
             }
         }
 
-        // AJUSTEMENT FINAL OPTIMISÉ POUR 11.6" FHD
+        // AJUSTEMENT FINAL OPTIMISÉ (seulement si pas de zoom sauvegardé)
         const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
         if (coords.hasFlexParams && coords.flexActive === 1) {
             boundsPoints.push(points.flex);
@@ -623,31 +738,34 @@
         
         const bounds = L.latLngBounds(boundsPoints);
         
-        // Ajustement intelligent selon le type d'écran
-        setTimeout(() => {
-            const boundsZoom = map.getBoundsZoom(bounds, false);
-            let finalZoom, padding;
-            
-            if (screenConfig.is116InchFHD) {
-                // Pour 11.6" FHD : bon compromis entre vue complète et détails
-                finalZoom = Math.min(optimalZoom, boundsZoom);
-                padding = [15, 15]; // Padding modéré
-            } else if (screenConfig.screenType === "≤7\"") {
-                // Très petits écrans : priorité au zoom rapproché
-                finalZoom = Math.max(optimalZoom, boundsZoom - 1);
-                padding = [10, 10];
-            } else {
-                // Autres écrans : équilibre
-                finalZoom = Math.min(optimalZoom, boundsZoom);
-                padding = [20, 20];
-            }
-            
-            map.fitBounds(bounds, { padding: padding, maxZoom: finalZoom });
-            
-            console.log(`Ajustement final - Type: ${screenConfig.screenType}, Zoom: ${finalZoom}`);
-        }, 200);
+        // Ajustement intelligent selon le type d'écran (uniquement si pas de zoom sauvegardé)
+        if (!savedZoom) {
+            setTimeout(() => {
+                const boundsZoom = map.getBoundsZoom(bounds, false);
+                let finalZoom, padding;
+                
+                if (screenConfig.is116InchFHD) {
+                    finalZoom = Math.min(initialZoom, boundsZoom);
+                    padding = [15, 15];
+                } else if (screenConfig.screenType === "≤7\"") {
+                    finalZoom = Math.max(initialZoom, boundsZoom - 1);
+                    padding = [10, 10];
+                } else {
+                    finalZoom = Math.min(initialZoom, boundsZoom);
+                    padding = [20, 20];
+                }
+                
+                map.fitBounds(bounds, { padding: padding, maxZoom: finalZoom });
+                saveZoomLevel(finalZoom); // Sauvegarder le zoom après ajustement
+                
+                console.log(`Ajustement final - Type: ${screenConfig.screenType}, Zoom: ${finalZoom}`);
+            }, 200);
+        }
 
-        // [Le reste du code (légende, météo, etc.) reste identique]
+        // =============================================================================
+        // INTERFACE UTILISATEUR (LÉGENDE, MÉTÉO, etc.)
+        // =============================================================================
+
         // Gestion de la légende repliable
         const legend = document.getElementById('legend');
         const legendHeader = legend.querySelector('.legend-header');
@@ -795,8 +913,21 @@
                 e.preventDefault();
                 const debugPanel = document.getElementById('debug-panel');
                 debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+                
+                // Mettre à jour les infos de zoom sauvegardé
+                document.getElementById('saved-zoom-info').textContent = getSavedZoomLevel() || 'Aucun';
             }
         });
+
+        // Fonction pour réinitialiser le zoom (utile pour le debug)
+        function resetSavedZoom() {
+            localStorage.removeItem(ZOOM_STORAGE_KEY);
+            console.log('Zoom sauvegardé réinitialisé');
+            location.reload();
+        }
+
+        // Exposer la fonction reset pour le debug (optionnel)
+        window.resetSavedZoom = resetSavedZoom;
     </script>
 </body>
 </html>
