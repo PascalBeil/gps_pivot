@@ -710,9 +710,9 @@
                 zIndexOffset: 700
             }).addTo(map).bindPopup('Porte-à-faux escamotable');
             
-            // Segment vert foncé entre pivot et PafEscam
+            // CORRECTION : Segment en BLEU comme les autres segments de référence
             L.polyline([points.pivot, points.pafEscam], { 
-                color: '#006400', // Vert foncé
+                color: 'blue', // Changé de vert foncé à bleu
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
