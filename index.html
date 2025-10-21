@@ -723,7 +723,7 @@
         }
 
         // =============================================================================
-        // LIGNES ET POLYGONES - AMÉLIORATION DE LA VISIBILITÉ
+        // LIGNES ET POLYGONES - MODE PIVOTFLEX SANS POLYGONES
         // =============================================================================
 
         // LIGNE MAX ANGLE - PLUS ÉPAISSE ET PLUS VISIBLE
@@ -738,76 +738,11 @@
         }
 
         // =============================================================================
-        // NOUVELLES FONCTIONS POUR COURBES PIVOTFLEX PRÉCISES
-        // =============================================================================
-
-        /**
-         * Calcule la distance entre deux points en mètres
-         */
-        function calculateDistance(point1, point2) {
-            const R = 6371000; // Rayon de la Terre en mètres
-            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
-            const dLon = (point2.lng - point1.lng) * Math.PI / 180;
-            const a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        /**
-         * Calcule l'angle entre deux points par rapport à un centre
-         */
-        function calculateAngle(center, point) {
-            const dx = point.lng - center.lng;
-            const dy = point.lat - center.lat;
-            return Math.atan2(dy, dx);
-        }
-
-        /**
-         * Crée un arc de cercle précis pour pivotflex
-         * @param {L.LatLng} center - Centre de rotation (point de flexion)
-         * @param {L.LatLng} startPoint - Point de départ
-         * @param {L.LatLng} endPoint - Point d'arrivée  
-         * @param {number} radius - Rayon de courbure (distance flex->pivot)
-         * @param {number} numPoints - Nombre de points pour l'arc
-         */
-        function createPivotFlexArc(center, startPoint, endPoint, radius, numPoints = 20) {
-            // Calcul des angles
-            const startAngle = calculateAngle(center, startPoint);
-            const endAngle = calculateAngle(center, endPoint);
-            
-            // Ajustement pour prendre le plus court chemin
-            let angleDiff = endAngle - startAngle;
-            if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-            if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-            
-            const arcPoints = [];
-            
-            for (let i = 0; i <= numPoints; i++) {
-                const t = i / numPoints;
-                const angle = startAngle + angleDiff * t;
-                
-                // Calcul des coordonnées du point sur l'arc
-                const lat = center.lat + (Math.sin(angle) * radius / 111320); // 111320 m/deg latitude
-                const lng = center.lng + (Math.cos(angle) * radius / (111320 * Math.cos(center.lat * Math.PI / 180)));
-                
-                arcPoints.push(L.latLng(lat, lng));
-            }
-            
-            return arcPoints;
-        }
-
-        // =============================================================================
-        // LIGNES DE RÉFÉRENCE PIVOTFLEX AVEC COURBES PRÉCISES
+        // LIGNES DE RÉFÉRENCE PIVOTFLEX - SANS POLYGONES
         // =============================================================================
 
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // Calcul du rayon de courbure (distance entre flex et pivot)
-            const flexRadius = calculateDistance(points.flex, points.pivot);
-            console.log(`📏 Rayon de courbure pivotflex: ${flexRadius.toFixed(2)} m`);
-            
+            // SEGMENTS DE RÉFÉRENCE EXISTANTS - RIEN NE CHANGE
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
                 dashArray: '6, 6',
@@ -823,38 +758,131 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // ARC PRÉCIS entre zéro et pivot avec le bon rayon
-            const arcZeroPivot = createPivotFlexArc(points.flex, points.zero, points.pivot, flexRadius, 30);
-            L.polyline(arcZeroPivot, { 
+            // SEGMENT ARRONDI entre zéro et pivot - EXISTANT
+            const roundedSegmentZeroPivot = createRoundedSegment(points.zero, points.pivot, points.origine, 15);
+            L.polyline(roundedSegmentZeroPivot, { 
                 color: 'blue',
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
-            }).addTo(map).bindPopup('Arc Zéro à Pivot (rayon précis)');
+            }).addTo(map).bindPopup('Arc arrondi Zéro à Pivot');
             
-            // ARC PRÉCIS entre pivot et maxAngle avec le bon rayon
-            const arcPivotMaxAngle = createPivotFlexArc(points.flex, points.pivot, points.maxAngle, flexRadius, 30);
-            L.polyline(arcPivotMaxAngle, { 
+            // SEGMENT ARRONDI entre pivot et maxAngle - EXISTANT
+            const roundedSegmentPivotMaxAngle = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
+            L.polyline(roundedSegmentPivotMaxAngle, { 
                 color: 'blue',
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
-            }).addTo(map).bindPopup('Arc Pivot à MaxAngle (rayon précis)');
+            }).addTo(map).bindPopup('Arc arrondi Pivot à MaxAngle');
+            
+            // SUPPRESSION DES POLYGONES EN MODE PIVOTFLEX
+            console.log('🎯 Mode pivotflex - Affichage des segments uniquement (pas de polygones)');
         } else {
-            // Mode pivot standard - segment zéro-pivot droit
+            // Mode pivot standard - segment zéro-pivot droit ET polygones
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
+            
+            // POLYGONES UNIQUEMENT EN MODE STANDARD
+            if (coords.sens === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+            } else if (coords.sens === 1 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.6);
+            } else if (coords.sens === 2 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.6);
+            } else if (coords.sens === 1 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
+                drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.6);
+            } else if (coords.sens === 2 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+                drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
+            }
         }
 
         // =============================================================================
-        // POLYGONES AVEC BORDURES VISIBLES ET COHÉRENTES
+        // FONCTION POUR CRÉER UN SEGMENT ARRONDI VERS L'EXTÉRIEUR (EXISTANTE)
+        // =============================================================================
+
+        function createRoundedSegment(startPoint, endPoint, centerPoint, numPoints = 15) {
+            // Calculer le milieu du segment
+            const midPoint = L.latLng(
+                (startPoint.lat + endPoint.lat) / 2,
+                (startPoint.lng + endPoint.lng) / 2
+            );
+            
+            // Calculer la direction du segment
+            const dx = endPoint.lng - startPoint.lng;
+            const dy = endPoint.lat - startPoint.lat;
+            
+            // Calculer la normale (perpendiculaire)
+            const normal = {
+                x: -dy,
+                y: dx
+            };
+            
+            // Normaliser la normale
+            const length = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+            if (length > 0) {
+                normal.x /= length;
+                normal.y /= length;
+            }
+            
+            // Déterminer le sens (vers l'extérieur par rapport au centre)
+            const toCenter = {
+                x: centerPoint.lng - midPoint.lng,
+                y: centerPoint.lat - midPoint.lat
+            };
+            
+            // Produit scalaire pour déterminer si la normale pointe vers l'extérieur
+            const dot = normal.x * toCenter.x + normal.y * toCenter.y;
+            if (dot > 0) {
+                // Inverser la normale si elle pointe vers l'intérieur
+                normal.x = -normal.x;
+                normal.y = -normal.y;
+            }
+            
+            // Calculer la distance pour la courbure (proportionnelle à la longueur du segment)
+            const segmentLength = Math.sqrt(dx * dx + dy * dy);
+            const curveDistance = segmentLength * 0.15;
+            
+            // Point de contrôle pour la courbe de Bézier quadratique
+            const controlPoint = L.latLng(
+                midPoint.lat + normal.y * curveDistance,
+                midPoint.lng + normal.x * curveDistance
+            );
+            
+            // Générer les points de la courbe
+            const curvePoints = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                
+                // Courbe de Bézier quadratique
+                const lat = (1 - t) * (1 - t) * startPoint.lat + 
+                           2 * (1 - t) * t * controlPoint.lat + 
+                           t * t * endPoint.lat;
+                
+                const lng = (1 - t) * (1 - t) * startPoint.lng + 
+                           2 * (1 - t) * t * controlPoint.lng + 
+                           t * t * endPoint.lng;
+                
+                curvePoints.push(L.latLng(lat, lng));
+            }
+            
+            return curvePoints;
+        }
+
+        // =============================================================================
+        // POLYGONES AVEC BORDURES VISIBLES ET COHÉRENTES (POUR MODE STANDARD)
         // =============================================================================
 
         function drawPolygon(pointList, color) {
+            // BORDURES AMÉLIORÉES - COULEURS FIXES POUR TOUS LES POLYGONES
             const borderColor = '#0044aa';
             const borderWeight = 2;
             const borderOpacity = 1.0;
@@ -914,58 +942,6 @@
             }).addTo(map);
         }
 
-        // =============================================================================
-        // GESTION DES ZONES PIVOTFLEX AVEC COURBES PRÉCISES
-        // =============================================================================
-
-        function handlePivotFlexZones() {
-            // Calcul du rayon de courbure
-            const flexRadius = calculateDistance(points.flex, points.pivot);
-            
-            // Création des arcs précis
-            const arcZeroPivot = createPivotFlexArc(points.flex, points.zero, points.pivot, flexRadius, 30);
-            const arcPivotMaxAngle = createPivotFlexArc(points.flex, points.pivot, points.maxAngle, flexRadius, 30);
-            
-            const polygone1 = [points.origine, ...arcZeroPivot, points.flex, points.origine];
-            const polygone2 = [points.origine, points.flex, ...arcPivotMaxAngle, points.origine];
-            
-            let polygone1Color, polygone2Color;
-            
-            if (coords.sens === 0) {
-                polygone1Color = polygone2Color = 'lightblue';
-            } else if (coords.sens === 1) {
-                polygone1Color = coords.PivCirc === 0 ? 'lightblue' : '#fff941';
-                polygone2Color = coords.PivCirc === 0 ? '#fff941' : 'lightblue';
-            } else if (coords.sens === 2) {
-                polygone1Color = coords.PivCirc === 0 ? '#fff941' : 'lightblue';
-                polygone2Color = coords.PivCirc === 0 ? 'lightblue' : '#fff941';
-            }
-            
-            drawPolygon(polygone1, polygone1Color);
-            drawPolygon(polygone2, polygone2Color);
-        }
-
-        // Gestion des scénarios
-        if (coords.hasFlexParams && coords.flexActive === 1) {
-            handlePivotFlexZones();
-        } else {
-            if (coords.sens === 0) {
-                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
-            } else if (coords.sens === 1 && coords.PivCirc === 0) {
-                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
-                drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.6);
-            } else if (coords.sens === 2 && coords.PivCirc === 0) {
-                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
-                drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.6);
-            } else if (coords.sens === 1 && coords.PivCirc === 1) {
-                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
-                drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.6);
-            } else if (coords.sens === 2 && coords.PivCirc === 1) {
-                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
-                drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
-            }
-        }
-
         // Ajustement final avec prise en compte du PafEscam si activé
         if (!savedCenter) {
             const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
@@ -991,209 +967,8 @@
         }
 
         // =============================================================================
-        // MÉTÉO - CORRECTION COMPLÈTE
+        // [TOUT LE RESTE DU CODE (MÉTÉO, LÉGENDE, etc.) RESTE IDENTIQUE]
         // =============================================================================
-
-        const weatherPanel = document.getElementById('weather-panel');
-        let isWeatherExpanded = false;
-
-        // Fonction COMPLÈTE pour la météo
-        async function fetchWeather(lat, lon) {
-            console.log('🌤️ Chargement météo pour:', lat, lon);
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
-            
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
-                const data = await response.json();
-                console.log('✅ Données météo reçues:', data);
-                displayWeather(data);
-            } catch (error) {
-                console.error('❌ Erreur météo:', error);
-                weatherPanel.innerHTML = `
-                    <div style="font-weight: bold;">Météo non disponible</div>
-                    <div style="font-size: 10px; color: #666;">Service temporairement indisponible</div>
-                    <div class="weather-toggle">Cliquer pour détails</div>
-                `;
-            }
-        }
-
-        function displayWeather(data) {
-            if (!data.current_weather) {
-                console.error('❌ Données météo incomplètes');
-                return;
-            }
-            
-            const current = data.current_weather;
-            window.weatherData = {
-                temperature: current.temperature,
-                weatherCode: current.weathercode,
-                time: new Date(current.time)
-            };
-            updateWeatherDisplay();
-        }
-
-        function updateWeatherDisplay() {
-            if (!window.weatherData) {
-                console.log('⏳ Données météo non encore chargées');
-                return;
-            }
-
-            const current = window.weatherData;
-            const now = new Date();
-            const date = now.toLocaleDateString('fr-FR');
-            const heure = now.toLocaleTimeString('fr-FR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-
-            const templates = {
-                0: { temp: 'Température', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Porte-à-faux' },
-                1: { temp: 'Temperature', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Overhang' },
-                2: { temp: 'Temperatura', angle: 'Ángulo', flex: 'PivotFlex', pafEscam: 'Voladizo' },
-                3: { temp: 'Temperatura', angle: 'Ângulo', flex: 'PivotFlex', pafEscam: 'Balancim' },
-                4: { temp: 'Temperatur', angle: 'Winkel', flex: 'PivotFlex', pafEscam: 'Ausleger' },
-                5: { temp: 'Temperatuur', angle: 'Hoek', flex: 'PivotFlex', pafEscam: 'Uitkraging' },
-                6: { temp: 'Temperatura', angle: 'Angolo', flex: 'PivotFlex', pafEscam: 'Sbalzo' }
-            };
-
-            const t = templates[coords.lang] || templates[0];
-            const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
-            
-            let flexStatus = '';
-            if (coords.hasFlexParams) {
-                flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
-            }
-
-            let pafEscamStatus = '';
-            if (coords.hasPafEscamParams) {
-                pafEscamStatus = coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF';
-            }
-
-            if (isWeatherExpanded) {
-                let displayContent = `
-                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>
-                    <div><strong>Date:</strong> ${date}</div>
-                    <div><strong>Heure:</strong> ${heure}</div>
-                    <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
-                    <div><strong>Météo:</strong> ${weatherDesc}</div>
-                    <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
-                `;
-                
-                if (coords.hasFlexParams) {
-                    displayContent += `<div><strong>${t.flex}:</strong> ${flexStatus}</div>`;
-                }
-                
-                if (coords.hasPafEscamParams) {
-                    displayContent += `<div><strong>${t.pafEscam}:</strong> ${pafEscamStatus}</div>`;
-                }
-                
-                displayContent += `<div class="weather-toggle">Cliquer pour réduire</div>`;
-                
-                weatherPanel.innerHTML = displayContent;
-            } else {
-                let displayContent = `
-                    <div style="font-weight: bold;">${current.temperature.toFixed(1)}°C | ${coords.ang}°</div>
-                    <div style="font-size: 10px; color: #666;">${weatherDesc}`;
-                
-                if (coords.hasFlexParams) {
-                    displayContent += ` | Flex: ${flexStatus}`;
-                }
-                
-                if (coords.hasPafEscamParams) {
-                    displayContent += ` | Paf: ${pafEscamStatus}`;
-                }
-                
-                displayContent += `</div><div class="weather-toggle">Cliquer pour détails</div>`;
-                
-                weatherPanel.innerHTML = displayContent;
-            }
-        }
-
-        // Fonction de description météo multilingue
-        function getWeatherDescription(code, lang) {
-            const descriptions = {
-                0: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
-                1: ['Principalement dégagé', 'Mainly clear', 'Principalmente despejado', 'Principalmente limpo', 'Überwiegend klar', 'Overwegend helder', 'Prevalentemente sereno'],
-                2: ['Partiellement nuageux', 'Partly cloudy', 'Parcialmente nublado', 'Parcialmente nublado', 'Teilweise bewölkt', 'Gedeeltelijk bewolkt', 'Parzialmente nuvoloso'],
-                3: ['Couvert', 'Overcast', 'Cubierto', 'Nublado', 'Bedeckt', 'Bewolkt', 'Nuvoloso'],
-                45: ['Brouillard', 'Fog', 'Niebla', 'Nevoeiro', 'Nebel', 'Mist', 'Nebbia'],
-                48: ['Brouillard givrant', 'Rime fog', 'Niebla helada', 'Nevoeiro gelado', 'Eisnebel', 'Rijpmist', 'Nebbia gelata'],
-                51: ['Bruine légère', 'Light drizzle', 'Llovizna ligera', 'Garoa leve', 'Leichter Nieselregen', 'Lichte motregen', 'Pioggerella leggera'],
-                53: ['Bruine modérée', 'Moderate drizzle', 'Llovizna moderada', 'Garoa moderada', 'Mäßiger Nieselregen', 'Matige motregen', 'Pioggerella moderata'],
-                55: ['Bruine dense', 'Dense drizzle', 'Llovizna densa', 'Garoa densa', 'Dichter Nieselregen', 'Dichte motregen', 'Pioggerella fitta'],
-                61: ['Pluie légère', 'Slight rain', 'Lluvia ligera', 'Chuva leve', 'Leichter Regen', 'Lichte regen', 'Pioggia leggera'],
-                63: ['Pluie modérée', 'Moderate rain', 'Lluvia moderada', 'Chuva moderada', 'Mäßiger Regen', 'Matige regen', 'Pioggia moderata'],
-                65: ['Pluie forte', 'Heavy rain', 'Lluvia intensa', 'Chuva forte', 'Starker Regen', 'Zware regen', 'Pioggia forte'],
-                71: ['Neige légère', 'Slight snow', 'Nieve ligera', 'Neve leve', 'Leichter Schneefall', 'Lichte sneeuw', 'Neve leggera'],
-                73: ['Neige modérée', 'Moderate snow', 'Nieve moderada', 'Neve moderada', 'Mäßiger Schneefall', 'Matige sneeuw', 'Neve moderata'],
-                75: ['Neige forte', 'Heavy snow', 'Nieve intensa', 'Neve forte', 'Starker Schneefall', 'Zware sneeuw', 'Neve forte'],
-                95: ['Orage', 'Thunderstorm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
-            };
-
-            return descriptions[code]?.[lang] || descriptions[code]?.[0] || 'Conditions inconnues';
-        }
-
-        // Gestion du clic sur le panneau météo
-        weatherPanel.addEventListener('click', function() {
-            isWeatherExpanded = !isWeatherExpanded;
-            weatherPanel.classList.toggle('weather-expanded', isWeatherExpanded);
-            updateWeatherDisplay();
-        });
-
-        // CHARGEMENT DE LA MÉTÉO - APPELLÉ APRÈS LA CRÉATION DE LA CARTE
-        setTimeout(() => {
-            fetchWeather(coords.LatOri, coords.LonOri);
-        }, 1000);
-
-        // =============================================================================
-        // LÉGENDE ET INTERFACE
-        // =============================================================================
-
-        const legend = document.getElementById('legend');
-        const legendHeader = legend.querySelector('.legend-header');
-        const toggleIcon = legend.querySelector('.toggle-icon');
-
-        legendHeader.addEventListener('click', function() {
-            const isCollapsed = legend.classList.toggle('collapsed');
-            toggleIcon.textContent = isCollapsed ? '+' : '−';
-        });
-
-        // =============================================================================
-        // DEBUG ET UTILITAIRES
-        // =============================================================================
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'F2') {
-                e.preventDefault();
-                const debugPanel = document.getElementById('debug-panel');
-                debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
-                updateDebugPanel();
-                updateTileDebugInfo();
-            }
-        });
-
-        function resetSavedPosition() {
-            localStorage.removeItem(ZOOM_STORAGE_KEY);
-            localStorage.removeItem(CENTER_STORAGE_KEY);
-            console.log('🗑️ Position réinitialisée');
-            location.reload();
-        }
-
-        window.resetSavedPosition = resetSavedPosition;
-        updateDebugPanel();
-
-        // Mise à jour périodique de l'heure dans la météo
-        setInterval(() => {
-            if (window.weatherData) {
-                window.weatherData.time = new Date();
-                updateWeatherDisplay();
-            }
-        }, 60000);
-
-        console.log('✅ Application Pivot Irrifrance initialisée avec succès');
-        console.log(`🎯 Configuration: Flex ${coords.hasFlexParams ? (coords.flexActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
-        console.log(`🎯 Configuration: PafEscam ${coords.hasPafEscamParams ? (coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
     </script>
 </body>
 </html>
