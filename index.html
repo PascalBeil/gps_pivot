@@ -741,24 +741,25 @@
             // MODE PIVOTFLEX - SEGMENTS DROITS SANS POLYGONES ET SANS ARRONDIS
             console.log('🎯 Mode pivotflex - Segments droits sans polygones et sans arrondis');
             
-            // Segment Origine → Zéro (AJOUTÉ)
+            // Segment Origine → Zéro (TRAIT DISCONTINU)
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
+                dashArray: '6, 6', // TRAIT DISCONTINU
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
             
-            // Segment Origine → Flex
+            // Segment Origine → Flex (TRAIT CONTINU)
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
-                dashArray: '6, 6',
+                // PAS DE dashArray = TRAIT CONTINU
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
-            // Segment Flex → Pivot  
+            // Segment Flex → Pivot (TRAIT CONTINU)
             L.polyline([points.flex, points.pivot], { 
                 color: 'blue',
                 weight: 3,
