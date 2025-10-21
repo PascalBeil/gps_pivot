@@ -788,23 +788,49 @@
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
             // =============================================================================
-            // CERCLE AUTOUR DU POINT DE FLEXION
+            // CERCLE AUTOUR DU POINT DE FLEXION - AVEC GESTION PORTE-À-FAUX
             // =============================================================================
             
-            // Calcul de la distance entre le point de flexion et la dernière tour
-            const flexRadius = calculateDistance(points.flex, points.pivot);
-            console.log(`📏 Rayon de courbure pivotflex: ${flexRadius.toFixed(2)} m`);
+            let circleColor, circleRadius, circlePopup;
             
-            // Création du cercle vert clair autour du point de flexion
+            // Vérifier si les deux modes sont activés
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+                // CAS : FLEX + PORTE-À-FAUX ACTIVÉS - CERCLE VIOLET
+                circleRadius = calculateDistance(points.flex, points.pafEscam);
+                circleColor = '#8A2BE2'; // Violet
+                circlePopup = `Rayon porte-à-faux - Distance: ${circleRadius.toFixed(2)} m`;
+                console.log(`📏 Rayon porte-à-faux (violet): ${circleRadius.toFixed(2)} m`);
+            } else {
+                // CAS : FLEX SEUL - CERCLE VERT (comportement original)
+                circleRadius = calculateDistance(points.flex, points.pivot);
+                circleColor = '#90EE90'; // Vert clair
+                circlePopup = `Cercle de flexion - Rayon: ${circleRadius.toFixed(2)} m`;
+                console.log(`📏 Rayon de courbure pivotflex (vert): ${circleRadius.toFixed(2)} m`);
+            }
+            
+            // Création du cercle avec la couleur appropriée
             const flexCircle = L.circle(points.flex, {
-                color: '#90EE90', // Vert clair
-                fillColor: '#90EE90',
+                color: circleColor,
+                fillColor: circleColor,
                 fillOpacity: 0.3, // Opacité de 30%
-                radius: flexRadius
-            }).addTo(map).bindPopup(`Cercle de flexion - Rayon: ${flexRadius.toFixed(2)} m`);
+                radius: circleRadius
+            }).addTo(map).bindPopup(circlePopup);
             
-            // Afficher dans la légende
-            document.getElementById('flex-circle-legend-item').style.display = 'flex';
+            // Mise à jour de la légende
+            const flexCircleLegendItem = document.getElementById('flex-circle-legend-item');
+            flexCircleLegendItem.style.display = 'flex';
+            
+            // Changer la couleur dans la légende selon le mode
+            const legendColor = flexCircleLegendItem.querySelector('.legend-color');
+            legendColor.style.backgroundColor = circleColor;
+            
+            // Changer le texte de la légende selon le mode
+            const legendText = flexCircleLegendItem.querySelector('span');
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+                legendText.textContent = 'Rayon porte-à-faux';
+            } else {
+                legendText.textContent = 'Rayon flexion';
+            }
             
             // PAS DE SEGMENTS ARRONDIS
             // PAS DE POLYGONES
@@ -1132,6 +1158,13 @@
         console.log('✅ Application Pivot Irrifrance initialisée avec succès');
         console.log(`🎯 Configuration: Flex ${coords.hasFlexParams ? (coords.flexActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
         console.log(`🎯 Configuration: PafEscam ${coords.hasPafEscamParams ? (coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
+
+        // Log spécial pour le mode combiné
+        if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            console.log('🎯 MODE COMBINÉ: Flex + Porte-à-faux - Cercle violet activé');
+            const combinedRadius = calculateDistance(points.flex, points.pafEscam);
+            console.log(`📏 Rayon combiné (flex → paf): ${combinedRadius.toFixed(2)} m`);
+        }
     </script>
 </body>
 </html>
