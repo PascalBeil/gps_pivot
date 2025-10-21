@@ -259,6 +259,10 @@
                 <div class="legend-color" style="background-color: #32CD32;"></div>
                 <span>Porte-à-faux</span>
             </div>
+            <div class="legend-item" id="flex-circle-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #90EE90;"></div>
+                <span>Rayon flexion</span>
+            </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
     </div>
@@ -312,6 +316,22 @@
                 const status = tilesError > tilesLoaded ? '⚠️ Problèmes' : '✅ OK';
                 document.getElementById('tile-status').textContent = status;
             }
+        }
+
+        // =============================================================================
+        // FONCTION POUR CALCULER LA DISTANCE ENTRE DEUX POINTS
+        // =============================================================================
+
+        function calculateDistance(point1, point2) {
+            const R = 6371000; // Rayon de la Terre en mètres
+            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
         }
 
         // =============================================================================
@@ -766,6 +786,25 @@
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
+            
+            // =============================================================================
+            // CERCLE AUTOUR DU POINT DE FLEXION
+            // =============================================================================
+            
+            // Calcul de la distance entre le point de flexion et la dernière tour
+            const flexRadius = calculateDistance(points.flex, points.pivot);
+            console.log(`📏 Rayon de courbure pivotflex: ${flexRadius.toFixed(2)} m`);
+            
+            // Création du cercle vert clair autour du point de flexion
+            const flexCircle = L.circle(points.flex, {
+                color: '#90EE90', // Vert clair
+                fillColor: '#90EE90',
+                fillOpacity: 0.3, // Opacité de 30%
+                radius: flexRadius
+            }).addTo(map).bindPopup(`Cercle de flexion - Rayon: ${flexRadius.toFixed(2)} m`);
+            
+            // Afficher dans la légende
+            document.getElementById('flex-circle-legend-item').style.display = 'flex';
             
             // PAS DE SEGMENTS ARRONDIS
             // PAS DE POLYGONES
