@@ -98,13 +98,13 @@
             text-align: right;
             margin-top: 4px;
         }
-        /* Style personnalisé pour le marqueur pivot - VIOLET */
+        /* Styles unifiés pour tous les marqueurs - 12px */
         .pivot-marker {
             background-color: #8A2BE2; /* Violet */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 12px;
+            height: 12px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         /* Style pour l'icône du point de départ */
@@ -117,8 +117,17 @@
             background-color: #FF6B00; /* Orange */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 16px;
-            height: 16px;
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        /* Style pour le porte-à-faux escamotable */
+        .paf-escam-marker {
+            background-color: #32CD32; /* Vert Lime */
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         .error-panel {
@@ -245,6 +254,10 @@
             <div class="legend-item" id="flex-legend-item" style="display: none;">
                 <div class="legend-color" style="background-color: #FF6B00;"></div>
                 <span>Point de flexion</span>
+            </div>
+            <div class="legend-item" id="paf-escam-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #32CD32;"></div>
+                <span>Porte-à-faux</span>
             </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
@@ -418,7 +431,7 @@
         }
 
         // =============================================================================
-        // FONCTIONS PRINCIPALES
+        // FONCTIONS PRINCIPALES AVEC AJOUT PAFESCAM
         // =============================================================================
 
         function getQueryParams() {
@@ -433,19 +446,46 @@
                 
                 const values = paramString.split(',').map(Number);
                 
+                // Gestion de tous les cas possibles
                 if (values.length === 12) {
+                    // Cas de base sans flex ni PafEscam
                     return {
                         LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
                         LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
                         PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
-                        flexActive: 0, hasFlexParams: false
+                        flexActive: 0, hasFlexParams: false,
+                        pafEscamActive: 0, hasPafEscamParams: false
                     };
                 } else if (values.length === 15) {
+                    // Cas avec flex seulement
                     return {
                         LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
                         LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
                         PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
-                        flexActive: values[12], LatFlex: values[13], LonFlex: values[14], hasFlexParams: true
+                        flexActive: values[12], LatFlex: values[13], LonFlex: values[14], 
+                        hasFlexParams: true,
+                        pafEscamActive: 0, hasPafEscamParams: false
+                    };
+                } else if (values.length === 16) {
+                    // Cas avec PafEscam seulement (sans flex)
+                    return {
+                        LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
+                        LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
+                        PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
+                        flexActive: 0, hasFlexParams: false,
+                        pafEscamActive: values[12], LatPafEscam: values[13], LonPafEscam: values[14],
+                        hasPafEscamParams: true
+                    };
+                } else if (values.length === 18) {
+                    // Cas avec flex et PafEscam
+                    return {
+                        LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
+                        LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
+                        PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
+                        flexActive: values[12], LatFlex: values[13], LonFlex: values[14], 
+                        hasFlexParams: true,
+                        pafEscamActive: values[15], LatPafEscam: values[16], LonPafEscam: values[17],
+                        hasPafEscamParams: true
                     };
                 } else {
                     console.error("❌ Nombre de paramètres incorrect:", values.length);
@@ -582,7 +622,7 @@
         });
 
         // =============================================================================
-        // POINTS ET MARQUEURS - AMÉLIORATION DE LA VISIBILITÉ
+        // POINTS ET MARQUEURS - AVEC AJOUT PAFESCAM
         // =============================================================================
 
         const points = {
@@ -592,28 +632,34 @@
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
 
+        // Gestion du flex si présent
         if (coords.hasFlexParams && coords.flexActive === 1) {
             points.flex = L.latLng(coords.LatFlex, coords.LonFlex);
         }
 
-        // Création de l'icône personnalisée - PLUS VISIBLE
+        // Gestion du PafEscam si présent (indépendamment du flex)
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            points.pafEscam = L.latLng(coords.LatPafEscam, coords.LonPafEscam);
+        }
+
+        // Création de l'icône personnalisée - TAILLE UNIFORME 12px
         const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
-            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#4A90E2" stroke="#FFFFFF" stroke-width="2"/>
-                <circle cx="16" cy="16" r="6" fill="#FFFFFF"/>
-                <path d="M16 6 L16 26 M6 16 L26 16" stroke="#FFFFFF" stroke-width="2"/>
-                <path d="M16 6 L12 10 M16 6 L20 10" stroke="#FFFFFF" stroke-width="2"/>
+            <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="8" cy="8" r="7" fill="#4A90E2" stroke="#FFFFFF" stroke-width="1"/>
+                <circle cx="8" cy="8" r="3" fill="#FFFFFF"/>
+                <path d="M8 3 L8 13 M3 8 L13 8" stroke="#FFFFFF" stroke-width="1"/>
+                <path d="M8 3 L6 5 M8 3 L10 5" stroke="#FFFFFF" stroke-width="1"/>
             </svg>
         `)}`;
 
         const startPointIcon = L.divIcon({
             className: 'pivot-icon',
-            html: `<img src="${pivotIconSVG}" width="28" height="28" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
-            iconSize: [28, 28],
-            iconAnchor: [14, 14]
+            html: `<img src="${pivotIconSVG}" width="16" height="16" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
         });
 
-        // Marqueurs - PLUS VISIBLES
+        // Marqueurs - TAILLE UNIFORME 12px
         L.marker(points.origine, { 
             icon: startPointIcon,
             zIndexOffset: 1000
@@ -622,8 +668,8 @@
         const pivotIcon = L.divIcon({
             className: 'pivot-marker',
             html: '',
-            iconSize: [24, 24], // Agrandi
-            iconAnchor: [12, 12]
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
         });
 
         L.marker(points.pivot, { 
@@ -631,12 +677,13 @@
             zIndexOffset: 900
         }).addTo(map).bindPopup('Dernière tour du pivot');
 
+        // Marqueur flex si activé
         if (coords.hasFlexParams && coords.flexActive === 1) {
             const flexIcon = L.divIcon({
                 className: 'flex-marker',
                 html: '',
-                iconSize: [20, 20], // Agrandi
-                iconAnchor: [10, 10]
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
             });
             L.marker(points.flex, { 
                 icon: flexIcon,
@@ -646,15 +693,45 @@
         }
 
         // =============================================================================
-        // LIGNES ET POLYGONES - AMÉLIORATION DE LA VISIBILITÉ (BORDURES SUBTILES)
+        // MARQUEUR ET SEGMENT PAFESCAM (INDÉPENDANT DU FLEX)
+        // =============================================================================
+
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            // Création du marqueur PafEscam
+            const pafEscamIcon = L.divIcon({
+                className: 'paf-escam-marker',
+                html: '',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+            
+            L.marker(points.pafEscam, { 
+                icon: pafEscamIcon,
+                zIndexOffset: 700
+            }).addTo(map).bindPopup('Porte-à-faux escamotable');
+            
+            // Segment vert foncé entre pivot et PafEscam
+            L.polyline([points.pivot, points.pafEscam], { 
+                color: '#006400', // Vert foncé
+                weight: 3,
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Porte-à-faux');
+            
+            // Afficher dans la légende
+            document.getElementById('paf-escam-legend-item').style.display = 'flex';
+        }
+
+        // =============================================================================
+        // LIGNES ET POLYGONES - AMÉLIORATION DE LA VISIBILITÉ
         // =============================================================================
 
         // LIGNE MAX ANGLE - PLUS ÉPAISSE ET PLUS VISIBLE
         if (coords.PivCirc === 0) {
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
-                dashArray: '8, 8', // Plus visible
-                weight: 4, // Épaissi
+                dashArray: '8, 8',
+                weight: 4,
                 opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Direction maximale');
@@ -704,7 +781,7 @@
             
             // Calculer la distance pour la courbure (proportionnelle à la longueur du segment)
             const segmentLength = Math.sqrt(dx * dx + dy * dy);
-            const curveDistance = segmentLength * 0.15; // 15% de la longueur pour une courbure légère
+            const curveDistance = segmentLength * 0.15;
             
             // Point de contrôle pour la courbe de Bézier quadratique
             const controlPoint = L.latLng(
@@ -782,13 +859,13 @@
 
         function drawPolygon(pointList, color) {
             // BORDURES AMÉLIORÉES - COULEURS FIXES POUR TOUS LES POLYGONES
-            const borderColor = '#0044aa'; // BLEU FONCÉ FIXE pour TOUTES les bordures
-            const borderWeight = 2; // Épaisseur augmentée pour mieux voir
-            const borderOpacity = 1.0; // Opacité maximale
+            const borderColor = '#0044aa';
+            const borderWeight = 2;
+            const borderOpacity = 1.0;
             
             return L.polygon(pointList, {
-                color: borderColor, // TOUJOURS BLEU FONCÉ
-                fillColor: color,   // Remplissage change selon la zone
+                color: borderColor,
+                fillColor: color,
                 fillOpacity: 0.6,
                 weight: borderWeight,
                 opacity: borderOpacity,
@@ -827,13 +904,12 @@
                 arcPoints.push(toLatLng(pointPx));
             }
 
-            // BORDURES AMÉLIORÉES - COULEUR FIXE BLEUE
-            const borderColor = '#0044aa'; // BLEU FONCÉ FIXE
-            const borderWeight = 2; // Épaisseur augmentée
-            const borderOpacity = 1.0; // Opacité maximale
+            const borderColor = '#0044aa';
+            const borderWeight = 2;
+            const borderOpacity = 1.0;
             
             return L.polygon(arcPoints, {
-                color: borderColor, // TOUJOURS BLEU FONCÉ
+                color: borderColor,
                 fillColor: color,
                 fillOpacity: opacity,
                 weight: borderWeight,
@@ -887,11 +963,14 @@
             }
         }
 
-        // Ajustement final seulement si pas de position sauvegardée
+        // Ajustement final avec prise en compte du PafEscam si activé
         if (!savedCenter) {
             const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
             if (coords.hasFlexParams && coords.flexActive === 1) {
                 boundsPoints.push(points.flex);
+            }
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+                boundsPoints.push(points.pafEscam);
             }
             
             const bounds = L.latLngBounds(boundsPoints);
@@ -966,13 +1045,13 @@
             });
 
             const templates = {
-                0: { temp: 'Température', angle: 'Angle', flex: 'PivotFlex' },
-                1: { temp: 'Temperature', angle: 'Angle', flex: 'PivotFlex' },
-                2: { temp: 'Temperatura', angle: 'Ángulo', flex: 'PivotFlex' },
-                3: { temp: 'Temperatura', angle: 'Ângulo', flex: 'PivotFlex' },
-                4: { temp: 'Temperatur', angle: 'Winkel', flex: 'PivotFlex' },
-                5: { temp: 'Temperatuur', angle: 'Hoek', flex: 'PivotFlex' },
-                6: { temp: 'Temperatura', angle: 'Angolo', flex: 'PivotFlex' }
+                0: { temp: 'Température', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Porte-à-faux' },
+                1: { temp: 'Temperature', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Overhang' },
+                2: { temp: 'Temperatura', angle: 'Ángulo', flex: 'PivotFlex', pafEscam: 'Voladizo' },
+                3: { temp: 'Temperatura', angle: 'Ângulo', flex: 'PivotFlex', pafEscam: 'Balancim' },
+                4: { temp: 'Temperatur', angle: 'Winkel', flex: 'PivotFlex', pafEscam: 'Ausleger' },
+                5: { temp: 'Temperatuur', angle: 'Hoek', flex: 'PivotFlex', pafEscam: 'Uitkraging' },
+                6: { temp: 'Temperatura', angle: 'Angolo', flex: 'PivotFlex', pafEscam: 'Sbalzo' }
             };
 
             const t = templates[coords.lang] || templates[0];
@@ -981,6 +1060,11 @@
             let flexStatus = '';
             if (coords.hasFlexParams) {
                 flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
+            }
+
+            let pafEscamStatus = '';
+            if (coords.hasPafEscamParams) {
+                pafEscamStatus = coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF';
             }
 
             if (isWeatherExpanded) {
@@ -997,6 +1081,10 @@
                     displayContent += `<div><strong>${t.flex}:</strong> ${flexStatus}</div>`;
                 }
                 
+                if (coords.hasPafEscamParams) {
+                    displayContent += `<div><strong>${t.pafEscam}:</strong> ${pafEscamStatus}</div>`;
+                }
+                
                 displayContent += `<div class="weather-toggle">Cliquer pour réduire</div>`;
                 
                 weatherPanel.innerHTML = displayContent;
@@ -1007,6 +1095,10 @@
                 
                 if (coords.hasFlexParams) {
                     displayContent += ` | Flex: ${flexStatus}`;
+                }
+                
+                if (coords.hasPafEscamParams) {
+                    displayContent += ` | Paf: ${pafEscamStatus}`;
                 }
                 
                 displayContent += `</div><div class="weather-toggle">Cliquer pour détails</div>`;
@@ -1097,6 +1189,8 @@
         }, 60000);
 
         console.log('✅ Application Pivot Irrifrance initialisée avec succès');
+        console.log(`🎯 Configuration: Flex ${coords.hasFlexParams ? (coords.flexActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
+        console.log(`🎯 Configuration: PafEscam ${coords.hasPafEscamParams ? (coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
     </script>
 </body>
 </html>
