@@ -741,6 +741,14 @@
             // MODE PIVOTFLEX - SEGMENTS DROITS SANS POLYGONES ET SANS ARRONDIS
             console.log('🎯 Mode pivotflex - Segments droits sans polygones et sans arrondis');
             
+            // Segment Origine → Zéro (AJOUTÉ)
+            L.polyline([points.origine, points.zero], { 
+                color: 'blue',
+                weight: 3,
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Origine à Zéro');
+            
             // Segment Origine → Flex
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
