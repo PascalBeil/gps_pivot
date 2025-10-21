@@ -710,9 +710,9 @@
                 zIndexOffset: 700
             }).addTo(map).bindPopup('Porte-à-faux escamotable');
             
-            // CORRECTION : Segment en BLEU comme les autres segments de référence
+            // Segment en bleu comme les autres segments de référence
             L.polyline([points.pivot, points.pafEscam], { 
-                color: 'blue', // Changé de vert foncé à bleu
+                color: 'blue',
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
@@ -738,79 +738,76 @@
         }
 
         // =============================================================================
-        // FONCTION POUR CRÉER UN SEGMENT ARRONDI VERS L'EXTÉRIEUR
+        // NOUVELLES FONCTIONS POUR COURBES PIVOTFLEX PRÉCISES
         // =============================================================================
 
-        function createRoundedSegment(startPoint, endPoint, centerPoint, numPoints = 15) {
-            // Calculer le milieu du segment
-            const midPoint = L.latLng(
-                (startPoint.lat + endPoint.lat) / 2,
-                (startPoint.lng + endPoint.lng) / 2
-            );
-            
-            // Calculer la direction du segment
-            const dx = endPoint.lng - startPoint.lng;
-            const dy = endPoint.lat - startPoint.lat;
-            
-            // Calculer la normale (perpendiculaire)
-            const normal = {
-                x: -dy,
-                y: dx
-            };
-            
-            // Normaliser la normale
-            const length = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
-            if (length > 0) {
-                normal.x /= length;
-                normal.y /= length;
-            }
-            
-            // Déterminer le sens (vers l'extérieur par rapport au centre)
-            const toCenter = {
-                x: centerPoint.lng - midPoint.lng,
-                y: centerPoint.lat - midPoint.lat
-            };
-            
-            // Produit scalaire pour déterminer si la normale pointe vers l'extérieur
-            const dot = normal.x * toCenter.x + normal.y * toCenter.y;
-            if (dot > 0) {
-                // Inverser la normale si elle pointe vers l'intérieur
-                normal.x = -normal.x;
-                normal.y = -normal.y;
-            }
-            
-            // Calculer la distance pour la courbure (proportionnelle à la longueur du segment)
-            const segmentLength = Math.sqrt(dx * dx + dy * dy);
-            const curveDistance = segmentLength * 0.15;
-            
-            // Point de contrôle pour la courbe de Bézier quadratique
-            const controlPoint = L.latLng(
-                midPoint.lat + normal.y * curveDistance,
-                midPoint.lng + normal.x * curveDistance
-            );
-            
-            // Générer les points de la courbe
-            const curvePoints = [];
-            for (let i = 0; i <= numPoints; i++) {
-                const t = i / numPoints;
-                
-                // Courbe de Bézier quadratique
-                const lat = (1 - t) * (1 - t) * startPoint.lat + 
-                           2 * (1 - t) * t * controlPoint.lat + 
-                           t * t * endPoint.lat;
-                
-                const lng = (1 - t) * (1 - t) * startPoint.lng + 
-                           2 * (1 - t) * t * controlPoint.lng + 
-                           t * t * endPoint.lng;
-                
-                curvePoints.push(L.latLng(lat, lng));
-            }
-            
-            return curvePoints;
+        /**
+         * Calcule la distance entre deux points en mètres
+         */
+        function calculateDistance(point1, point2) {
+            const R = 6371000; // Rayon de la Terre en mètres
+            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
         }
 
-        // Lignes de référence PivotFlex - AVEC SEGMENTS ARRONDIS
+        /**
+         * Calcule l'angle entre deux points par rapport à un centre
+         */
+        function calculateAngle(center, point) {
+            const dx = point.lng - center.lng;
+            const dy = point.lat - center.lat;
+            return Math.atan2(dy, dx);
+        }
+
+        /**
+         * Crée un arc de cercle précis pour pivotflex
+         * @param {L.LatLng} center - Centre de rotation (point de flexion)
+         * @param {L.LatLng} startPoint - Point de départ
+         * @param {L.LatLng} endPoint - Point d'arrivée  
+         * @param {number} radius - Rayon de courbure (distance flex->pivot)
+         * @param {number} numPoints - Nombre de points pour l'arc
+         */
+        function createPivotFlexArc(center, startPoint, endPoint, radius, numPoints = 20) {
+            // Calcul des angles
+            const startAngle = calculateAngle(center, startPoint);
+            const endAngle = calculateAngle(center, endPoint);
+            
+            // Ajustement pour prendre le plus court chemin
+            let angleDiff = endAngle - startAngle;
+            if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            
+            const arcPoints = [];
+            
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                const angle = startAngle + angleDiff * t;
+                
+                // Calcul des coordonnées du point sur l'arc
+                const lat = center.lat + (Math.sin(angle) * radius / 111320); // 111320 m/deg latitude
+                const lng = center.lng + (Math.cos(angle) * radius / (111320 * Math.cos(center.lat * Math.PI / 180)));
+                
+                arcPoints.push(L.latLng(lat, lng));
+            }
+            
+            return arcPoints;
+        }
+
+        // =============================================================================
+        // LIGNES DE RÉFÉRENCE PIVOTFLEX AVEC COURBES PRÉCISES
+        // =============================================================================
+
         if (coords.hasFlexParams && coords.flexActive === 1) {
+            // Calcul du rayon de courbure (distance entre flex et pivot)
+            const flexRadius = calculateDistance(points.flex, points.pivot);
+            console.log(`📏 Rayon de courbure pivotflex: ${flexRadius.toFixed(2)} m`);
+            
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
                 dashArray: '6, 6',
@@ -826,23 +823,23 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // SEGMENT ARRONDI entre zéro et pivot
-            const roundedSegmentZeroPivot = createRoundedSegment(points.zero, points.pivot, points.origine, 15);
-            L.polyline(roundedSegmentZeroPivot, { 
+            // ARC PRÉCIS entre zéro et pivot avec le bon rayon
+            const arcZeroPivot = createPivotFlexArc(points.flex, points.zero, points.pivot, flexRadius, 30);
+            L.polyline(arcZeroPivot, { 
                 color: 'blue',
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
-            }).addTo(map).bindPopup('Arc arrondi Zéro à Pivot');
+            }).addTo(map).bindPopup('Arc Zéro à Pivot (rayon précis)');
             
-            // SEGMENT ARRONDI entre pivot et maxAngle
-            const roundedSegmentPivotMaxAngle = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
-            L.polyline(roundedSegmentPivotMaxAngle, { 
+            // ARC PRÉCIS entre pivot et maxAngle avec le bon rayon
+            const arcPivotMaxAngle = createPivotFlexArc(points.flex, points.pivot, points.maxAngle, flexRadius, 30);
+            L.polyline(arcPivotMaxAngle, { 
                 color: 'blue',
                 weight: 3,
                 opacity: 0.9,
                 lineCap: 'round'
-            }).addTo(map).bindPopup('Arc arrondi Pivot à MaxAngle');
+            }).addTo(map).bindPopup('Arc Pivot à MaxAngle (rayon précis)');
         } else {
             // Mode pivot standard - segment zéro-pivot droit
             L.polyline([points.origine, points.zero], { 
@@ -858,7 +855,6 @@
         // =============================================================================
 
         function drawPolygon(pointList, color) {
-            // BORDURES AMÉLIORÉES - COULEURS FIXES POUR TOUS LES POLYGONES
             const borderColor = '#0044aa';
             const borderWeight = 2;
             const borderOpacity = 1.0;
@@ -918,13 +914,20 @@
             }).addTo(map);
         }
 
+        // =============================================================================
+        // GESTION DES ZONES PIVOTFLEX AVEC COURBES PRÉCISES
+        // =============================================================================
+
         function handlePivotFlexZones() {
-            // Créer les arcs arrondis pour les deux segments
-            const roundedSegmentZeroPivot = createRoundedSegment(points.zero, points.pivot, points.origine, 15);
-            const roundedSegmentPivotMaxAngle = createRoundedSegment(points.pivot, points.maxAngle, points.origine, 15);
+            // Calcul du rayon de courbure
+            const flexRadius = calculateDistance(points.flex, points.pivot);
             
-            const polygone1 = [points.origine, ...roundedSegmentZeroPivot, points.flex, points.origine];
-            const polygone2 = [points.origine, points.flex, ...roundedSegmentPivotMaxAngle, points.origine];
+            // Création des arcs précis
+            const arcZeroPivot = createPivotFlexArc(points.flex, points.zero, points.pivot, flexRadius, 30);
+            const arcPivotMaxAngle = createPivotFlexArc(points.flex, points.pivot, points.maxAngle, flexRadius, 30);
+            
+            const polygone1 = [points.origine, ...arcZeroPivot, points.flex, points.origine];
+            const polygone2 = [points.origine, points.flex, ...arcPivotMaxAngle, points.origine];
             
             let polygone1Color, polygone2Color;
             
