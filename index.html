@@ -263,6 +263,10 @@
                 <div class="legend-color" style="background-color: #90EE90;"></div>
                 <span>Rayon flexion</span>
             </div>
+            <div class="legend-item" id="paf-circle-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #90EE90;"></div>
+                <span>Rayon porte-à-faux</span>
+            </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
     </div>
@@ -812,7 +816,7 @@
             const flexCircle = L.circle(points.flex, {
                 color: circleColor,
                 fillColor: circleColor,
-                fillOpacity: 0.2, // Opacité de 20%
+                fillOpacity: 0.3, // Opacité de 30%
                 radius: circleRadius
             }).addTo(map).bindPopup(circlePopup);
             
@@ -862,6 +866,28 @@
             } else if (coords.sens === 2 && coords.PivCirc === 1) {
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
                 drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
+            }
+
+            // =============================================================================
+            // CERCLE VERT CLAIR POUR MODE NORMAL AVEC PORTE-À-FAUX
+            // =============================================================================
+            
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
+                (!coords.hasFlexParams || coords.flexActive === 0)) {
+                
+                const pafRadius = calculateDistance(points.pivot, points.pafEscam);
+                console.log(`📏 Rayon porte-à-faux (mode normal): ${pafRadius.toFixed(2)} m`);
+                
+                // Création du cercle vert clair autour du point porte-à-faux
+                const pafCircle = L.circle(points.pafEscam, {
+                    color: '#90EE90', // Vert clair
+                    fillColor: '#90EE90',
+                    fillOpacity: 0.3, // Opacité de 30%
+                    radius: pafRadius
+                }).addTo(map).bindPopup(`Rayon porte-à-faux - Distance: ${pafRadius.toFixed(2)} m`);
+                
+                // Afficher dans la légende
+                document.getElementById('paf-circle-legend-item').style.display = 'flex';
             }
         }
 
@@ -1165,7 +1191,14 @@
             const combinedRadius = calculateDistance(points.flex, points.pafEscam);
             console.log(`📏 Rayon combiné (flex → paf): ${combinedRadius.toFixed(2)} m`);
         }
+
+        // Log pour le mode normal avec porte-à-faux
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
+            (!coords.hasFlexParams || coords.flexActive === 0)) {
+            console.log('🎯 MODE NORMAL: Porte-à-faux seul - Cercle vert activé');
+            const pafRadius = calculateDistance(points.pivot, points.pafEscam);
+            console.log(`📏 Rayon porte-à-faux (pivot → paf): ${pafRadius.toFixed(2)} m`);
+        }
     </script>
 </body>
 </html>
-
