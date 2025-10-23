@@ -103,8 +103,8 @@
             background-color: #8A2BE2; /* Violet */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         /* Style pour l'icône du point de départ */
@@ -117,8 +117,8 @@
             background-color: #FF6B00; /* Orange */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         /* Style pour le porte-à-faux escamotable */
@@ -126,8 +126,8 @@
             background-color: #32CD32; /* Vert Lime */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         .error-panel {
@@ -276,6 +276,7 @@
     </div>
     
     <script>
+
         // =============================================================================
         // CORRECTIONS POUR LA MÉTÉO ET LA VISIBILITÉ DES LIGNES
         // =============================================================================
@@ -692,12 +693,12 @@
 
         const startPointIcon = L.divIcon({
             className: 'pivot-icon',
-            html: `<img src="${pivotIconSVG}" width="16" height="16" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
+            html: `<img src="${pivotIconSVG}" width="18" height="18" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
         });
 
-        // Marqueurs - TAILLE UNIFORME 12px
+        // Marqueurs - TAILLE UNIFORME
         L.marker(points.origine, { 
             icon: startPointIcon,
             zIndexOffset: 1000
@@ -706,8 +707,8 @@
         const pivotIcon = L.divIcon({
             className: 'pivot-marker',
             html: '',
-            iconSize: [12, 12],
-            iconAnchor: [6, 6]
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
         });
 
         L.marker(points.pivot, { 
@@ -720,8 +721,8 @@
             const flexIcon = L.divIcon({
                 className: 'flex-marker',
                 html: '',
-                iconSize: [12, 12],
-                iconAnchor: [6, 6]
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
             });
             L.marker(points.flex, { 
                 icon: flexIcon,
@@ -739,8 +740,8 @@
             const pafEscamIcon = L.divIcon({
                 className: 'paf-escam-marker',
                 html: '',
-                iconSize: [12, 12],
-                iconAnchor: [6, 6]
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
             });
             
             L.marker(points.pafEscam, { 
@@ -751,7 +752,7 @@
             // Segment en bleu comme les autres segments de référence
             L.polyline([points.pivot, points.pafEscam], { 
                 color: 'blue',
-                weight: 6,
+                weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Porte-à-faux');
@@ -863,7 +864,7 @@
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
                 dashArray: '8, 8',
-                weight: 8,
+                weight: 6,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Direction maximale');
@@ -877,7 +878,7 @@
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
                 dashArray: '6, 6', // TRAIT DISCONTINU
-                weight: 8,
+                weight: 6,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
@@ -1337,6 +1338,7 @@
     </script>
 </body>
 </html>
+
 
 
 
