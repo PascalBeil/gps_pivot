@@ -260,7 +260,7 @@
                 <span>Porte-à-faux</span>
             </div>
             <div class="legend-item" id="flex-circle-legend-item" style="display: none;">
-                <div class="legend-color" style="background-color: #90EE90;"></div>
+                <div class="legend-color" style="background-color: #FFFF00;"></div>
                 <span>Rayon flexion</span>
             </div>
             <div class="legend-item" id="paf-circle-legend-item" style="display: none;">
@@ -802,30 +802,28 @@
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
             // =============================================================================
-            // CERCLE AUTOUR DU POINT DE FLEXION - AVEC GESTION PORTE-À-FAUX
+            // CERCLE AUTOUR DU POINT DE FLEXION - TOUJOURS JAUNE MAINTENANT
             // =============================================================================
             
-            let circleColor, circleRadius, circlePopup;
+            let circleRadius, circlePopup;
             
             // Vérifier si les deux modes sont activés
             if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-                // CAS : FLEX + PORTE-À-FAUX ACTIVÉS - CERCLE VIOLET
+                // CAS : FLEX + PORTE-À-FAUX ACTIVÉS - CERCLE JAUNE
                 circleRadius = calculateDistance(points.flex, points.pafEscam);
-                circleColor = '#8A2BE2'; // Violet
                 circlePopup = `Rayon porte-à-faux - Distance: ${circleRadius.toFixed(2)} m`;
-                console.log(`📏 Rayon porte-à-faux (violet): ${circleRadius.toFixed(2)} m`);
+                console.log(`📏 Rayon porte-à-faux (jaune): ${circleRadius.toFixed(2)} m`);
             } else {
-                // CAS : FLEX SEUL - CERCLE VERT (comportement original)
+                // CAS : FLEX SEUL - CERCLE JAUNE
                 circleRadius = calculateDistance(points.flex, points.pivot);
-                circleColor = '#90EE90'; // Vert clair
                 circlePopup = `Cercle de flexion - Rayon: ${circleRadius.toFixed(2)} m`;
-                console.log(`📏 Rayon de courbure pivotflex (vert): ${circleRadius.toFixed(2)} m`);
+                console.log(`📏 Rayon de courbure pivotflex (jaune): ${circleRadius.toFixed(2)} m`);
             }
             
-            // Création du cercle avec la couleur appropriée
+            // Création du cercle JAUNE pour les deux cas
             const flexCircle = L.circle(points.flex, {
-                color: circleColor,
-                fillColor: circleColor,
+                color: '#FFFF00', // JAUNE pour les deux cas
+                fillColor: '#FFFF00',
                 fillOpacity: 0.3, // Opacité de 30%
                 radius: circleRadius
             }).addTo(map).bindPopup(circlePopup);
@@ -833,10 +831,6 @@
             // Mise à jour de la légende
             const flexCircleLegendItem = document.getElementById('flex-circle-legend-item');
             flexCircleLegendItem.style.display = 'flex';
-            
-            // Changer la couleur dans la légende selon le mode
-            const legendColor = flexCircleLegendItem.querySelector('.legend-color');
-            legendColor.style.backgroundColor = circleColor;
             
             // Changer le texte de la légende selon le mode
             const legendText = flexCircleLegendItem.querySelector('span');
@@ -879,7 +873,7 @@
             }
 
             // =============================================================================
-            // CERCLE VERT CLAIR POUR MODE NORMAL AVEC PORTE-À-FAUX - CORRECTION
+            // CERCLE VERT CLAIR POUR MODE NORMAL AVEC PORTE-À-FAUX
             // =============================================================================
             
             if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
@@ -1207,15 +1201,23 @@
 
         // Log spécial pour le mode combiné
         if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            console.log('🎯 MODE COMBINÉ: Flex + Porte-à-faux - Cercle violet activé');
+            console.log('🎯 MODE COMBINÉ: Flex + Porte-à-faux - Cercle JAUNE activé');
             const combinedRadius = calculateDistance(points.flex, points.pafEscam);
             console.log(`📏 Rayon combiné (flex → paf): ${combinedRadius.toFixed(2)} m`);
+        }
+
+        // Log pour le mode flex seul
+        if (coords.hasFlexParams && coords.flexActive === 1 && 
+            (!coords.hasPafEscamParams || coords.pafEscamActive === 0)) {
+            console.log('🎯 MODE FLEX: Flex seul - Cercle JAUNE activé');
+            const flexRadius = calculateDistance(points.flex, points.pivot);
+            console.log(`📏 Rayon flexion (flex → pivot): ${flexRadius.toFixed(2)} m`);
         }
 
         // Log pour le mode normal avec porte-à-faux
         if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
             (!coords.hasFlexParams || coords.flexActive === 0)) {
-            console.log('🎯 MODE NORMAL: Porte-à-faux seul - Cercle vert activé');
+            console.log('🎯 MODE NORMAL: Porte-à-faux seul - Cercle VERT activé');
             const totalDistance = calculateDistance(points.pivot, points.pafEscam);
             const circleRadius = totalDistance / 2;
             const circleCenter = calculateMidpoint(points.pivot, points.pafEscam);
