@@ -751,8 +751,8 @@
             // Segment en bleu comme les autres segments de référence
             L.polyline([points.pivot, points.pafEscam], { 
                 color: 'blue',
-                weight: 3,
-                opacity: 0.9,
+                weight: 4,
+                opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Porte-à-faux');
             
@@ -846,7 +846,7 @@
         const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
             color: '#8A2BE2',
             weight: 4,
-            opacity: 0.9,
+            opacity: 1.0,
             dashArray: '10, 10',
             lineCap: 'round'
         }).addTo(map).bindPopup(`Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`);
@@ -863,8 +863,8 @@
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
                 dashArray: '8, 8',
-                weight: 4,
-                opacity: 0.9,
+                weight: 5,
+                opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Direction maximale');
         }
@@ -886,16 +886,16 @@
             L.polyline([points.origine, points.flex], { 
                 color: 'blue', 
                 // PAS DE dashArray = TRAIT CONTINU
-                weight: 3,
-                opacity: 0.9,
+                weight: 4,
+                opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
             // Segment Flex → Pivot (TRAIT CONTINU)
             L.polyline([points.flex, points.pivot], { 
                 color: 'blue',
-                weight: 3,
-                opacity: 0.9,
+                weight: 4,
+                opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
@@ -922,7 +922,7 @@
             const flexCircle = L.circle(points.flex, {
                 color: '#FFFF00', // JAUNE pour les deux cas
                 fillColor: '#FFFF00',
-                fillOpacity: 0.3, // Opacité de 30%
+                fillOpacity: 0.2, // Opacité de 20%
                 radius: circleRadius
             }).addTo(map).bindPopup(circlePopup);
             
@@ -994,7 +994,7 @@
                 const pafCircle = L.circle(circleCenter, {
                     color: '#90EE90', // Vert clair
                     fillColor: '#90EE90',
-                    fillOpacity: 0.3, // Opacité de 30%
+                    fillOpacity: 0.2, // Opacité de 30%
                     radius: circleRadius
                 }).addTo(map).bindPopup(`Rayon porte-à-faux - Distance: ${totalDistance.toFixed(2)} m (Rayon: ${circleRadius.toFixed(2)} m)`);
                 
@@ -1337,3 +1337,4 @@
     </script>
 </body>
 </html>
+
