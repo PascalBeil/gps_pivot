@@ -761,34 +761,91 @@
         }
 
         // =============================================================================
-        // CERCLE VIOLET AUTOUR DE L'ORIGINE - TOUJOURS PRÉSENT
+        // FONCTIONS POUR LE CERCLE VIOLET AVEC PARTIE MASQUÉE
         // =============================================================================
 
-        let originCircleRadius, originCirclePopup;
-
-        // Déterminer le rayon selon la présence du porte-à-faux
-        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            // Porte-à-faux activé : rayon = distance origine → porte-à-faux
-            originCircleRadius = calculateDistance(points.origine, points.pafEscam);
-            originCirclePopup = `Rayon d'action (avec porte-à-faux) - Distance: ${originCircleRadius.toFixed(2)} m`;
-            console.log(`📏 Cercle origine (avec porte-à-faux): ${originCircleRadius.toFixed(2)} m`);
-        } else {
-            // Porte-à-faux non activé : rayon = distance origine → dernière tour
-            originCircleRadius = calculateDistance(points.origine, points.pivot);
-            originCirclePopup = `Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`;
-            console.log(`📏 Cercle origine (sans porte-à-faux): ${originCircleRadius.toFixed(2)} m`);
+        // Fonction pour calculer l'angle d'un point par rapport au centre
+        function calculateAngle(center, point) {
+            const dx = point.lng - center.lng;
+            const dy = point.lat - center.lat;
+            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            
+            // Normaliser l'angle entre 0° et 360°
+            if (angle < 0) angle += 360;
+            return angle;
         }
 
-        // Création du cercle violet avec bordure discontinue
-        const originCircle = L.circle(points.origine, {
-            color: '#8A2BE2', // Violet
-            fillColor: 'transparent', // Intérieur transparent
-            fillOpacity: 0, // Complètement transparent
-            weight: 4, // Bordure épaisse
-            opacity: 0.9, // Légère transparence de la bordure
-            dashArray: '10, 10', // Bordure discontinue
-            radius: originCircleRadius
-        }).addTo(map).bindPopup(originCirclePopup);
+        // Fonction pour créer un arc de cercle
+        function drawArc(center, radius, startAngle, endAngle, options) {
+            const points = [];
+            const steps = 100;
+            
+            // Convertir les angles de degrés en radians
+            const startRad = (startAngle * Math.PI) / 180;
+            const endRad = (endAngle * Math.PI) / 180;
+            
+            // Calculer la différence d'angle
+            let angleDiff = endRad - startRad;
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+            
+            // Créer les points de l'arc
+            for (let i = 0; i <= steps; i++) {
+                const angle = startRad + (angleDiff * (i / steps));
+                // Conversion des coordonnées métriques en coordonnées géographiques
+                const dx = (radius * Math.cos(angle)) / (111320 * Math.cos(center.lat * Math.PI / 180));
+                const dy = (radius * Math.sin(angle)) / 110574;
+                
+                const point = L.latLng(
+                    center.lat + dy,
+                    center.lng + dx
+                );
+                points.push(point);
+            }
+            
+            return L.polyline(points, options);
+        }
+
+        // =============================================================================
+        // CERCLE VIOLET AUTOUR DE L'ORIGINE - AVEC PARTIE MASQUÉE
+        // =============================================================================
+
+        // Déterminer le rayon comme précédemment
+        let originCircleRadius;
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            originCircleRadius = calculateDistance(points.origine, points.pafEscam);
+        } else {
+            originCircleRadius = calculateDistance(points.origine, points.pivot);
+        }
+
+        // Calculer les angles des points zero et maxAngle
+        const angleZero = calculateAngle(points.origine, points.zero);
+        const angleMax = calculateAngle(points.origine, points.maxAngle);
+
+        console.log(`📐 Angles - Zero: ${angleZero.toFixed(2)}°, Max: ${angleMax.toFixed(2)}°`);
+
+        // Déterminer l'arc à afficher (le complémentaire de l'arc entre zero et maxAngle)
+        let startArcAngle, endArcAngle;
+
+        if (angleMax > angleZero) {
+            // Cas normal : maxAngle est après zero
+            startArcAngle = angleMax;
+            endArcAngle = angleZero + 360; // Pour faire le tour complet
+        } else {
+            // Cas où maxAngle est avant zero
+            startArcAngle = angleMax;
+            endArcAngle = angleZero;
+        }
+
+        console.log(`🎯 Arc violet - Début: ${startArcAngle.toFixed(2)}°, Fin: ${endArcAngle.toFixed(2)}°`);
+
+        // Créer l'arc violet (cercle complet MOINS l'arc entre zero et maxAngle)
+        const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
+            color: '#8A2BE2',
+            weight: 4,
+            opacity: 0.9,
+            dashArray: '10, 10',
+            lineCap: 'round'
+        }).addTo(map).bindPopup(`Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`);
 
         // Afficher dans la légende
         document.getElementById('origin-circle-legend-item').style.display = 'flex';
