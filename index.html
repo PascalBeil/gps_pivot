@@ -761,7 +761,7 @@
         }
 
         // =============================================================================
-        // FONCTIONS POUR LE CERCLE VIOLET AVEC PARTIE MASQUÉE
+        // FONCTIONS POUR LE CERCLE VIOLET AVEC PARTIE MASQUÉE - CORRECTION
         // =============================================================================
 
         // Fonction pour calculer l'angle d'un point par rapport au centre
@@ -806,7 +806,7 @@
         }
 
         // =============================================================================
-        // CERCLE VIOLET AUTOUR DE L'ORIGINE - AVEC PARTIE MASQUÉE
+        // CERCLE VIOLET AUTOUR DE L'ORIGINE - CORRECTION FINALE
         // =============================================================================
 
         // Déterminer le rayon comme précédemment
@@ -823,22 +823,26 @@
 
         console.log(`📐 Angles - Zero: ${angleZero.toFixed(2)}°, Max: ${angleMax.toFixed(2)}°`);
 
-        // Déterminer l'arc à afficher (le complémentaire de l'arc entre zero et maxAngle)
+        // CORRECTION : Calculer l'angle du petit arc entre zero et maxAngle
+        let angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
+        
+        // Déterminer l'arc à afficher (le GRAND arc, c'est-à-dire le complémentaire du petit arc entre zero et maxAngle)
         let startArcAngle, endArcAngle;
 
-        if (angleMax > angleZero) {
-            // Cas normal : maxAngle est après zero
+        if (angleFromZeroToMax <= 180) {
+            // Le petit arc est entre zero et maxAngle, donc nous affichons le GRAND arc (le complémentaire)
             startArcAngle = angleMax;
-            endArcAngle = angleZero + 360; // Pour faire le tour complet
+            endArcAngle = angleZero + 360;
         } else {
-            // Cas où maxAngle est avant zero
-            startArcAngle = angleMax;
-            endArcAngle = angleZero;
+            // Le petit arc est le complémentaire, donc nous affichons le GRAND arc (entre zero et maxAngle)
+            startArcAngle = angleZero;
+            endArcAngle = angleMax;
         }
 
-        console.log(`🎯 Arc violet - Début: ${startArcAngle.toFixed(2)}°, Fin: ${endArcAngle.toFixed(2)}°`);
+        console.log(`📏 Petit arc entre zero et maxAngle: ${angleFromZeroToMax.toFixed(2)}°`);
+        console.log(`🎯 Arc violet affiché - Début: ${startArcAngle.toFixed(2)}°, Fin: ${endArcAngle.toFixed(2)}°`);
 
-        // Créer l'arc violet (cercle complet MOINS l'arc entre zero et maxAngle)
+        // Créer l'arc violet (le GRAND arc)
         const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
             color: '#8A2BE2',
             weight: 4,
