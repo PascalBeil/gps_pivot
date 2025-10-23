@@ -267,6 +267,10 @@
                 <div class="legend-color" style="background-color: #90EE90;"></div>
                 <span>Rayon porte-à-faux</span>
             </div>
+            <div class="legend-item" id="origin-circle-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #8A2BE2;"></div>
+                <span>Rayon d'action</span>
+            </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
     </div>
@@ -757,6 +761,39 @@
         }
 
         // =============================================================================
+        // CERCLE VIOLET AUTOUR DE L'ORIGINE - TOUJOURS PRÉSENT
+        // =============================================================================
+
+        let originCircleRadius, originCirclePopup;
+
+        // Déterminer le rayon selon la présence du porte-à-faux
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            // Porte-à-faux activé : rayon = distance origine → porte-à-faux
+            originCircleRadius = calculateDistance(points.origine, points.pafEscam);
+            originCirclePopup = `Rayon d'action (avec porte-à-faux) - Distance: ${originCircleRadius.toFixed(2)} m`;
+            console.log(`📏 Cercle origine (avec porte-à-faux): ${originCircleRadius.toFixed(2)} m`);
+        } else {
+            // Porte-à-faux non activé : rayon = distance origine → dernière tour
+            originCircleRadius = calculateDistance(points.origine, points.pivot);
+            originCirclePopup = `Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`;
+            console.log(`📏 Cercle origine (sans porte-à-faux): ${originCircleRadius.toFixed(2)} m`);
+        }
+
+        // Création du cercle violet avec bordure discontinue
+        const originCircle = L.circle(points.origine, {
+            color: '#8A2BE2', // Violet
+            fillColor: 'transparent', // Intérieur transparent
+            fillOpacity: 0, // Complètement transparent
+            weight: 4, // Bordure épaisse
+            opacity: 0.9, // Légère transparence de la bordure
+            dashArray: '10, 10', // Bordure discontinue
+            radius: originCircleRadius
+        }).addTo(map).bindPopup(originCirclePopup);
+
+        // Afficher dans la légende
+        document.getElementById('origin-circle-legend-item').style.display = 'flex';
+
+        // =============================================================================
         // LIGNES ET POLYGONES - MODE PIVOTFLEX SANS POLYGONES ET SANS ARRONDIS
         // =============================================================================
 
@@ -1224,6 +1261,17 @@
             console.log(`📏 Distance totale pivot→paf: ${totalDistance.toFixed(2)} m`);
             console.log(`🎯 Centre du cercle: ${circleCenter.lat.toFixed(6)}, ${circleCenter.lng.toFixed(6)}`);
             console.log(`📐 Rayon du cercle: ${circleRadius.toFixed(2)} m`);
+        }
+
+        // Log pour le cercle violet d'origine
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            console.log('🎯 CERCLE ORIGINE: Rayon basé sur porte-à-faux');
+            const originRadius = calculateDistance(points.origine, points.pafEscam);
+            console.log(`📏 Rayon origine→paf: ${originRadius.toFixed(2)} m`);
+        } else {
+            console.log('🎯 CERCLE ORIGINE: Rayon basé sur dernière tour');
+            const originRadius = calculateDistance(points.origine, points.pivot);
+            console.log(`📏 Rayon origine→pivot: ${originRadius.toFixed(2)} m`);
         }
     </script>
 </body>
