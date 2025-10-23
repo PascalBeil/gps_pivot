@@ -339,6 +339,16 @@
         }
 
         // =============================================================================
+        // FONCTION POUR CALCULER LE POINT MILIEU ENTRE DEUX POINTS
+        // =============================================================================
+
+        function calculateMidpoint(point1, point2) {
+            const lat = (point1.lat + point2.lat) / 2;
+            const lng = (point1.lng + point2.lng) / 2;
+            return L.latLng(lat, lng);
+        }
+
+        // =============================================================================
         // GESTION DE LA SAUVEGARDE DU ZOOM ET DE LA POSITION
         // =============================================================================
 
@@ -869,22 +879,32 @@
             }
 
             // =============================================================================
-            // CERCLE VERT CLAIR POUR MODE NORMAL AVEC PORTE-À-FAUX
+            // CERCLE VERT CLAIR POUR MODE NORMAL AVEC PORTE-À-FAUX - CORRECTION
             // =============================================================================
             
             if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
                 (!coords.hasFlexParams || coords.flexActive === 0)) {
                 
-                const pafRadius = calculateDistance(points.pivot, points.pafEscam);
-                console.log(`📏 Rayon porte-à-faux (mode normal): ${pafRadius.toFixed(2)} m`);
+                // Calcul de la distance totale entre pivot et porte-à-faux
+                const totalDistance = calculateDistance(points.pivot, points.pafEscam);
                 
-                // Création du cercle vert clair autour du point porte-à-faux
-                const pafCircle = L.circle(points.pafEscam, {
+                // Le centre est le milieu entre pivot et porte-à-faux
+                const circleCenter = calculateMidpoint(points.pivot, points.pafEscam);
+                
+                // Le rayon est la moitié de la distance totale
+                const circleRadius = totalDistance / 2;
+                
+                console.log(`📏 Mode normal porte-à-faux - Distance totale: ${totalDistance.toFixed(2)} m`);
+                console.log(`🎯 Centre du cercle: ${circleCenter.lat.toFixed(6)}, ${circleCenter.lng.toFixed(6)}`);
+                console.log(`📐 Rayon du cercle: ${circleRadius.toFixed(2)} m`);
+                
+                // Création du cercle vert clair
+                const pafCircle = L.circle(circleCenter, {
                     color: '#90EE90', // Vert clair
                     fillColor: '#90EE90',
                     fillOpacity: 0.3, // Opacité de 30%
-                    radius: pafRadius
-                }).addTo(map).bindPopup(`Rayon porte-à-faux - Distance: ${pafRadius.toFixed(2)} m`);
+                    radius: circleRadius
+                }).addTo(map).bindPopup(`Rayon porte-à-faux - Distance: ${totalDistance.toFixed(2)} m (Rayon: ${circleRadius.toFixed(2)} m)`);
                 
                 // Afficher dans la légende
                 document.getElementById('paf-circle-legend-item').style.display = 'flex';
@@ -1196,8 +1216,12 @@
         if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
             (!coords.hasFlexParams || coords.flexActive === 0)) {
             console.log('🎯 MODE NORMAL: Porte-à-faux seul - Cercle vert activé');
-            const pafRadius = calculateDistance(points.pivot, points.pafEscam);
-            console.log(`📏 Rayon porte-à-faux (pivot → paf): ${pafRadius.toFixed(2)} m`);
+            const totalDistance = calculateDistance(points.pivot, points.pafEscam);
+            const circleRadius = totalDistance / 2;
+            const circleCenter = calculateMidpoint(points.pivot, points.pafEscam);
+            console.log(`📏 Distance totale pivot→paf: ${totalDistance.toFixed(2)} m`);
+            console.log(`🎯 Centre du cercle: ${circleCenter.lat.toFixed(6)}, ${circleCenter.lng.toFixed(6)}`);
+            console.log(`📐 Rayon du cercle: ${circleRadius.toFixed(2)} m`);
         }
     </script>
 </body>
