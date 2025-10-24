@@ -760,16 +760,17 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // MODIFICATION: Tous les segments en vert fluo dans tous les modes
+        // CORRECTION: Segment origine -> zéro en bleu discontinu dans tous les modes
         L.polyline([points.origine, points.zero], { 
-            color: '#00FF00', // Vert fluo
+            color: 'blue',
+            dashArray: '6, 6',
             weight: 4,
             opacity: 1.0,
             lineCap: 'round'
         }).addTo(map).bindPopup('Segment Origine à Zéro');
 
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // Segments en mode pivotflex - TOUS EN VERT FLUO
+            // Segments en mode pivotflex - EN VERT FLUO
             L.polyline([points.origine, points.flex], { 
                 color: '#00FF00', // Vert fluo
                 weight: 8,
@@ -784,9 +785,8 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // SUPPRESSION: Plus de cercle jaune en mode flex
         } else {
-            // Mode normal - segments en vert fluo
+            // Mode normal - segment origine -> pivot en vert fluo
             L.polyline([points.origine, points.pivot], { 
                 color: '#00FF00', // Vert fluo
                 weight: 8,
@@ -810,11 +810,9 @@
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
                 drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
             }
-
-            // SUPPRESSION: Plus de cercle vert en mode normal avec porte-à-faux
         }
 
-        // Afficher la légende pour les segments vert fluo dans tous les cas
+        // Afficher la légende pour les segments vert fluo dans tous les cas où ils sont utilisés
         document.getElementById('flex-segment-legend-item').style.display = 'flex';
 
         // Ajustement final de la vue
