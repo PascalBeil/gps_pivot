@@ -762,7 +762,7 @@
         }
 
         // =============================================================================
-        // FONCTIONS POUR LE CERCLE VIOLET AVEC PARTIE MASQUÉE - CORRECTION
+        // FONCTIONS POUR LE CERCLE VIOLET AVEC PARTIE MASQUÉE - MARQUER PARCELLE
         // =============================================================================
 
         // Fonction pour calculer l'angle d'un point par rapport au centre
@@ -846,7 +846,7 @@
         // Créer l'arc violet (le GRAND arc)
         const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
             color: '#8A2BE2',
-            weight: 8,
+            weight: 4,
             opacity: 1.0,
             dashArray: '10, 10',
             lineCap: 'round'
@@ -864,7 +864,7 @@
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
                 dashArray: '8, 8',
-                weight: 6,
+                weight: 4,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Direction maximale');
@@ -878,7 +878,7 @@
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
                 dashArray: '6, 6', // TRAIT DISCONTINU
-                weight: 6,
+                weight: 4,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
@@ -949,7 +949,7 @@
             // Segment Origine → Zéro
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
-                weight: 5,
+                weight: 4,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
@@ -1338,6 +1338,7 @@
     </script>
 </body>
 </html>
+
 
 
 
