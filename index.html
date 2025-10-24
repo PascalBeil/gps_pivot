@@ -741,15 +741,18 @@
         const angleZero = calculateAngle(points.origine, points.zero);
         const angleMax = calculateAngle(points.origine, points.maxAngle);
 
+        // CORRECTION DU PROBLÈME DE DÉBUT/FIN DU DEMI-CERCLE
+        // Le demi-cercle doit commencer à l'angle zéro et se terminer à l'angle max
         let startArcAngle, endArcAngle;
-        let angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
         
-        if (angleFromZeroToMax <= 180) {
-            startArcAngle = angleMax;
-            endArcAngle = angleZero + 360;
-        } else {
+        // Déterminer l'ordre correct des angles pour le demi-cercle
+        if (angleZero <= angleMax) {
             startArcAngle = angleZero;
             endArcAngle = angleMax;
+        } else {
+            // Si l'angle zéro est après l'angle max, on inverse
+            startArcAngle = angleMax;
+            endArcAngle = angleZero;
         }
 
         const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
@@ -758,7 +761,7 @@
             opacity: 1.0,
             dashArray: '10, 10',
             lineCap: 'round'
-        }).addTo(map).bindPopup(`Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`);
+        }).addTo(map).bindPopup(`Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m<br>Angle début: ${startArcAngle.toFixed(1)}°<br>Angle fin: ${endArcAngle.toFixed(1)}°`);
 
         document.getElementById('origin-circle-legend-item').style.display = 'flex';
 
