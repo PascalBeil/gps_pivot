@@ -244,6 +244,10 @@
                 <div class="legend-color" style="background-color: #FF00FF;"></div>
                 <span>Rayon d'action</span>
             </div>
+            <div class="legend-item" id="flex-segment-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #00FF00;"></div>
+                <span>Segments flexion</span>
+            </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
     </div>
@@ -772,15 +776,16 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
             
+            // MODIFICATION: Segments en vert fluo
             L.polyline([points.origine, points.flex], { 
-                color: 'blue',
+                color: '#00FF00', // Vert fluo
                 weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
             L.polyline([points.flex, points.pivot], { 
-                color: 'blue',
+                color: '#00FF00', // Vert fluo
                 weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
@@ -808,6 +813,9 @@
             const legendText = flexCircleLegendItem.querySelector('span');
             legendText.textContent = coords.hasPafEscamParams && coords.pafEscamActive === 1 ? 
                 'Rayon porte-à-faux' : 'Rayon flexion';
+            
+            // Afficher la légende pour les segments vert fluo
+            document.getElementById('flex-segment-legend-item').style.display = 'flex';
             
         } else {
             L.polyline([points.origine, points.zero], { 
