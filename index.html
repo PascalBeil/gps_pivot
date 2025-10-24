@@ -7,16 +7,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
-        /* =============================================================================
-           STYLES PRINCIPAUX
-           ============================================================================= */
-        
         #map { 
             height: 100vh; 
             width: 100%;
         }
-        
-        /* Panel météo */
         #weather-panel {
             position: absolute;
             top: 10px;
@@ -40,8 +34,6 @@
         .weather-expanded {
             max-width: 220px;
         }
-        
-        /* Légende */
         .legend {
             position: absolute;
             bottom: 10px;
@@ -99,8 +91,13 @@
         .legend:not(.collapsed) .compact-view {
             display: none;
         }
-        
-        /* Marqueurs unifiés 12px */
+        .weather-toggle {
+            cursor: pointer;
+            font-size: 10px;
+            color: #0066cc;
+            text-align: right;
+            margin-top: 4px;
+        }
         .pivot-marker {
             background-color: #8A2BE2;
             border: 2px solid #ffffff;
@@ -129,8 +126,6 @@
             height: 14px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
-        
-        /* Panels d'interface */
         .error-panel {
             position: absolute;
             top: 50%;
@@ -143,13 +138,6 @@
             z-index: 2000;
             text-align: center;
             max-width: 400px;
-        }
-        .weather-toggle {
-            cursor: pointer;
-            font-size: 10px;
-            color: #0066cc;
-            text-align: right;
-            margin-top: 4px;
         }
         .loading-indicator {
             position: absolute;
@@ -198,19 +186,18 @@
 <body>
     <div id="map"></div>
 
-    <!-- Indicateurs d'interface -->
     <div id="loading-indicator" class="loading-indicator">
         🔄 Chargement des images satellite...
     </div>
+
     <div id="tile-error-message" class="tile-error-message">
         ⚠️ Zoom trop élevé - Résolution non disponible
     </div>
+
     <div id="zoom-save-indicator" class="zoom-save-indicator">Position sauvegardée</div>
 
-    <!-- Panel météo -->
     <div id="weather-panel" class="weather-compact">Chargement météo...</div>
     
-    <!-- Légende -->
     <div class="legend collapsed" id="legend">
         <div class="legend-header">
             <span>Légende</span>
@@ -262,10 +249,6 @@
     </div>
     
     <script>
-        // =============================================================================
-        // INITIALISATION ET CONFIGURATION
-        // =============================================================================
-
         // Variables de suivi des tuiles
         let tilesLoaded = 0;
         let tilesError = 0;
@@ -275,13 +258,7 @@
         const ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
         const CENTER_STORAGE_KEY = 'pivot_irrifrance_map_center';
 
-        // =============================================================================
-        // FONCTIONS UTILITAIRES GÉNÉRALES
-        // =============================================================================
-
-        /**
-         * Calcule la distance entre deux points en mètres
-         */
+        // Fonctions utilitaires générales
         function calculateDistance(point1, point2) {
             const R = 6371000;
             const dLat = (point2.lat - point1.lat) * Math.PI / 180;
@@ -294,18 +271,12 @@
             return R * c;
         }
 
-        /**
-         * Calcule le point milieu entre deux points
-         */
         function calculateMidpoint(point1, point2) {
             const lat = (point1.lat + point2.lat) / 2;
             const lng = (point1.lng + point2.lng) / 2;
             return L.latLng(lat, lng);
         }
 
-        /**
-         * Calcule l'angle d'un point par rapport à un centre
-         */
         function calculateAngle(center, point) {
             const dx = point.lng - center.lng;
             const dy = point.lat - center.lat;
@@ -314,10 +285,7 @@
             return angle;
         }
 
-        // =============================================================================
-        // GESTION DE L'INTERFACE UTILISATEUR
-        // =============================================================================
-
+        // Gestion de l'interface utilisateur
         function showLoadingIndicator() {
             const loader = document.getElementById('loading-indicator');
             loader.style.display = 'block';
@@ -346,10 +314,7 @@
             }, 2000);
         }
 
-        // =============================================================================
-        // GESTION DE LA SAUVEGARDE DU ZOOM ET POSITION
-        // =============================================================================
-
+        // Gestion de la sauvegarde du zoom et position
         function saveMapState() {
             try {
                 const zoom = map.getZoom();
@@ -391,10 +356,7 @@
             }
         }
 
-        // =============================================================================
-        // CALCUL DU ZOOM OPTIMAL SELON L'ÉCRAN
-        // =============================================================================
-
+        // Calcul du zoom optimal selon l'écran
         function calculateOptimalZoom() {
             const screenWidth = window.screen.width;
             const screenHeight = window.screen.height;
@@ -418,10 +380,7 @@
             return optimalZoom;
         }
 
-        // =============================================================================
-        // PARSING DES PARAMÈTRES URL
-        // =============================================================================
-
+        // Parsing des paramètres URL
         function getQueryParams() {
             try {
                 const params = new URLSearchParams(window.location.search);
@@ -434,7 +393,6 @@
                 
                 const values = paramString.split(',').map(Number);
                 
-                // Gestion des différents formats de paramètres
                 if (values.length === 12) {
                     return {
                         LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
@@ -497,10 +455,7 @@
             throw new Error("Paramètres manquants ou incorrects");
         }
 
-        // =============================================================================
-        // INITIALISATION DE LA CARTE
-        // =============================================================================
-
+        // Initialisation de la carte
         const savedZoom = getSavedZoomLevel();
         const savedCenter = getSavedCenter();
         const optimalZoom = calculateOptimalZoom();
@@ -524,10 +479,7 @@
             markerZoomAnimation: true
         }).setView(initialCenter, initialZoom);
 
-        // =============================================================================
-        // CONFIGURATION DE LA COUCHE SATELLITE ESRI
-        // =============================================================================
-
+        // Configuration de la couche satellite Esri
         const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '© Esri, Maxar, Earthstar Geographics',
             maxZoom: 19,
@@ -562,10 +514,7 @@
 
         esriLayer.addTo(map);
 
-        // =============================================================================
-        // GESTIONNAIRES D'ÉVÉNEMENTS DE LA CARTE
-        // =============================================================================
-
+        // Gestionnaires d'événements de la carte
         let saveStateTimeout;
 
         map.on('zoomstart', function() {
@@ -593,10 +542,7 @@
             }, 1000);
         });
 
-        // =============================================================================
-        // DÉFINITION DES POINTS ET MARQUEURS
-        // =============================================================================
-
+        // Définition des points et marqueurs
         const points = {
             origine: L.latLng(coords.LatOri, coords.LonOri),
             zero: L.latLng(coords.LatZero, coords.LonZero),
@@ -664,10 +610,7 @@
             document.getElementById('flex-legend-item').style.display = 'flex';
         }
 
-        // =============================================================================
-        // GESTION DU PORTE-À-FAUX ESCAMOTABLE
-        // =============================================================================
-
+        // Gestion du porte-à-faux escamotable
         if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
             const pafEscamIcon = L.divIcon({
                 className: 'paf-escam-marker',
@@ -691,13 +634,7 @@
             document.getElementById('paf-escam-legend-item').style.display = 'flex';
         }
 
-        // =============================================================================
-        // FONCTIONS POUR LE DESSIN DES FORMES GÉOMÉTRIQUES
-        // =============================================================================
-
-        /**
-         * Dessine un arc de cercle entre deux angles
-         */
+        // Fonctions pour le dessin des formes géométriques
         function drawArc(center, radius, startAngle, endAngle, options) {
             const points = [];
             const steps = 100;
@@ -723,9 +660,6 @@
             return L.polyline(points, options);
         }
 
-        /**
-         * Dessine un polygone rempli
-         */
         function drawPolygon(pointList, color) {
             const borderColor = '#0044aa';
             const borderWeight = 2;
@@ -741,9 +675,6 @@
             }).addTo(map);
         }
 
-        /**
-         * Dessine un arc rempli entre trois points
-         */
         function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 0.6) {
             const toPoint = latlng => map.latLngToLayerPoint(latlng);
             const toLatLng = point => map.layerPointToLatLng(point);
@@ -789,11 +720,7 @@
             }).addTo(map);
         }
 
-        // =============================================================================
-        // CERCLE DE RAYON D'ACTION (MAGENTA) - CORRECTION
-        // =============================================================================
-
-        // Calcul du rayon
+        // Cercle de rayon d'action (magenta) - Correction de la coupure
         let originCircleRadius;
         if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
             originCircleRadius = calculateDistance(points.origine, points.pafEscam);
@@ -801,27 +728,22 @@
             originCircleRadius = calculateDistance(points.origine, points.pivot);
         }
 
-        // Calcul des angles avec correction
         const angleZero = calculateAngle(points.origine, points.zero);
         const angleMax = calculateAngle(points.origine, points.maxAngle);
 
-        // Détermination de l'arc à afficher
         let startArcAngle, endArcAngle;
         let angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
         
         if (angleFromZeroToMax <= 180) {
-            // Affichage du grand arc
             startArcAngle = angleMax;
             endArcAngle = angleZero + 360;
         } else {
-            // Affichage du petit arc
             startArcAngle = angleZero;
             endArcAngle = angleMax;
         }
 
-        // Création de l'arc magenta
         const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
-            color: '#FF00FF', // Magenta
+            color: '#FF00FF',
             weight: 4,
             opacity: 1.0,
             dashArray: '10, 10',
@@ -830,11 +752,7 @@
 
         document.getElementById('origin-circle-legend-item').style.display = 'flex';
 
-        // =============================================================================
-        // SEGMENTS ET POLYGONES PRINCIPAUX
-        // =============================================================================
-
-        // Ligne de direction maximale
+        // Segments et polygones principaux
         if (coords.PivCirc === 0) {
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
@@ -845,9 +763,7 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // Mode avec flexion
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // Segments en mode pivotflex
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
                 dashArray: '6, 6',
@@ -870,7 +786,6 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
-            // Cercle autour du point de flexion
             let circleRadius, circlePopup;
             
             if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
@@ -895,7 +810,6 @@
                 'Rayon porte-à-faux' : 'Rayon flexion';
             
         } else {
-            // Mode normal
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
                 weight: 4,
@@ -903,7 +817,6 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Zéro');
 
-            // Polygones standards
             if (coords.sens === 0) {
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
             } else if (coords.sens === 1 && coords.PivCirc === 0) {
@@ -920,7 +833,6 @@
                 drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
             }
 
-            // Cercle pour porte-à-faux en mode normal
             if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
                 (!coords.hasFlexParams || coords.flexActive === 0)) {
                 
@@ -939,10 +851,7 @@
             }
         }
 
-        // =============================================================================
-        // AJUSTEMENT FINAL DE LA VUE
-        // =============================================================================
-
+        // Ajustement final de la vue
         if (!savedCenter) {
             const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
             if (coords.hasFlexParams && coords.flexActive === 1) {
@@ -964,10 +873,7 @@
             }, 200);
         }
 
-        // =============================================================================
-        // SYSTÈME MÉTÉO
-        // =============================================================================
-
+        // Système météo
         const weatherPanel = document.getElementById('weather-panel');
         let isWeatherExpanded = false;
 
@@ -1109,10 +1015,7 @@
             fetchWeather(coords.LatOri, coords.LonOri);
         }, 1000);
 
-        // =============================================================================
-        // GESTION DE LA LÉGENDE
-        // =============================================================================
-
+        // Gestion de la légende
         const legend = document.getElementById('legend');
         const legendHeader = legend.querySelector('.legend-header');
         const toggleIcon = legend.querySelector('.toggle-icon');
@@ -1122,11 +1025,7 @@
             toggleIcon.textContent = isCollapsed ? '+' : '−';
         });
 
-        // =============================================================================
-        // INITIALISATION FINALE
-        // =============================================================================
-
-        // Mise à jour périodique de l'heure
+        // Initialisation finale
         setInterval(() => {
             if (window.weatherData) {
                 window.weatherData.time = new Date();
