@@ -760,7 +760,7 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // CORRECTION: Segment origine -> zéro en bleu discontinu dans tous les modes
+        // Segment origine -> zéro en bleu discontinu dans tous les modes
         L.polyline([points.origine, points.zero], { 
             color: 'blue',
             dashArray: '6, 6',
@@ -786,7 +786,7 @@
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
         } else {
-            // Mode normal - segment origine -> pivot en vert fluo
+            // CORRECTION: Segment origine -> pivot en vert fluo AVANT les polygones
             L.polyline([points.origine, points.pivot], { 
                 color: '#00FF00', // Vert fluo
                 weight: 8,
@@ -794,7 +794,7 @@
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Pivot');
 
-            // Polygones standards
+            // Polygones standards avec bordure réduite pour ne pas recouvrir le segment
             if (coords.sens === 0) {
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
             } else if (coords.sens === 1 && coords.PivCirc === 0) {
