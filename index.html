@@ -246,7 +246,7 @@
             </div>
             <div class="legend-item" id="flex-segment-legend-item" style="display: none;">
                 <div class="legend-color" style="background-color: #00FF00;"></div>
-                <span>Segments flexion</span>
+                <span>Segments pivot</span>
             </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
@@ -628,8 +628,9 @@
                 zIndexOffset: 700
             }).addTo(map).bindPopup('Porte-à-faux escamotable');
             
+            // MODIFICATION: Segment en vert fluo
             L.polyline([points.pivot, points.pafEscam], { 
-                color: 'blue',
+                color: '#00FF00', // Vert fluo
                 weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
@@ -814,9 +815,6 @@
             legendText.textContent = coords.hasPafEscamParams && coords.pafEscamActive === 1 ? 
                 'Rayon porte-à-faux' : 'Rayon flexion';
             
-            // Afficher la légende pour les segments vert fluo
-            document.getElementById('flex-segment-legend-item').style.display = 'flex';
-            
         } else {
             L.polyline([points.origine, points.zero], { 
                 color: 'blue',
@@ -857,6 +855,11 @@
                 
                 document.getElementById('paf-circle-legend-item').style.display = 'flex';
             }
+        }
+
+        // Afficher la légende pour les segments vert fluo dans tous les cas où ils sont utilisés
+        if ((coords.hasFlexParams && coords.flexActive === 1) || (coords.hasPafEscamParams && coords.pafEscamActive === 1)) {
+            document.getElementById('flex-segment-legend-item').style.display = 'flex';
         }
 
         // Ajustement final de la vue
