@@ -717,11 +717,24 @@
             }).addTo(map);
         }
 
-        // Cercle de rayon d'action (magenta) - Correction de la coupure
+        // NOUVEAU CALCUL DU RAYON D'ACTION (demi-cercle magenta)
         let originCircleRadius;
-        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            originCircleRadius = calculateDistance(points.origine, points.pafEscam);
+        
+        // Logique de calcul selon les conditions
+        if (!coords.hasFlexParams && !coords.hasPafEscamParams) {
+            // Ni flex ni porte-à-faux activés
+            originCircleRadius = calculateDistance(points.origine, points.pivot);
+        } else if (coords.hasFlexParams && coords.flexActive === 1 && (!coords.hasPafEscamParams || coords.pafEscamActive === 0)) {
+            // Flex activé mais pas le porte-à-faux
+            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot);
+        } else if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            // Flex et porte-à-faux activés
+            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
+        } else if ((!coords.hasFlexParams || coords.flexActive === 0) && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            // Seulement le porte-à-faux activé
+            originCircleRadius = calculateDistance(points.origine, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
         } else {
+            // Cas par défaut (sécurité)
             originCircleRadius = calculateDistance(points.origine, points.pivot);
         }
 
