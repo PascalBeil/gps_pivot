@@ -246,65 +246,66 @@
     
     <script>
         // Variables de suivi des tuiles
-        let tilesLoaded = 0;
-        let tilesError = 0;
-        let tileLoadTimeout;
+        var tilesLoaded = 0;
+        var tilesError = 0;
+        var tileLoadTimeout;
 
         // Clés de stockage localStorage
-        const ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
-        const CENTER_STORAGE_KEY = 'pivot_irrifrance_map_center';
+        var ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
+        var CENTER_STORAGE_KEY = 'pivot_irrifrance_map_center';
 
         // Fonctions utilitaires générales
         function calculateDistance(point1, point2) {
-            const R = 6371000;
-            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
-            const dLon = (point2.lng - point1.lng) * Math.PI / 180;
-            const a = 
+            var R = 6371000;
+            var dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            var dLon = (point2.lng - point1.lng) * Math.PI / 180;
+            var a = 
                 Math.sin(dLat/2) * Math.sin(dLat/2) +
                 Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
                 Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
         }
 
         function calculateMidpoint(point1, point2) {
-            const lat = (point1.lat + point2.lat) / 2;
-            const lng = (point1.lng + point2.lng) / 2;
+            var lat = (point1.lat + point2.lat) / 2;
+            var lng = (point1.lng + point2.lng) / 2;
             return L.latLng(lat, lng);
         }
 
         function calculateAngle(center, point) {
-            const dx = point.lng - center.lng;
-            const dy = point.lat - center.lat;
-            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            var dx = point.lng - center.lng;
+            var dy = point.lat - center.lat;
+            var angle = Math.atan2(dy, dx) * (180 / Math.PI);
             if (angle < 0) angle += 360;
             return angle;
         }
 
         // Gestion de l'interface utilisateur
         function showLoadingIndicator() {
-            const loader = document.getElementById('loading-indicator');
+            var loader = document.getElementById('loading-indicator');
             loader.style.display = 'block';
         }
 
         function hideLoadingIndicator() {
-            const loader = document.getElementById('loading-indicator');
+            var loader = document.getElementById('loading-indicator');
             loader.style.display = 'none';
         }
 
         function showTileError(message) {
-            const errorMsg = document.getElementById('tile-error-message');
+            var errorMsg = document.getElementById('tile-error-message');
             errorMsg.textContent = message;
             errorMsg.style.display = 'block';
-        //  setTimeout(() => {errorMsg.style.display = 'none';}, 5000);
-            setTimeout(function() {errorMsg.style.display = 'none';}, 5000);
+            setTimeout(function() {
+                errorMsg.style.display = 'none';
+            }, 5000);
         }
 
         function showZoomSaveIndicator() {
-            const indicator = document.getElementById('zoom-save-indicator');
+            var indicator = document.getElementById('zoom-save-indicator');
             indicator.textContent = 'Position sauvegardée';
             indicator.classList.add('show');
-            setTimeout(() => {
+            setTimeout(function() {
                 indicator.classList.remove('show');
             }, 2000);
         }
@@ -312,8 +313,8 @@
         // Gestion de la sauvegarde du zoom et position
         function saveMapState() {
             try {
-                const zoom = map.getZoom();
-                const center = map.getCenter();
+                var zoom = map.getZoom();
+                var center = map.getCenter();
                 
                 localStorage.setItem(ZOOM_STORAGE_KEY, zoom.toString());
                 localStorage.setItem(CENTER_STORAGE_KEY, JSON.stringify({
@@ -329,7 +330,7 @@
 
         function getSavedZoomLevel() {
             try {
-                const savedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
+                var savedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
                 return savedZoom ? parseInt(savedZoom) : null;
             } catch (error) {
                 console.error('Erreur récupération zoom:', error);
@@ -339,9 +340,9 @@
 
         function getSavedCenter() {
             try {
-                const savedCenter = localStorage.getItem(CENTER_STORAGE_KEY);
+                var savedCenter = localStorage.getItem(CENTER_STORAGE_KEY);
                 if (savedCenter) {
-                    const center = JSON.parse(savedCenter);
+                    var center = JSON.parse(savedCenter);
                     return L.latLng(center.lat, center.lng);
                 }
                 return null;
@@ -353,14 +354,14 @@
 
         // Calcul du zoom optimal selon l'écran
         function calculateOptimalZoom() {
-            const screenWidth = window.screen.width;
-            const screenHeight = window.screen.height;
-            const pixelRatio = window.devicePixelRatio || 1;
+            var screenWidth = window.screen.width;
+            var screenHeight = window.screen.height;
+            var pixelRatio = window.devicePixelRatio || 1;
             
-            const estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 
+            var estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 
                                    (pixelRatio >= 2 ? 200 : 100);
             
-            let baseZoom;
+            var baseZoom;
             
             if (estimatedDiagonal <= 7) baseZoom = 19;
             else if (estimatedDiagonal <= 10) baseZoom = 18;
@@ -369,24 +370,38 @@
             else if (estimatedDiagonal <= 24) baseZoom = 15;
             else baseZoom = 14;
             
-            const densityAdjustment = Math.log2(pixelRatio);
-            let optimalZoom = Math.min(19, Math.max(14, baseZoom + Math.round(densityAdjustment)));
+            var densityAdjustment = Math.log2(pixelRatio);
+            var optimalZoom = Math.min(19, Math.max(14, baseZoom + Math.round(densityAdjustment)));
             
             return optimalZoom;
         }
 
-        // Parsing des paramètres URL
+        // Parsing des paramètres URL - VERSION COMPATIBLE
         function getQueryParams() {
             try {
-                const params = new URLSearchParams(window.location.search);
-                const paramString = params.get('p');
+                var queryString = window.location.search;
+                if (!queryString || queryString.length < 3) {
+                    console.error("Paramètre 'p' manquant");
+                    return null;
+                }
+                
+                // Extraire manuellement le paramètre p
+                var paramString = null;
+                var pairs = queryString.substring(1).split('&');
+                for (var i = 0; i < pairs.length; i++) {
+                    var pair = pairs[i].split('=');
+                    if (pair[0] === 'p') {
+                        paramString = decodeURIComponent(pair[1]);
+                        break;
+                    }
+                }
                 
                 if (!paramString) {
                     console.error("Paramètre 'p' manquant");
                     return null;
                 }
                 
-                const values = paramString.split(',').map(Number);
+                var values = paramString.split(',').map(function(v) { return Number(v); });
                 
                 if (values.length === 12) {
                     return {
@@ -435,27 +450,22 @@
         }
 
         // Récupération des coordonnées
-        const coords = getQueryParams();
+        var coords = getQueryParams();
         
         if (!coords) {
-            const errorDiv = document.createElement('div');
+            var errorDiv = document.createElement('div');
             errorDiv.className = 'error-panel';
-            errorDiv.innerHTML = `
-                <h3>Erreur de paramètres</h3>
-                <p>L'URL ne contient pas les paramètres attendus.</p>
-                <p><strong>Format attendu:</strong></p>
-                <p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang</p>
-            `;
+            errorDiv.innerHTML = '<h3>Erreur de paramètres</h3><p>L\'URL ne contient pas les paramètres attendus.</p><p><strong>Format attendu:</strong></p><p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang</p>';
             document.body.appendChild(errorDiv);
             throw new Error("Paramètres manquants ou incorrects");
         }
 
         // Initialisation de la carte
-        const savedZoom = getSavedZoomLevel();
-        const savedCenter = getSavedCenter();
-        const optimalZoom = calculateOptimalZoom();
+        var savedZoom = getSavedZoomLevel();
+        var savedCenter = getSavedCenter();
+        var optimalZoom = calculateOptimalZoom();
         
-        let initialZoom, initialCenter;
+        var initialZoom, initialCenter;
         
         if (savedZoom !== null && savedCenter !== null) {
             initialZoom = Math.min(savedZoom, 19);
@@ -465,7 +475,7 @@
             initialCenter = [coords.LatOri, coords.LonOri];
         }
         
-        const map = L.map('map', { 
+        var map = L.map('map', { 
             minZoom: 10, 
             maxZoom: 19,
             zoomControl: true,
@@ -475,7 +485,7 @@
         }).setView(initialCenter, initialZoom);
 
         // Configuration de la couche satellite Esri
-        const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        var esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '© Esri, Maxar, Earthstar Geographics',
             maxZoom: 19,
             minZoom: 0,
@@ -510,21 +520,21 @@
         esriLayer.addTo(map);
 
         // Gestionnaires d'événements de la carte
-        let saveStateTimeout;
+        var saveStateTimeout;
 
         map.on('zoomstart', function() {
             showLoadingIndicator();
         });
 
         map.on('zoomend', function() {
-            const currentZoom = map.getZoom();
+            var currentZoom = map.getZoom();
             if (currentZoom > 19) {
                 map.setZoom(19);
                 showTileError('Zoom maximum atteint (limite technique)');
                 return;
             }
             clearTimeout(saveStateTimeout);
-            saveStateTimeout = setTimeout(() => {
+            saveStateTimeout = setTimeout(function() {
                 saveMapState();
             }, 500);
             setTimeout(hideLoadingIndicator, 1000);
@@ -532,13 +542,13 @@
 
         map.on('moveend', function() {
             clearTimeout(saveStateTimeout);
-            saveStateTimeout = setTimeout(() => {
+            saveStateTimeout = setTimeout(function() {
                 saveMapState();
             }, 1000);
         });
 
         // Définition des points et marqueurs
-        const points = {
+        var points = {
             origine: L.latLng(coords.LatOri, coords.LonOri),
             zero: L.latLng(coords.LatZero, coords.LonZero),
             maxAngle: L.latLng(coords.LatMaxAngle, coords.LonMaxAngle),
@@ -556,18 +566,11 @@
         }
 
         // Icône personnalisée pour le point de départ
-        const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
-            <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="8" cy="8" r="7" fill="#4A90E2" stroke="#FFFFFF" stroke-width="1"/>
-                <circle cx="8" cy="8" r="3" fill="#FFFFFF"/>
-                <path d="M8 3 L8 13 M3 8 L13 8" stroke="#FFFFFF" stroke-width="1"/>
-                <path d="M8 3 L6 5 M8 3 L10 5" stroke="#FFFFFF" stroke-width="1"/>
-            </svg>
-        `)}`;
+        var pivotIconSVG = 'data:image/svg+xml;base64,' + btoa('<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="7" fill="#4A90E2" stroke="#FFFFFF" stroke-width="1"/><circle cx="8" cy="8" r="3" fill="#FFFFFF"/><path d="M8 3 L8 13 M3 8 L13 8" stroke="#FFFFFF" stroke-width="1"/><path d="M8 3 L6 5 M8 3 L10 5" stroke="#FFFFFF" stroke-width="1"/></svg>');
 
-        const startPointIcon = L.divIcon({
+        var startPointIcon = L.divIcon({
             className: 'pivot-icon',
-            html: `<img src="${pivotIconSVG}" width="18" height="18" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
+            html: '<img src="' + pivotIconSVG + '" width="18" height="18" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">',
             iconSize: [18, 18],
             iconAnchor: [9, 9]
         });
@@ -578,7 +581,7 @@
             zIndexOffset: 1000
         }).addTo(map).bindPopup('Point de départ du pivot');
 
-        const pivotIcon = L.divIcon({
+        var pivotIcon = L.divIcon({
             className: 'pivot-marker',
             html: '',
             iconSize: [14, 14],
@@ -592,7 +595,7 @@
 
         // Marqueur de flexion si activé
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            const flexIcon = L.divIcon({
+            var flexIcon = L.divIcon({
                 className: 'flex-marker',
                 html: '',
                 iconSize: [14, 14],
@@ -607,7 +610,7 @@
 
         // Gestion du porte-à-faux escamotable
         if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            const pafEscamIcon = L.divIcon({
+            var pafEscamIcon = L.divIcon({
                 className: 'paf-escam-marker',
                 html: '',
                 iconSize: [14, 14],
@@ -621,7 +624,7 @@
             
             // Segment en vert fluo
             L.polyline([points.pivot, points.pafEscam], { 
-                color: '#00FF00', // Vert fluo
+                color: '#00FF00',
                 weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
@@ -632,21 +635,21 @@
 
         // Fonctions pour le dessin des formes géométriques
         function drawArc(center, radius, startAngle, endAngle, options) {
-            const points = [];
-            const steps = 100;
+            var points = [];
+            var steps = 100;
             
-            const startRad = (startAngle * Math.PI) / 180;
-            const endRad = (endAngle * Math.PI) / 180;
+            var startRad = (startAngle * Math.PI) / 180;
+            var endRad = (endAngle * Math.PI) / 180;
             
-            let angleDiff = endRad - startRad;
+            var angleDiff = endRad - startRad;
             if (angleDiff < 0) angleDiff += 2 * Math.PI;
             
-            for (let i = 0; i <= steps; i++) {
-                const angle = startRad + (angleDiff * (i / steps));
-                const dx = (radius * Math.cos(angle)) / (111320 * Math.cos(center.lat * Math.PI / 180));
-                const dy = (radius * Math.sin(angle)) / 110574;
+            for (var i = 0; i <= steps; i++) {
+                var angle = startRad + (angleDiff * (i / steps));
+                var dx = (radius * Math.cos(angle)) / (111320 * Math.cos(center.lat * Math.PI / 180));
+                var dy = (radius * Math.sin(angle)) / 110574;
                 
-                const point = L.latLng(
+                var point = L.latLng(
                     center.lat + dy,
                     center.lng + dx
                 );
@@ -657,9 +660,9 @@
         }
 
         function drawPolygon(pointList, color) {
-            const borderColor = '#0044aa';
-            const borderWeight = 2;
-            const borderOpacity = 1.0;
+            var borderColor = '#0044aa';
+            var borderWeight = 2;
+            var borderOpacity = 1.0;
             
             return L.polygon(pointList, {
                 color: borderColor,
@@ -671,40 +674,43 @@
             }).addTo(map);
         }
 
-        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 0.6) {
-            const toPoint = latlng => map.latLngToLayerPoint(latlng);
-            const toLatLng = point => map.layerPointToLatLng(point);
+        function drawFilledArc(center, startPoint, endPoint, color, opacity) {
+            color = color || 'lightblue';
+            opacity = opacity || 0.6;
+            
+            var toPoint = function(latlng) { return map.latLngToLayerPoint(latlng); };
+            var toLatLng = function(point) { return map.layerPointToLatLng(point); };
 
-            const centerPoint = toPoint(center);
-            const startPointPx = toPoint(startPoint);
-            const endPointPx = toPoint(endPoint);
+            var centerPoint = toPoint(center);
+            var startPointPx = toPoint(startPoint);
+            var endPointPx = toPoint(endPoint);
 
-            const radiusStart = centerPoint.distanceTo(startPointPx);
-            const radiusEnd = centerPoint.distanceTo(endPointPx);
+            var radiusStart = centerPoint.distanceTo(startPointPx);
+            var radiusEnd = centerPoint.distanceTo(endPointPx);
 
-            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
-            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+            var angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
+            var angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
 
-            let angleDiff = angleEnd - angleStart;
+            var angleDiff = angleEnd - angleStart;
             if (angleDiff < 0) angleDiff += 2 * Math.PI;
 
-            const arcPoints = [center];
-            const numPoints = 100;
+            var arcPoints = [center];
+            var numPoints = 100;
 
-            for (let i = 0; i <= numPoints; i++) {
-                const angle = angleStart + (angleDiff * (i / numPoints));
-                const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
+            for (var i = 0; i <= numPoints; i++) {
+                var angle = angleStart + (angleDiff * (i / numPoints));
+                var radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
                 
-                const pointPx = L.point({
-                    x: centerPoint.x + radius * Math.cos(angle),
-                    y: centerPoint.y + radius * Math.sin(angle)
-                });
+                var pointPx = L.point(
+                    centerPoint.x + radius * Math.cos(angle),
+                    centerPoint.y + radius * Math.sin(angle)
+                );
                 arcPoints.push(toLatLng(pointPx));
             }
-            
-            const borderColor = '#0044aa';
-            const borderWeight = 2;
-            const borderOpacity = 1.0;
+
+            var borderColor = '#0044aa';
+            var borderWeight = 2;
+            var borderOpacity = 1.0;
             
             return L.polygon(arcPoints, {
                 color: borderColor,
@@ -717,32 +723,26 @@
         }
 
         // NOUVEAU CALCUL DU RAYON D'ACTION (demi-cercle magenta)
-        let originCircleRadius;
+        var originCircleRadius;
         
         // Logique de calcul selon les conditions
         if (!coords.hasFlexParams && !coords.hasPafEscamParams) {
-            // Ni flex ni porte-à-faux activés
             originCircleRadius = calculateDistance(points.origine, points.pivot);
         } else if (coords.hasFlexParams && coords.flexActive === 1 && (!coords.hasPafEscamParams || coords.pafEscamActive === 0)) {
-            // Flex activé mais pas le porte-à-faux
             originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot);
         } else if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            // Flex et porte-à-faux activés
             originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
         } else if ((!coords.hasFlexParams || coords.flexActive === 0) && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            // Seulement le porte-à-faux activé
             originCircleRadius = calculateDistance(points.origine, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
         } else {
-            // Cas par défaut (sécurité)
             originCircleRadius = calculateDistance(points.origine, points.pivot);
         }
 
-        const angleZero = calculateAngle(points.origine, points.zero);
-        const angleMax = calculateAngle(points.origine, points.maxAngle);
+        var angleZero = calculateAngle(points.origine, points.zero);
+        var angleMax = calculateAngle(points.origine, points.maxAngle);
 
-        // CORRECTION : RETOUR À LA LOGIQUE ORIGINALE POUR LES ANGLES (qui avait le bon sens)
-        let startArcAngle, endArcAngle;
-        let angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
+        var startArcAngle, endArcAngle;
+        var angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
         
         if (angleFromZeroToMax <= 180) {
             startArcAngle = angleMax;
@@ -752,18 +752,17 @@
             endArcAngle = angleMax;
         }
 
-        // CORRECTION : Ajustement des angles pour résoudre le problème de décalage
-        const angleOffset = 0.5; // 0.5 degré d'offset pour s'assurer que l'arc couvre bien les points
+        var angleOffset = 0.5;
         startArcAngle -= angleOffset;
         endArcAngle += angleOffset;
 
-        const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
+        var originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
             color: '#FF00FF',
             weight: 4,
             opacity: 1.0,
             dashArray: '10, 10',
             lineCap: 'round'
-        }).addTo(map).bindPopup(`Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`);
+        }).addTo(map).bindPopup('Rayon d\'action - Distance: ' + originCircleRadius.toFixed(2) + ' m');
 
         document.getElementById('origin-circle-legend-item').style.display = 'flex';
 
@@ -778,7 +777,6 @@
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        // Segment origine -> zéro en bleu discontinu dans tous les modes
         L.polyline([points.origine, points.zero], { 
             color: 'blue',
             dashArray: '6, 6',
@@ -788,31 +786,28 @@
         }).addTo(map).bindPopup('Segment Origine à Zéro');
 
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            // Segments en mode pivotflex - EN VERT FLUO
             L.polyline([points.origine, points.flex], { 
-                color: '#00FF00', // Vert fluo
+                color: '#00FF00',
                 weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
             L.polyline([points.flex, points.pivot], { 
-                color: '#00FF00', // Vert fluo
+                color: '#00FF00',
                 weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
         } else {
-            // CORRECTION: Segment origine -> pivot en vert fluo AVANT les polygones
             L.polyline([points.origine, points.pivot], { 
-                color: '#00FF00', // Vert fluo
+                color: '#00FF00',
                 weight: 8,
                 opacity: 1.0,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Pivot');
 
-            // Polygones standards avec bordure réduite pour ne pas recouvrir le segment
             if (coords.sens === 0) {
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
             } else if (coords.sens === 1 && coords.PivCirc === 0) {
@@ -830,12 +825,11 @@
             }
         }
 
-        // Afficher la légende pour les segments vert fluo dans tous les cas où ils sont utilisés
         document.getElementById('flex-segment-legend-item').style.display = 'flex';
 
         // Ajustement final de la vue
         if (!savedCenter) {
-            const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
+            var boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
             if (coords.hasFlexParams && coords.flexActive === 1) {
                 boundsPoints.push(points.flex);
             }
@@ -843,11 +837,11 @@
                 boundsPoints.push(points.pafEscam);
             }
             
-            const bounds = L.latLngBounds(boundsPoints);
+            var bounds = L.latLngBounds(boundsPoints);
             
-            setTimeout(() => {
-                const boundsZoom = map.getBoundsZoom(bounds, false);
-                let finalZoom = Math.min(optimalZoom, boundsZoom);
+            setTimeout(function() {
+                var boundsZoom = map.getBoundsZoom(bounds, false);
+                var finalZoom = Math.min(optimalZoom, boundsZoom);
                 finalZoom = Math.min(finalZoom, 19);
                 
                 map.fitBounds(bounds, { padding: [15, 15], maxZoom: finalZoom });
@@ -856,31 +850,30 @@
         }
 
         // Système météo
-        const weatherPanel = document.getElementById('weather-panel');
-        let isWeatherExpanded = false;
+        var weatherPanel = document.getElementById('weather-panel');
+        var isWeatherExpanded = false;
 
-        async function fetchWeather(lat, lon) {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
+        function fetchWeather(lat, lon) {
+            var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&timezone=auto';
             
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
-                const data = await response.json();
-                displayWeather(data);
-            } catch (error) {
-                console.error('Erreur météo:', error);
-                weatherPanel.innerHTML = `
-                    <div style="font-weight: bold;">Météo non disponible</div>
-                    <div style="font-size: 10px; color: #666;">Service temporairement indisponible</div>
-                    <div class="weather-toggle">Cliquer pour détails</div>
-                `;
-            }
+            fetch(url)
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Erreur HTTP: ' + response.status);
+                    return response.json();
+                })
+                .then(function(data) {
+                    displayWeather(data);
+                })
+                .catch(function(error) {
+                    console.error('Erreur météo:', error);
+                    weatherPanel.innerHTML = '<div style="font-weight: bold;">Météo non disponible</div><div style="font-size: 10px; color: #666;">Service temporairement indisponible</div><div class="weather-toggle">Cliquer pour détails</div>';
+                });
         }
 
         function displayWeather(data) {
             if (!data.current_weather) return;
             
-            const current = data.current_weather;
+            var current = data.current_weather;
             window.weatherData = {
                 temperature: current.temperature,
                 weatherCode: current.weathercode,
@@ -892,15 +885,15 @@
         function updateWeatherDisplay() {
             if (!window.weatherData) return;
 
-            const current = window.weatherData;
-            const now = new Date();
-            const date = now.toLocaleDateString('fr-FR');
-            const heure = now.toLocaleTimeString('fr-FR', { 
+            var current = window.weatherData;
+            var now = new Date();
+            var date = now.toLocaleDateString('fr-FR');
+            var heure = now.toLocaleTimeString('fr-FR', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
             });
 
-            const templates = {
+            var templates = {
                 0: { temp: 'Température', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Porte-à-faux' },
                 1: { temp: 'Temperature', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Overhang' },
                 2: { temp: 'Temperatura', angle: 'Ángulo', flex: 'PivotFlex', pafEscam: 'Voladizo' },
@@ -910,61 +903,58 @@
                 6: { temp: 'Temperatura', angle: 'Angolo', flex: 'PivotFlex', pafEscam: 'Sbalzo' }
             };
 
-            const t = templates[coords.lang] || templates[0];
-            const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
+            var t = templates[coords.lang] || templates[0];
+            var weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
             
-            let flexStatus = '';
+            var flexStatus = '';
             if (coords.hasFlexParams) {
                 flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
             }
 
-            let pafEscamStatus = '';
+            var pafEscamStatus = '';
             if (coords.hasPafEscamParams) {
                 pafEscamStatus = coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF';
             }
 
             if (isWeatherExpanded) {
-                let displayContent = `
-                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>
-                    <div><strong>Date:</strong> ${date}</div>
-                    <div><strong>Heure:</strong> ${heure}</div>
-                    <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
-                    <div><strong>Météo:</strong> ${weatherDesc}</div>
-                    <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
-                `;
+                var displayContent = '<div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>' +
+                    '<div><strong>Date:</strong> ' + date + '</div>' +
+                    '<div><strong>Heure:</strong> ' + heure + '</div>' +
+                    '<div><strong>' + t.temp + ':</strong> ' + current.temperature.toFixed(1) + '°C</div>' +
+                    '<div><strong>Météo:</strong> ' + weatherDesc + '</div>' +
+                    '<div><strong>' + t.angle + ':</strong> ' + coords.ang + '°</div>';
                 
                 if (coords.hasFlexParams) {
-                    displayContent += `<div><strong>${t.flex}:</strong> ${flexStatus}</div>`;
+                    displayContent += '<div><strong>' + t.flex + ':</strong> ' + flexStatus + '</div>';
                 }
                 
                 if (coords.hasPafEscamParams) {
-                    displayContent += `<div><strong>${t.pafEscam}:</strong> ${pafEscamStatus}</div>`;
+                    displayContent += '<div><strong>' + t.pafEscam + ':</strong> ' + pafEscamStatus + '</div>';
                 }
                 
-                displayContent += `<div class="weather-toggle">Cliquer pour réduire</div>`;
+                displayContent += '<div class="weather-toggle">Cliquer pour réduire</div>';
                 
                 weatherPanel.innerHTML = displayContent;
             } else {
-                let displayContent = `
-                    <div style="font-weight: bold;">${current.temperature.toFixed(1)}°C | ${coords.ang}°</div>
-                    <div style="font-size: 10px; color: #666;">${weatherDesc}`;
+                var displayContent = '<div style="font-weight: bold;">' + current.temperature.toFixed(1) + '°C | ' + coords.ang + '°</div>' +
+                    '<div style="font-size: 10px; color: #666;">' + weatherDesc;
                 
                 if (coords.hasFlexParams) {
-                    displayContent += ` | Flex: ${flexStatus}`;
+                    displayContent += ' | Flex: ' + flexStatus;
                 }
                 
                 if (coords.hasPafEscamParams) {
-                    displayContent += ` | Paf: ${pafEscamStatus}`;
+                    displayContent += ' | Paf: ' + pafEscamStatus;
                 }
                 
-                displayContent += `</div><div class="weather-toggle">Cliquer pour détails</div>`;
+                displayContent += '</div><div class="weather-toggle">Cliquer pour détails</div>';
                 
                 weatherPanel.innerHTML = displayContent;
             }
         }
 
         function getWeatherDescription(code, lang) {
-            const descriptions = {
+            var descriptions = {
                 0: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
                 1: ['Principalement dégagé', 'Mainly clear', 'Principalmente despejado', 'Principalmente limpo', 'Überwiegend klar', 'Overwegend helder', 'Prevalentemente sereno'],
                 2: ['Partiellement nuageux', 'Partly cloudy', 'Parcialmente nublado', 'Parcialmente nublado', 'Teilweise bewölkt', 'Gedeeltelijk bewolkt', 'Parzialmente nuvoloso'],
@@ -983,7 +973,7 @@
                 95: ['Orage', 'Thunderstorm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
             };
 
-            return descriptions[code]?.[lang] || descriptions[code]?.[0] || 'Conditions inconnues';
+            return (descriptions[code] && descriptions[code][lang]) ? descriptions[code][lang] : (descriptions[code] ? descriptions[code][0] : 'Conditions inconnues');
         }
 
         weatherPanel.addEventListener('click', function() {
@@ -992,23 +982,22 @@
             updateWeatherDisplay();
         });
 
-        // Chargement de la météo
-        setTimeout(() => {
+        setTimeout(function() {
             fetchWeather(coords.LatOri, coords.LonOri);
         }, 1000);
 
         // Gestion de la légende
-        const legend = document.getElementById('legend');
-        const legendHeader = legend.querySelector('.legend-header');
-        const toggleIcon = legend.querySelector('.toggle-icon');
+        var legend = document.getElementById('legend');
+        var legendHeader = legend.querySelector('.legend-header');
+        var toggleIcon = legend.querySelector('.toggle-icon');
 
         legendHeader.addEventListener('click', function() {
-            const isCollapsed = legend.classList.toggle('collapsed');
+            var isCollapsed = legend.classList.toggle('collapsed');
             toggleIcon.textContent = isCollapsed ? '+' : '−';
         });
 
         // Initialisation finale
-        setInterval(() => {
+        setInterval(function() {
             if (window.weatherData) {
                 window.weatherData.time = new Date();
                 updateWeatherDisplay();
@@ -1019,6 +1008,3 @@
     </script>
 </body>
 </html>
-
-
-
