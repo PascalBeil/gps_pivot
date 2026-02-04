@@ -296,11 +296,10 @@
             const errorMsg = document.getElementById('tile-error-message');
             errorMsg.textContent = message;
             errorMsg.style.display = 'block';
-            setTimeout(() => {
-                errorMsg.style.display = 'none';
-            }, 5000);
+        //  setTimeout(() => {errorMsg.style.display = 'none';}, 5000);
+            setTimeout(function() {errorMsg.style.display = 'none';}, 5000);
         }
-        
+
         function showZoomSaveIndicator() {
             const indicator = document.getElementById('zoom-save-indicator');
             indicator.textContent = 'Position sauvegardée';
@@ -1020,5 +1019,6 @@
     </script>
 </body>
 </html>
+
 
 
