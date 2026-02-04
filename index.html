@@ -98,32 +98,36 @@
             text-align: right;
             margin-top: 4px;
         }
+        /* Styles unifiés pour tous les marqueurs - 12px */
         .pivot-marker {
-            background-color: #8A2BE2;
+            background-color: #8A2BE2; /* Violet */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
+        /* Style pour l'icône du point de départ */
         .pivot-icon {
             background: transparent;
             border: none;
         }
+        /* Style pour le point de flexion */
         .flex-marker {
-            background-color: #FF6B00;
+            background-color: #FF6B00; /* Orange */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
+        /* Style pour le porte-à-faux escamotable */
         .paf-escam-marker {
-            background-color: #32CD32;
+            background-color: #32CD32; /* Vert Lime */
             border: 2px solid #ffffff;
             border-radius: 50%;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         .error-panel {
@@ -138,6 +142,35 @@
             z-index: 2000;
             text-align: center;
             max-width: 400px;
+        }
+        .debug-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 10px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        .zoom-save-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .zoom-save-indicator.show {
+            opacity: 1;
         }
         .loading-indicator {
             position: absolute;
@@ -165,39 +198,33 @@
             max-width: 250px;
             display: none;
         }
-        .zoom-save-indicator {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .zoom-save-indicator.show {
-            opacity: 1;
-        }
     </style>
 </head>
 <body>
     <div id="map"></div>
 
+    <!-- Indicateur de chargement -->
     <div id="loading-indicator" class="loading-indicator">
         🔄 Chargement des images satellite...
     </div>
 
+    <!-- Message d'erreur tuiles -->
     <div id="tile-error-message" class="tile-error-message">
         ⚠️ Zoom trop élevé - Résolution non disponible
     </div>
 
+    <!-- Panel de debug (optionnel) -->
+    <div id="debug-panel" class="debug-panel" style="display: none;">
+        Résolution: <span id="resolution-info"></span><br>
+        Zoom: <span id="zoom-info"></span>/<span id="max-zoom-info"></span><br>
+        Tuiles chargées: <span id="tiles-loaded"></span><br>
+        Statut: <span id="tile-status"></span>
+    </div>
+
+    <!-- Indicateur de sauvegarde du zoom -->
     <div id="zoom-save-indicator" class="zoom-save-indicator">Position sauvegardée</div>
 
     <div id="weather-panel" class="weather-compact">Chargement météo...</div>
-    
     <div class="legend collapsed" id="legend">
         <div class="legend-header">
             <span>Légende</span>
@@ -232,89 +259,110 @@
                 <div class="legend-color" style="background-color: #32CD32;"></div>
                 <span>Porte-à-faux</span>
             </div>
-            <div class="legend-item" id="origin-circle-legend-item" style="display: none;">
-                <div class="legend-color" style="background-color: #FF00FF;"></div>
-                <span>Rayon d'action</span>
+            <div class="legend-item" id="flex-circle-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #FFFF00;"></div>
+                <span>Rayon flexion</span>
             </div>
-            <div class="legend-item" id="flex-segment-legend-item" style="display: none;">
-                <div class="legend-color" style="background-color: #00FF00;"></div>
-                <span>Segments pivot</span>
+            <div class="legend-item" id="paf-circle-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #90EE90;"></div>
+                <span>Rayon porte-à-faux</span>
+            </div>
+            <div class="legend-item" id="origin-circle-legend-item" style="display: none;">
+                <div class="legend-color" style="background-color: #8A2BE2;"></div>
+                <span>Rayon d'action</span>
             </div>
         </div>
         <div class="compact-view">Légende (cliquer pour développer)</div>
     </div>
     
     <script>
-        // Variables de suivi des tuiles
-        var tilesLoaded = 0;
-        var tilesError = 0;
-        var tileLoadTimeout;
+        // =============================================================================
+        // CORRECTIONS POUR LA MÉTÉO ET LA VISIBILITÉ DES LIGNES
+        // =============================================================================
 
-        // Clés de stockage localStorage
-        var ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
-        var CENTER_STORAGE_KEY = 'pivot_irrifrance_map_center';
+        // Variables pour le suivi des tuiles
+        let tilesLoaded = 0;
+        let tilesError = 0;
+        let tileLoadTimeout;
 
-        // Fonctions utilitaires générales
-        function calculateDistance(point1, point2) {
-            var R = 6371000;
-            var dLat = (point2.lat - point1.lat) * Math.PI / 180;
-            var dLon = (point2.lng - point1.lng) * Math.PI / 180;
-            var a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        function calculateMidpoint(point1, point2) {
-            var lat = (point1.lat + point2.lat) / 2;
-            var lng = (point1.lng + point2.lng) / 2;
-            return L.latLng(lat, lng);
-        }
-
-        function calculateAngle(center, point) {
-            var dx = point.lng - center.lng;
-            var dy = point.lat - center.lat;
-            var angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            if (angle < 0) angle += 360;
-            return angle;
-        }
-
-        // Gestion de l'interface utilisateur
+        // Fonction pour montrer l'indicateur de chargement
         function showLoadingIndicator() {
-            var loader = document.getElementById('loading-indicator');
+            const loader = document.getElementById('loading-indicator');
             loader.style.display = 'block';
         }
 
+        // Fonction pour cacher l'indicateur de chargement
         function hideLoadingIndicator() {
-            var loader = document.getElementById('loading-indicator');
+            const loader = document.getElementById('loading-indicator');
             loader.style.display = 'none';
         }
 
+        // Fonction pour montrer l'erreur de tuiles
         function showTileError(message) {
-            var errorMsg = document.getElementById('tile-error-message');
+            const errorMsg = document.getElementById('tile-error-message');
             errorMsg.textContent = message;
             errorMsg.style.display = 'block';
-            setTimeout(function() {
+            setTimeout(() => {
                 errorMsg.style.display = 'none';
             }, 5000);
         }
 
-        function showZoomSaveIndicator() {
-            var indicator = document.getElementById('zoom-save-indicator');
-            indicator.textContent = 'Position sauvegardée';
-            indicator.classList.add('show');
-            setTimeout(function() {
-                indicator.classList.remove('show');
-            }, 2000);
+        // Suivi du chargement des tuiles
+        function setupTileTracking() {
+            tilesLoaded = 0;
+            tilesError = 0;
+            updateTileDebugInfo();
         }
 
-        // Gestion de la sauvegarde du zoom et position
+        // Mettre à jour les infos de debug des tuiles
+        function updateTileDebugInfo() {
+            if (document.getElementById('debug-panel').style.display !== 'none') {
+                document.getElementById('tiles-loaded').textContent = `${tilesLoaded} (erreurs: ${tilesError})`;
+                document.getElementById('zoom-info').textContent = map ? map.getZoom() : 'N/A';
+                document.getElementById('max-zoom-info').textContent = map ? map.getMaxZoom() : 'N/A';
+                
+                const status = tilesError > tilesLoaded ? '⚠️ Problèmes' : '✅ OK';
+                document.getElementById('tile-status').textContent = status;
+            }
+        }
+
+        // =============================================================================
+        // FONCTION POUR CALCULER LA DISTANCE ENTRE DEUX POINTS
+        // =============================================================================
+
+        function calculateDistance(point1, point2) {
+            const R = 6371000; // Rayon de la Terre en mètres
+            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // =============================================================================
+        // FONCTION POUR CALCULER LE POINT MILIEU ENTRE DEUX POINTS
+        // =============================================================================
+
+        function calculateMidpoint(point1, point2) {
+            const lat = (point1.lat + point2.lat) / 2;
+            const lng = (point1.lng + point2.lng) / 2;
+            return L.latLng(lat, lng);
+        }
+
+        // =============================================================================
+        // GESTION DE LA SAUVEGARDE DU ZOOM ET DE LA POSITION
+        // =============================================================================
+
+        const ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
+        const CENTER_STORAGE_KEY = 'pivot_irrifrance_map_center';
+
         function saveMapState() {
             try {
-                var zoom = map.getZoom();
-                var center = map.getCenter();
+                const zoom = map.getZoom();
+                const center = map.getCenter();
                 
                 localStorage.setItem(ZOOM_STORAGE_KEY, zoom.toString());
                 localStorage.setItem(CENTER_STORAGE_KEY, JSON.stringify({
@@ -322,88 +370,123 @@
                     lng: center.lng
                 }));
                 
+                console.log(`✅ Position sauvegardée: ${center.lat.toFixed(6)}, ${center.lng.toFixed(6)} | Zoom: ${zoom}`);
                 showZoomSaveIndicator();
+                updateDebugPanel();
             } catch (error) {
-                console.error('Erreur sauvegarde position:', error);
+                console.error('❌ Erreur sauvegarde position:', error);
             }
         }
 
         function getSavedZoomLevel() {
             try {
-                var savedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
+                const savedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
                 return savedZoom ? parseInt(savedZoom) : null;
             } catch (error) {
-                console.error('Erreur récupération zoom:', error);
+                console.error('❌ Erreur récupération zoom:', error);
                 return null;
             }
         }
 
         function getSavedCenter() {
             try {
-                var savedCenter = localStorage.getItem(CENTER_STORAGE_KEY);
+                const savedCenter = localStorage.getItem(CENTER_STORAGE_KEY);
                 if (savedCenter) {
-                    var center = JSON.parse(savedCenter);
+                    const center = JSON.parse(savedCenter);
                     return L.latLng(center.lat, center.lng);
                 }
                 return null;
             } catch (error) {
-                console.error('Erreur récupération centre:', error);
+                console.error('❌ Erreur récupération centre:', error);
                 return null;
             }
         }
 
-        // Calcul du zoom optimal selon l'écran
+        function showZoomSaveIndicator() {
+            const indicator = document.getElementById('zoom-save-indicator');
+            indicator.textContent = 'Position sauvegardée';
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        // =============================================================================
+        // DÉTECTION DE L'ÉCRAN
+        // =============================================================================
+
         function calculateOptimalZoom() {
-            var screenWidth = window.screen.width;
-            var screenHeight = window.screen.height;
-            var pixelRatio = window.devicePixelRatio || 1;
+            const screenWidth = window.screen.width;
+            const screenHeight = window.screen.height;
+            const pixelRatio = window.devicePixelRatio || 1;
             
-            var estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 
+            const effectiveWidth = screenWidth * pixelRatio;
+            const effectiveHeight = screenHeight * pixelRatio;
+            
+            const estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 
                                    (pixelRatio >= 2 ? 200 : 100);
             
-            var baseZoom;
+            let baseZoom;
             
-            if (estimatedDiagonal <= 7) baseZoom = 19;
-            else if (estimatedDiagonal <= 10) baseZoom = 18;
-            else if (estimatedDiagonal <= 13) baseZoom = 17;
-            else if (estimatedDiagonal <= 15) baseZoom = 16;
-            else if (estimatedDiagonal <= 24) baseZoom = 15;
-            else baseZoom = 14;
+            if (estimatedDiagonal <= 7) {
+                baseZoom = 19;
+            } else if (estimatedDiagonal <= 10) {
+                baseZoom = 18;
+            } else if (estimatedDiagonal <= 13) {
+                baseZoom = 17;
+            } else if (estimatedDiagonal <= 15) {
+                baseZoom = 16;
+            } else if (estimatedDiagonal <= 24) {
+                baseZoom = 15;
+            } else {
+                baseZoom = 14;
+            }
             
-            var densityAdjustment = Math.log2(pixelRatio);
-            var optimalZoom = Math.min(19, Math.max(14, baseZoom + Math.round(densityAdjustment)));
+            const densityAdjustment = Math.log2(pixelRatio);
+            let optimalZoom = Math.min(19, Math.max(14, baseZoom + Math.round(densityAdjustment)));
+            
+            console.log(`📐 Écran: ${Math.round(estimatedDiagonal)}", Zoom optimal: ${optimalZoom}`);
             
             return optimalZoom;
         }
 
-        // Parsing des paramètres URL - VERSION COMPATIBLE
+        function updateDebugPanel() {
+            if (document.getElementById('debug-panel').style.display !== 'none') {
+                const screenWidth = window.screen.width;
+                const screenHeight = window.screen.height;
+                const pixelRatio = window.devicePixelRatio || 1;
+                const effectiveWidth = screenWidth * pixelRatio;
+                const effectiveHeight = screenHeight * pixelRatio;
+                const estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / (pixelRatio >= 2 ? 200 : 100);
+                
+                document.getElementById('resolution-info').textContent = 
+                    `${screenWidth}x${screenHeight} (${effectiveWidth}x${effectiveHeight})`;
+                document.getElementById('zoom-info').textContent = 
+                    map ? map.getZoom() : 'N/A';
+                document.getElementById('max-zoom-info').textContent = 
+                    '19 (limité)';
+            }
+        }
+
+        // =============================================================================
+        // FONCTIONS PRINCIPALES AVEC AJOUT PAFESCAM
+        // =============================================================================
+
         function getQueryParams() {
             try {
-                var queryString = window.location.search;
-                if (!queryString || queryString.length < 3) {
-                    console.error("Paramètre 'p' manquant");
-                    return null;
-                }
-                
-                // Extraire manuellement le paramètre p
-                var paramString = null;
-                var pairs = queryString.substring(1).split('&');
-                for (var i = 0; i < pairs.length; i++) {
-                    var pair = pairs[i].split('=');
-                    if (pair[0] === 'p') {
-                        paramString = decodeURIComponent(pair[1]);
-                        break;
-                    }
-                }
+                const params = new URLSearchParams(window.location.search);
+                const paramString = params.get('p');
                 
                 if (!paramString) {
-                    console.error("Paramètre 'p' manquant");
+                    console.error("❌ Paramètre 'p' manquant");
                     return null;
                 }
                 
-                var values = paramString.split(',').map(function(v) { return Number(v); });
+                const values = paramString.split(',').map(Number);
                 
+                // Gestion de tous les cas possibles
                 if (values.length === 12) {
+                    // Cas de base sans flex ni PafEscam
                     return {
                         LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
                         LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
@@ -412,6 +495,7 @@
                         pafEscamActive: 0, hasPafEscamParams: false
                     };
                 } else if (values.length === 15) {
+                    // Cas avec flex seulement
                     return {
                         LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
                         LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
@@ -421,6 +505,7 @@
                         pafEscamActive: 0, hasPafEscamParams: false
                     };
                 } else if (values.length === 16) {
+                    // Cas avec PafEscam seulement (sans flex)
                     return {
                         LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
                         LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
@@ -430,6 +515,7 @@
                         hasPafEscamParams: true
                     };
                 } else if (values.length === 18) {
+                    // Cas avec flex et PafEscam
                     return {
                         LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
                         LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
@@ -440,42 +526,54 @@
                         hasPafEscamParams: true
                     };
                 } else {
-                    console.error("Nombre de paramètres incorrect:", values.length);
+                    console.error("❌ Nombre de paramètres incorrect:", values.length);
                     return null;
                 }
             } catch (error) {
-                console.error("Erreur parsing paramètres:", error);
+                console.error("❌ Erreur parsing paramètres:", error);
                 return null;
             }
         }
 
-        // Récupération des coordonnées
-        var coords = getQueryParams();
+        const coords = getQueryParams();
         
         if (!coords) {
-            var errorDiv = document.createElement('div');
+            const errorDiv = document.createElement('div');
             errorDiv.className = 'error-panel';
-            errorDiv.innerHTML = '<h3>Erreur de paramètres</h3><p>L\'URL ne contient pas les paramètres attendus.</p><p><strong>Format attendu:</strong></p><p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang</p>';
+            errorDiv.innerHTML = `
+                <h3>Erreur de paramètres</h3>
+                <p>L'URL ne contient pas les paramètres attendus.</p>
+                <p><strong>Format attendu:</strong></p>
+                <p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang</p>
+                <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                    Vérifiez la console du navigateur (F12) pour plus de détails.
+                </p>
+            `;
             document.body.appendChild(errorDiv);
             throw new Error("Paramètres manquants ou incorrects");
         }
 
-        // Initialisation de la carte
-        var savedZoom = getSavedZoomLevel();
-        var savedCenter = getSavedCenter();
-        var optimalZoom = calculateOptimalZoom();
+        // =============================================================================
+        // INITIALISATION DE LA CARTE
+        // =============================================================================
+
+        const savedZoom = getSavedZoomLevel();
+        const savedCenter = getSavedCenter();
+        const optimalZoom = calculateOptimalZoom();
         
-        var initialZoom, initialCenter;
+        let initialZoom, initialCenter;
         
         if (savedZoom !== null && savedCenter !== null) {
             initialZoom = Math.min(savedZoom, 19);
             initialCenter = savedCenter;
+            console.log(`🎯 Restauration position: ${savedCenter.lat.toFixed(6)}, ${savedCenter.lng.toFixed(6)} | Zoom: ${initialZoom}`);
         } else {
             initialZoom = optimalZoom;
             initialCenter = [coords.LatOri, coords.LonOri];
+            console.log(`🎯 Nouvelle position: ${coords.LatOri}, ${coords.LonOri} | Zoom: ${initialZoom}`);
         }
         
-        var map = L.map('map', { 
+        const map = L.map('map', { 
             minZoom: 10, 
             maxZoom: 19,
             zoomControl: true,
@@ -484,8 +582,11 @@
             markerZoomAnimation: true
         }).setView(initialCenter, initialZoom);
 
-        // Configuration de la couche satellite Esri
-        var esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        // =============================================================================
+        // COUCHE ESRI AVEC GESTION DES ERREURS
+        // =============================================================================
+
+        const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: '© Esri, Maxar, Earthstar Geographics',
             maxZoom: 19,
             minZoom: 0,
@@ -496,21 +597,26 @@
         // Gestionnaires d'événements pour les tuiles
         esriLayer.on('loading', function() {
             showLoadingIndicator();
-            tilesLoaded = 0;
-            tilesError = 0;
+            setupTileTracking();
         });
 
         esriLayer.on('tileerror', function(e) {
             tilesError++;
+            console.warn('❌ Erreur tuile:', e);
+            updateTileDebugInfo();
+            
             if (tilesError > 3) {
                 showTileError('Résolution satellite non disponible à ce zoom');
             }
+            
             clearTimeout(tileLoadTimeout);
             tileLoadTimeout = setTimeout(hideLoadingIndicator, 1000);
         });
 
         esriLayer.on('tileload', function() {
             tilesLoaded++;
+            updateTileDebugInfo();
+            
             if (tilesLoaded >= 4) {
                 clearTimeout(tileLoadTimeout);
                 tileLoadTimeout = setTimeout(hideLoadingIndicator, 500);
@@ -519,73 +625,89 @@
 
         esriLayer.addTo(map);
 
-        // Gestionnaires d'événements de la carte
-        var saveStateTimeout;
+        // =============================================================================
+        // GESTIONNAIRES D'ÉVÉNEMENTS POUR LA CARTE - SAUVEGARDE POSITION
+        // =============================================================================
+
+        let saveStateTimeout;
 
         map.on('zoomstart', function() {
             showLoadingIndicator();
         });
 
         map.on('zoomend', function() {
-            var currentZoom = map.getZoom();
+            const currentZoom = map.getZoom();
+            
             if (currentZoom > 19) {
                 map.setZoom(19);
                 showTileError('Zoom maximum atteint (limite technique)');
                 return;
             }
+            
             clearTimeout(saveStateTimeout);
-            saveStateTimeout = setTimeout(function() {
+            saveStateTimeout = setTimeout(() => {
                 saveMapState();
             }, 500);
+            
             setTimeout(hideLoadingIndicator, 1000);
         });
 
         map.on('moveend', function() {
             clearTimeout(saveStateTimeout);
-            saveStateTimeout = setTimeout(function() {
+            saveStateTimeout = setTimeout(() => {
                 saveMapState();
             }, 1000);
         });
 
-        // Définition des points et marqueurs
-        var points = {
+        // =============================================================================
+        // POINTS ET MARQUEURS - AVEC AJOUT PAFESCAM
+        // =============================================================================
+
+        const points = {
             origine: L.latLng(coords.LatOri, coords.LonOri),
             zero: L.latLng(coords.LatZero, coords.LonZero),
             maxAngle: L.latLng(coords.LatMaxAngle, coords.LonMaxAngle),
             pivot: L.latLng(coords.LatPiv, coords.LonPiv)
         };
 
-        // Gestion du point de flexion si présent
+        // Gestion du flex si présent
         if (coords.hasFlexParams && coords.flexActive === 1) {
             points.flex = L.latLng(coords.LatFlex, coords.LonFlex);
         }
 
-        // Gestion du porte-à-faux si présent
+        // Gestion du PafEscam si présent (indépendamment du flex)
         if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
             points.pafEscam = L.latLng(coords.LatPafEscam, coords.LonPafEscam);
         }
 
-        // Icône personnalisée pour le point de départ
-        var pivotIconSVG = 'data:image/svg+xml;base64,' + btoa('<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="7" fill="#4A90E2" stroke="#FFFFFF" stroke-width="1"/><circle cx="8" cy="8" r="3" fill="#FFFFFF"/><path d="M8 3 L8 13 M3 8 L13 8" stroke="#FFFFFF" stroke-width="1"/><path d="M8 3 L6 5 M8 3 L10 5" stroke="#FFFFFF" stroke-width="1"/></svg>');
+        // Création de l'icône personnalisée - TAILLE UNIFORME 12px
+        const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
+            <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="8" cy="8" r="7" fill="#4A90E2" stroke="#FFFFFF" stroke-width="1"/>
+                <circle cx="8" cy="8" r="3" fill="#FFFFFF"/>
+                <path d="M8 3 L8 13 M3 8 L13 8" stroke="#FFFFFF" stroke-width="1"/>
+                <path d="M8 3 L6 5 M8 3 L10 5" stroke="#FFFFFF" stroke-width="1"/>
+            </svg>
+        `)}`;
 
-        var startPointIcon = L.divIcon({
+        const startPointIcon = L.divIcon({
             className: 'pivot-icon',
-            html: '<img src="' + pivotIconSVG + '" width="18" height="18" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">',
-            iconSize: [18, 18],
-            iconAnchor: [9, 9]
+            html: `<img src="${pivotIconSVG}" width="16" height="16" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
         });
 
-        // Marqueurs principaux
+        // Marqueurs - TAILLE UNIFORME 12px
         L.marker(points.origine, { 
             icon: startPointIcon,
             zIndexOffset: 1000
         }).addTo(map).bindPopup('Point de départ du pivot');
 
-        var pivotIcon = L.divIcon({
+        const pivotIcon = L.divIcon({
             className: 'pivot-marker',
             html: '',
-            iconSize: [14, 14],
-            iconAnchor: [7, 7]
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
         });
 
         L.marker(points.pivot, { 
@@ -593,13 +715,13 @@
             zIndexOffset: 900
         }).addTo(map).bindPopup('Dernière tour du pivot');
 
-        // Marqueur de flexion si activé
+        // Marqueur flex si activé
         if (coords.hasFlexParams && coords.flexActive === 1) {
-            var flexIcon = L.divIcon({
+            const flexIcon = L.divIcon({
                 className: 'flex-marker',
                 html: '',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
             });
             L.marker(points.flex, { 
                 icon: flexIcon,
@@ -608,13 +730,17 @@
             document.getElementById('flex-legend-item').style.display = 'flex';
         }
 
-        // Gestion du porte-à-faux escamotable
+        // =============================================================================
+        // MARQUEUR ET SEGMENT PAFESCAM (INDÉPENDANT DU FLEX)
+        // =============================================================================
+
         if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            var pafEscamIcon = L.divIcon({
+            // Création du marqueur PafEscam
+            const pafEscamIcon = L.divIcon({
                 className: 'paf-escam-marker',
                 html: '',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
             });
             
             L.marker(points.pafEscam, { 
@@ -622,192 +748,151 @@
                 zIndexOffset: 700
             }).addTo(map).bindPopup('Porte-à-faux escamotable');
             
-            // Segment en vert fluo
+            // Segment en bleu comme les autres segments de référence
             L.polyline([points.pivot, points.pafEscam], { 
-                color: '#00FF00',
-                weight: 8,
-                opacity: 1.0,
+                color: 'blue',
+                weight: 3,
+                opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Porte-à-faux');
             
+            // Afficher dans la légende
             document.getElementById('paf-escam-legend-item').style.display = 'flex';
         }
 
-        // Fonctions pour le dessin des formes géométriques
-        function drawArc(center, radius, startAngle, endAngle, options) {
-            var points = [];
-            var steps = 100;
-            
-            var startRad = (startAngle * Math.PI) / 180;
-            var endRad = (endAngle * Math.PI) / 180;
-            
-            var angleDiff = endRad - startRad;
-            if (angleDiff < 0) angleDiff += 2 * Math.PI;
-            
-            for (var i = 0; i <= steps; i++) {
-                var angle = startRad + (angleDiff * (i / steps));
-                var dx = (radius * Math.cos(angle)) / (111320 * Math.cos(center.lat * Math.PI / 180));
-                var dy = (radius * Math.sin(angle)) / 110574;
-                
-                var point = L.latLng(
-                    center.lat + dy,
-                    center.lng + dx
-                );
-                points.push(point);
-            }
-            
-            return L.polyline(points, options);
-        }
+        // =============================================================================
+        // CERCLE VIOLET AUTOUR DE L'ORIGINE - TOUJOURS PRÉSENT
+        // =============================================================================
 
-        function drawPolygon(pointList, color) {
-            var borderColor = '#0044aa';
-            var borderWeight = 2;
-            var borderOpacity = 1.0;
-            
-            return L.polygon(pointList, {
-                color: borderColor,
-                fillColor: color,
-                fillOpacity: 0.6,
-                weight: borderWeight,
-                opacity: borderOpacity,
-                lineJoin: 'round'
-            }).addTo(map);
-        }
+        let originCircleRadius, originCirclePopup;
 
-        function drawFilledArc(center, startPoint, endPoint, color, opacity) {
-            color = color || 'lightblue';
-            opacity = opacity || 0.6;
-            
-            var toPoint = function(latlng) { return map.latLngToLayerPoint(latlng); };
-            var toLatLng = function(point) { return map.layerPointToLatLng(point); };
-
-            var centerPoint = toPoint(center);
-            var startPointPx = toPoint(startPoint);
-            var endPointPx = toPoint(endPoint);
-
-            var radiusStart = centerPoint.distanceTo(startPointPx);
-            var radiusEnd = centerPoint.distanceTo(endPointPx);
-
-            var angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
-            var angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
-
-            var angleDiff = angleEnd - angleStart;
-            if (angleDiff < 0) angleDiff += 2 * Math.PI;
-
-            var arcPoints = [center];
-            var numPoints = 100;
-
-            for (var i = 0; i <= numPoints; i++) {
-                var angle = angleStart + (angleDiff * (i / numPoints));
-                var radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
-                
-                var pointPx = L.point(
-                    centerPoint.x + radius * Math.cos(angle),
-                    centerPoint.y + radius * Math.sin(angle)
-                );
-                arcPoints.push(toLatLng(pointPx));
-            }
-
-            var borderColor = '#0044aa';
-            var borderWeight = 2;
-            var borderOpacity = 1.0;
-            
-            return L.polygon(arcPoints, {
-                color: borderColor,
-                fillColor: color,
-                fillOpacity: opacity,
-                weight: borderWeight,
-                opacity: borderOpacity,
-                lineJoin: 'round'
-            }).addTo(map);
-        }
-
-        // NOUVEAU CALCUL DU RAYON D'ACTION (demi-cercle magenta)
-        var originCircleRadius;
-        
-        // Logique de calcul selon les conditions
-        if (!coords.hasFlexParams && !coords.hasPafEscamParams) {
-            originCircleRadius = calculateDistance(points.origine, points.pivot);
-        } else if (coords.hasFlexParams && coords.flexActive === 1 && (!coords.hasPafEscamParams || coords.pafEscamActive === 0)) {
-            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot);
-        } else if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
-        } else if ((!coords.hasFlexParams || coords.flexActive === 0) && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            originCircleRadius = calculateDistance(points.origine, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
+        // Déterminer le rayon selon la présence du porte-à-faux
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            // Porte-à-faux activé : rayon = distance origine → porte-à-faux
+            originCircleRadius = calculateDistance(points.origine, points.pafEscam);
+            originCirclePopup = `Rayon d'action (avec porte-à-faux) - Distance: ${originCircleRadius.toFixed(2)} m`;
+            console.log(`📏 Cercle origine (avec porte-à-faux): ${originCircleRadius.toFixed(2)} m`);
         } else {
+            // Porte-à-faux non activé : rayon = distance origine → dernière tour
             originCircleRadius = calculateDistance(points.origine, points.pivot);
+            originCirclePopup = `Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`;
+            console.log(`📏 Cercle origine (sans porte-à-faux): ${originCircleRadius.toFixed(2)} m`);
         }
 
-        var angleZero = calculateAngle(points.origine, points.zero);
-        var angleMax = calculateAngle(points.origine, points.maxAngle);
+        // Création du cercle violet avec bordure discontinue
+        const originCircle = L.circle(points.origine, {
+            color: '#8A2BE2', // Violet
+            fillColor: 'transparent', // Intérieur transparent
+            fillOpacity: 0, // Complètement transparent
+            weight: 4, // Bordure épaisse
+            opacity: 0.9, // Légère transparence de la bordure
+            dashArray: '10, 10', // Bordure discontinue
+            radius: originCircleRadius
+        }).addTo(map).bindPopup(originCirclePopup);
 
-        var startArcAngle, endArcAngle;
-        var angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
-        
-        if (angleFromZeroToMax <= 180) {
-            startArcAngle = angleMax;
-            endArcAngle = angleZero + 360;
-        } else {
-            startArcAngle = angleZero;
-            endArcAngle = angleMax;
-        }
-
-        var angleOffset = 0.5;
-        startArcAngle -= angleOffset;
-        endArcAngle += angleOffset;
-
-        var originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
-            color: '#FF00FF',
-            weight: 4,
-            opacity: 1.0,
-            dashArray: '10, 10',
-            lineCap: 'round'
-        }).addTo(map).bindPopup('Rayon d\'action - Distance: ' + originCircleRadius.toFixed(2) + ' m');
-
+        // Afficher dans la légende
         document.getElementById('origin-circle-legend-item').style.display = 'flex';
 
-        // Segments et polygones principaux
+        // =============================================================================
+        // LIGNES ET POLYGONES - MODE PIVOTFLEX SANS POLYGONES ET SANS ARRONDIS
+        // =============================================================================
+
+        // LIGNE MAX ANGLE - TOUJOURS LÀ
         if (coords.PivCirc === 0) {
             L.polyline([points.origine, points.maxAngle], { 
                 color: 'red', 
                 dashArray: '8, 8',
                 weight: 4,
-                opacity: 1.0,
+                opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Direction maximale');
         }
 
-        L.polyline([points.origine, points.zero], { 
-            color: 'blue',
-            dashArray: '6, 6',
-            weight: 4,
-            opacity: 1.0,
-            lineCap: 'round'
-        }).addTo(map).bindPopup('Segment Origine à Zéro');
-
         if (coords.hasFlexParams && coords.flexActive === 1) {
+            // MODE PIVOTFLEX - SEGMENTS DROITS SANS POLYGONES ET SANS ARRONDIS
+            console.log('🎯 Mode pivotflex - Segments droits sans polygones et sans arrondis');
+            
+            // Segment Origine → Zéro (TRAIT DISCONTINU)
+            L.polyline([points.origine, points.zero], { 
+                color: 'blue',
+                dashArray: '6, 6', // TRAIT DISCONTINU
+                weight: 3,
+                opacity: 0.9,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Origine à Zéro');
+            
+            // Segment Origine → Flex (TRAIT CONTINU)
             L.polyline([points.origine, points.flex], { 
-                color: '#00FF00',
-                weight: 8,
-                opacity: 1.0,
+                color: 'blue', 
+                // PAS DE dashArray = TRAIT CONTINU
+                weight: 3,
+                opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Origine à Flex');
             
+            // Segment Flex → Pivot (TRAIT CONTINU)
             L.polyline([points.flex, points.pivot], { 
-                color: '#00FF00',
-                weight: 8,
-                opacity: 1.0,
+                color: 'blue',
+                weight: 3,
+                opacity: 0.9,
                 lineCap: 'round'
             }).addTo(map).bindPopup('Segment Flex à Pivot');
             
+            // =============================================================================
+            // CERCLE AUTOUR DU POINT DE FLEXION - TOUJOURS JAUNE MAINTENANT
+            // =============================================================================
+            
+            let circleRadius, circlePopup;
+            
+            // Vérifier si les deux modes sont activés
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+                // CAS : FLEX + PORTE-À-FAUX ACTIVÉS - CERCLE JAUNE
+                circleRadius = calculateDistance(points.flex, points.pafEscam);
+                circlePopup = `Rayon porte-à-faux - Distance: ${circleRadius.toFixed(2)} m`;
+                console.log(`📏 Rayon porte-à-faux (jaune): ${circleRadius.toFixed(2)} m`);
+            } else {
+                // CAS : FLEX SEUL - CERCLE JAUNE
+                circleRadius = calculateDistance(points.flex, points.pivot);
+                circlePopup = `Cercle de flexion - Rayon: ${circleRadius.toFixed(2)} m`;
+                console.log(`📏 Rayon de courbure pivotflex (jaune): ${circleRadius.toFixed(2)} m`);
+            }
+            
+            // Création du cercle JAUNE pour les deux cas
+            const flexCircle = L.circle(points.flex, {
+                color: '#FFFF00', // JAUNE pour les deux cas
+                fillColor: '#FFFF00',
+                fillOpacity: 0.3, // Opacité de 30%
+                radius: circleRadius
+            }).addTo(map).bindPopup(circlePopup);
+            
+            // Mise à jour de la légende
+            const flexCircleLegendItem = document.getElementById('flex-circle-legend-item');
+            flexCircleLegendItem.style.display = 'flex';
+            
+            // Changer le texte de la légende selon le mode
+            const legendText = flexCircleLegendItem.querySelector('span');
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+                legendText.textContent = 'Rayon porte-à-faux';
+            } else {
+                legendText.textContent = 'Rayon flexion';
+            }
+            
+            // PAS DE SEGMENTS ARRONDIS
+            // PAS DE POLYGONES
+            
         } else {
-            L.polyline([points.origine, points.pivot], { 
-                color: '#00FF00',
-                weight: 8,
-                opacity: 1.0,
+            // MODE NORMAL - TOUT RESTE IDENTIQUE
+            console.log('🎯 Mode normal - Comportement inchangé');
+            
+            // Segment Origine → Zéro
+            L.polyline([points.origine, points.zero], { 
+                color: 'blue',
+                weight: 3,
+                opacity: 0.9,
                 lineCap: 'round'
-            }).addTo(map).bindPopup('Segment Origine à Pivot');
+            }).addTo(map).bindPopup('Segment Origine à Zéro');
 
+            // POLYGONES STANDARD (inchangés)
             if (coords.sens === 0) {
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
             } else if (coords.sens === 1 && coords.PivCirc === 0) {
@@ -823,13 +908,108 @@
                 drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
                 drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
             }
+
+            // =============================================================================
+            // CERCLE VERT CLAIR POUR MODE NORMAL AVEC PORTE-À-FAUX
+            // =============================================================================
+            
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
+                (!coords.hasFlexParams || coords.flexActive === 0)) {
+                
+                // Calcul de la distance totale entre pivot et porte-à-faux
+                const totalDistance = calculateDistance(points.pivot, points.pafEscam);
+                
+                // Le centre est le milieu entre pivot et porte-à-faux
+                const circleCenter = calculateMidpoint(points.pivot, points.pafEscam);
+                
+                // Le rayon est la moitié de la distance totale
+                const circleRadius = totalDistance / 2;
+                
+                console.log(`📏 Mode normal porte-à-faux - Distance totale: ${totalDistance.toFixed(2)} m`);
+                console.log(`🎯 Centre du cercle: ${circleCenter.lat.toFixed(6)}, ${circleCenter.lng.toFixed(6)}`);
+                console.log(`📐 Rayon du cercle: ${circleRadius.toFixed(2)} m`);
+                
+                // Création du cercle vert clair
+                const pafCircle = L.circle(circleCenter, {
+                    color: '#90EE90', // Vert clair
+                    fillColor: '#90EE90',
+                    fillOpacity: 0.3, // Opacité de 30%
+                    radius: circleRadius
+                }).addTo(map).bindPopup(`Rayon porte-à-faux - Distance: ${totalDistance.toFixed(2)} m (Rayon: ${circleRadius.toFixed(2)} m)`);
+                
+                // Afficher dans la légende
+                document.getElementById('paf-circle-legend-item').style.display = 'flex';
+            }
         }
 
-        document.getElementById('flex-segment-legend-item').style.display = 'flex';
+        // =============================================================================
+        // POLYGONES AVEC BORDURES VISIBLES ET COHÉRENTES (POUR MODE STANDARD)
+        // =============================================================================
 
-        // Ajustement final de la vue
+        function drawPolygon(pointList, color) {
+            // BORDURES AMÉLIORÉES - COULEURS FIXES POUR TOUS LES POLYGONES
+            const borderColor = '#0044aa';
+            const borderWeight = 2;
+            const borderOpacity = 1.0;
+            
+            return L.polygon(pointList, {
+                color: borderColor,
+                fillColor: color,
+                fillOpacity: 0.6,
+                weight: borderWeight,
+                opacity: borderOpacity,
+                lineJoin: 'round'
+            }).addTo(map);
+        }
+
+        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 0.6) {
+            const toPoint = latlng => map.latLngToLayerPoint(latlng);
+            const toLatLng = point => map.layerPointToLatLng(point);
+
+            const centerPoint = toPoint(center);
+            const startPointPx = toPoint(startPoint);
+            const endPointPx = toPoint(endPoint);
+
+            const radiusStart = centerPoint.distanceTo(startPointPx);
+            const radiusEnd = centerPoint.distanceTo(endPointPx);
+
+            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
+            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+
+            let angleDiff = angleEnd - angleStart;
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+            const arcPoints = [center];
+            const numPoints = 100;
+
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = angleStart + (angleDiff * (i / numPoints));
+                const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
+                
+                const pointPx = L.point({
+                    x: centerPoint.x + radius * Math.cos(angle),
+                    y: centerPoint.y + radius * Math.sin(angle)
+                });
+                arcPoints.push(toLatLng(pointPx));
+            }
+
+            const borderColor = '#0044aa';
+            const borderWeight = 2;
+            const borderOpacity = 1.0;
+            
+            return L.polygon(arcPoints, {
+                color: borderColor,
+                fillColor: color,
+                fillOpacity: opacity,
+                weight: borderWeight,
+                opacity: borderOpacity,
+                lineJoin: 'round'
+            }).addTo(map);
+        }
+
+        // Ajustement final avec prise en compte du PafEscam si activé
         if (!savedCenter) {
-            var boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
+            const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
             if (coords.hasFlexParams && coords.flexActive === 1) {
                 boundsPoints.push(points.flex);
             }
@@ -837,43 +1017,55 @@
                 boundsPoints.push(points.pafEscam);
             }
             
-            var bounds = L.latLngBounds(boundsPoints);
+            const bounds = L.latLngBounds(boundsPoints);
             
-            setTimeout(function() {
-                var boundsZoom = map.getBoundsZoom(bounds, false);
-                var finalZoom = Math.min(optimalZoom, boundsZoom);
+            setTimeout(() => {
+                const boundsZoom = map.getBoundsZoom(bounds, false);
+                let finalZoom = Math.min(optimalZoom, boundsZoom);
                 finalZoom = Math.min(finalZoom, 19);
                 
                 map.fitBounds(bounds, { padding: [15, 15], maxZoom: finalZoom });
                 saveMapState();
+                
+                console.log(`🎯 Ajustement final - Zoom: ${finalZoom}`);
             }, 200);
         }
 
-        // Système météo
-        var weatherPanel = document.getElementById('weather-panel');
-        var isWeatherExpanded = false;
+        // =============================================================================
+        // MÉTÉO - CORRECTION COMPLÈTE
+        // =============================================================================
 
-        function fetchWeather(lat, lon) {
-            var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&timezone=auto';
+        const weatherPanel = document.getElementById('weather-panel');
+        let isWeatherExpanded = false;
+
+        // Fonction COMPLÈTE pour la météo
+        async function fetchWeather(lat, lon) {
+            console.log('🌤️ Chargement météo pour:', lat, lon);
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
             
-            fetch(url)
-                .then(function(response) {
-                    if (!response.ok) throw new Error('Erreur HTTP: ' + response.status);
-                    return response.json();
-                })
-                .then(function(data) {
-                    displayWeather(data);
-                })
-                .catch(function(error) {
-                    console.error('Erreur météo:', error);
-                    weatherPanel.innerHTML = '<div style="font-weight: bold;">Météo non disponible</div><div style="font-size: 10px; color: #666;">Service temporairement indisponible</div><div class="weather-toggle">Cliquer pour détails</div>';
-                });
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                const data = await response.json();
+                console.log('✅ Données météo reçues:', data);
+                displayWeather(data);
+            } catch (error) {
+                console.error('❌ Erreur météo:', error);
+                weatherPanel.innerHTML = `
+                    <div style="font-weight: bold;">Météo non disponible</div>
+                    <div style="font-size: 10px; color: #666;">Service temporairement indisponible</div>
+                    <div class="weather-toggle">Cliquer pour détails</div>
+                `;
+            }
         }
 
         function displayWeather(data) {
-            if (!data.current_weather) return;
+            if (!data.current_weather) {
+                console.error('❌ Données météo incomplètes');
+                return;
+            }
             
-            var current = data.current_weather;
+            const current = data.current_weather;
             window.weatherData = {
                 temperature: current.temperature,
                 weatherCode: current.weathercode,
@@ -883,17 +1075,20 @@
         }
 
         function updateWeatherDisplay() {
-            if (!window.weatherData) return;
+            if (!window.weatherData) {
+                console.log('⏳ Données météo non encore chargées');
+                return;
+            }
 
-            var current = window.weatherData;
-            var now = new Date();
-            var date = now.toLocaleDateString('fr-FR');
-            var heure = now.toLocaleTimeString('fr-FR', { 
+            const current = window.weatherData;
+            const now = new Date();
+            const date = now.toLocaleDateString('fr-FR');
+            const heure = now.toLocaleTimeString('fr-FR', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
             });
 
-            var templates = {
+            const templates = {
                 0: { temp: 'Température', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Porte-à-faux' },
                 1: { temp: 'Temperature', angle: 'Angle', flex: 'PivotFlex', pafEscam: 'Overhang' },
                 2: { temp: 'Temperatura', angle: 'Ángulo', flex: 'PivotFlex', pafEscam: 'Voladizo' },
@@ -903,58 +1098,62 @@
                 6: { temp: 'Temperatura', angle: 'Angolo', flex: 'PivotFlex', pafEscam: 'Sbalzo' }
             };
 
-            var t = templates[coords.lang] || templates[0];
-            var weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
+            const t = templates[coords.lang] || templates[0];
+            const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
             
-            var flexStatus = '';
+            let flexStatus = '';
             if (coords.hasFlexParams) {
                 flexStatus = coords.flexActive === 1 ? 'ACTIF' : 'INACTIF';
             }
 
-            var pafEscamStatus = '';
+            let pafEscamStatus = '';
             if (coords.hasPafEscamParams) {
                 pafEscamStatus = coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF';
             }
 
             if (isWeatherExpanded) {
-                var displayContent = '<div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>' +
-                    '<div><strong>Date:</strong> ' + date + '</div>' +
-                    '<div><strong>Heure:</strong> ' + heure + '</div>' +
-                    '<div><strong>' + t.temp + ':</strong> ' + current.temperature.toFixed(1) + '°C</div>' +
-                    '<div><strong>Météo:</strong> ' + weatherDesc + '</div>' +
-                    '<div><strong>' + t.angle + ':</strong> ' + coords.ang + '°</div>';
+                let displayContent = `
+                    <div style="font-weight: bold; margin-bottom: 6px; font-size: 11px;">Informations Pivot</div>
+                    <div><strong>Date:</strong> ${date}</div>
+                    <div><strong>Heure:</strong> ${heure}</div>
+                    <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
+                    <div><strong>Météo:</strong> ${weatherDesc}</div>
+                    <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
+                `;
                 
                 if (coords.hasFlexParams) {
-                    displayContent += '<div><strong>' + t.flex + ':</strong> ' + flexStatus + '</div>';
+                    displayContent += `<div><strong>${t.flex}:</strong> ${flexStatus}</div>`;
                 }
                 
                 if (coords.hasPafEscamParams) {
-                    displayContent += '<div><strong>' + t.pafEscam + ':</strong> ' + pafEscamStatus + '</div>';
+                    displayContent += `<div><strong>${t.pafEscam}:</strong> ${pafEscamStatus}</div>`;
                 }
                 
-                displayContent += '<div class="weather-toggle">Cliquer pour réduire</div>';
+                displayContent += `<div class="weather-toggle">Cliquer pour réduire</div>`;
                 
                 weatherPanel.innerHTML = displayContent;
             } else {
-                var displayContent = '<div style="font-weight: bold;">' + current.temperature.toFixed(1) + '°C | ' + coords.ang + '°</div>' +
-                    '<div style="font-size: 10px; color: #666;">' + weatherDesc;
+                let displayContent = `
+                    <div style="font-weight: bold;">${current.temperature.toFixed(1)}°C | ${coords.ang}°</div>
+                    <div style="font-size: 10px; color: #666;">${weatherDesc}`;
                 
                 if (coords.hasFlexParams) {
-                    displayContent += ' | Flex: ' + flexStatus;
+                    displayContent += ` | Flex: ${flexStatus}`;
                 }
                 
                 if (coords.hasPafEscamParams) {
-                    displayContent += ' | Paf: ' + pafEscamStatus;
+                    displayContent += ` | Paf: ${pafEscamStatus}`;
                 }
                 
-                displayContent += '</div><div class="weather-toggle">Cliquer pour détails</div>';
+                displayContent += `</div><div class="weather-toggle">Cliquer pour détails</div>`;
                 
                 weatherPanel.innerHTML = displayContent;
             }
         }
 
+        // Fonction de description météo multilingue
         function getWeatherDescription(code, lang) {
-            var descriptions = {
+            const descriptions = {
                 0: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
                 1: ['Principalement dégagé', 'Mainly clear', 'Principalmente despejado', 'Principalmente limpo', 'Überwiegend klar', 'Overwegend helder', 'Prevalentemente sereno'],
                 2: ['Partiellement nuageux', 'Partly cloudy', 'Parcialmente nublado', 'Parcialmente nublado', 'Teilweise bewölkt', 'Gedeeltelijk bewolkt', 'Parzialmente nuvoloso'],
@@ -973,31 +1172,60 @@
                 95: ['Orage', 'Thunderstorm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
             };
 
-            return (descriptions[code] && descriptions[code][lang]) ? descriptions[code][lang] : (descriptions[code] ? descriptions[code][0] : 'Conditions inconnues');
+            return descriptions[code]?.[lang] || descriptions[code]?.[0] || 'Conditions inconnues';
         }
 
+        // Gestion du clic sur le panneau météo
         weatherPanel.addEventListener('click', function() {
             isWeatherExpanded = !isWeatherExpanded;
             weatherPanel.classList.toggle('weather-expanded', isWeatherExpanded);
             updateWeatherDisplay();
         });
 
-        setTimeout(function() {
+        // CHARGEMENT DE LA MÉTÉO - APPELLÉ APRÈS LA CRÉATION DE LA CARTE
+        setTimeout(() => {
             fetchWeather(coords.LatOri, coords.LonOri);
         }, 1000);
 
-        // Gestion de la légende
-        var legend = document.getElementById('legend');
-        var legendHeader = legend.querySelector('.legend-header');
-        var toggleIcon = legend.querySelector('.toggle-icon');
+        // =============================================================================
+        // LÉGENDE ET INTERFACE
+        // =============================================================================
+
+        const legend = document.getElementById('legend');
+        const legendHeader = legend.querySelector('.legend-header');
+        const toggleIcon = legend.querySelector('.toggle-icon');
 
         legendHeader.addEventListener('click', function() {
-            var isCollapsed = legend.classList.toggle('collapsed');
+            const isCollapsed = legend.classList.toggle('collapsed');
             toggleIcon.textContent = isCollapsed ? '+' : '−';
         });
 
-        // Initialisation finale
-        setInterval(function() {
+        // =============================================================================
+        // DEBUG ET UTILITAIRES
+        // =============================================================================
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const debugPanel = document.getElementById('debug-panel');
+                debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+                updateDebugPanel();
+                updateTileDebugInfo();
+            }
+        });
+
+        function resetSavedPosition() {
+            localStorage.removeItem(ZOOM_STORAGE_KEY);
+            localStorage.removeItem(CENTER_STORAGE_KEY);
+            console.log('🗑️ Position réinitialisée');
+            location.reload();
+        }
+
+        window.resetSavedPosition = resetSavedPosition;
+        updateDebugPanel();
+
+        // Mise à jour périodique de l'heure dans la météo
+        setInterval(() => {
             if (window.weatherData) {
                 window.weatherData.time = new Date();
                 updateWeatherDisplay();
@@ -1005,6 +1233,46 @@
         }, 60000);
 
         console.log('✅ Application Pivot Irrifrance initialisée avec succès');
+        console.log(`🎯 Configuration: Flex ${coords.hasFlexParams ? (coords.flexActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
+        console.log(`🎯 Configuration: PafEscam ${coords.hasPafEscamParams ? (coords.pafEscamActive === 1 ? 'ACTIF' : 'INACTIF') : 'NON PRÉSENT'}`);
+
+        // Log spécial pour le mode combiné
+        if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            console.log('🎯 MODE COMBINÉ: Flex + Porte-à-faux - Cercle JAUNE activé');
+            const combinedRadius = calculateDistance(points.flex, points.pafEscam);
+            console.log(`📏 Rayon combiné (flex → paf): ${combinedRadius.toFixed(2)} m`);
+        }
+
+        // Log pour le mode flex seul
+        if (coords.hasFlexParams && coords.flexActive === 1 && 
+            (!coords.hasPafEscamParams || coords.pafEscamActive === 0)) {
+            console.log('🎯 MODE FLEX: Flex seul - Cercle JAUNE activé');
+            const flexRadius = calculateDistance(points.flex, points.pivot);
+            console.log(`📏 Rayon flexion (flex → pivot): ${flexRadius.toFixed(2)} m`);
+        }
+
+        // Log pour le mode normal avec porte-à-faux
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1 && 
+            (!coords.hasFlexParams || coords.flexActive === 0)) {
+            console.log('🎯 MODE NORMAL: Porte-à-faux seul - Cercle VERT activé');
+            const totalDistance = calculateDistance(points.pivot, points.pafEscam);
+            const circleRadius = totalDistance / 2;
+            const circleCenter = calculateMidpoint(points.pivot, points.pafEscam);
+            console.log(`📏 Distance totale pivot→paf: ${totalDistance.toFixed(2)} m`);
+            console.log(`🎯 Centre du cercle: ${circleCenter.lat.toFixed(6)}, ${circleCenter.lng.toFixed(6)}`);
+            console.log(`📐 Rayon du cercle: ${circleRadius.toFixed(2)} m`);
+        }
+
+        // Log pour le cercle violet d'origine
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            console.log('🎯 CERCLE ORIGINE: Rayon basé sur porte-à-faux');
+            const originRadius = calculateDistance(points.origine, points.pafEscam);
+            console.log(`📏 Rayon origine→paf: ${originRadius.toFixed(2)} m`);
+        } else {
+            console.log('🎯 CERCLE ORIGINE: Rayon basé sur dernière tour');
+            const originRadius = calculateDistance(points.origine, points.pivot);
+            console.log(`📏 Rayon origine→pivot: ${originRadius.toFixed(2)} m`);
+        }
     </script>
 </body>
 </html>
