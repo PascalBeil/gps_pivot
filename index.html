@@ -696,15 +696,10 @@
                 const angle = angleStart + (angleDiff * (i / numPoints));
                 const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
                 
-//                const pointPx = L.point({
-//                    x: centerPoint.x + radius * Math.cos(angle),
-//                    y: centerPoint.y + radius * Math.sin(angle)
-//                });
-            // ✅ CORRECTION
-                  const pointPx = L.point(
-                      centerPoint.x + radius * Math.cos(angle),
-                      centerPoint.y + radius * Math.sin(angle)
-                );
+                const pointPx = L.point({
+                    x: centerPoint.x + radius * Math.cos(angle),
+                    y: centerPoint.y + radius * Math.sin(angle)
+                });
                 arcPoints.push(toLatLng(pointPx));
             }
             
@@ -1025,4 +1020,5 @@
     </script>
 </body>
 </html>
+
 
