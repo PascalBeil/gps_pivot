@@ -1,199 +1,854 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pivot Irrifrance</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<style>
-#map { height: 100vh; width: 100%; }
-
-#weather-panel {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(255,255,255,0.95);
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-family: Arial, sans-serif;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    z-index: 1000;
-    max-width: 240px;
-    font-size: 12px;
-    line-height: 1.4;
-    backdrop-filter: blur(3px);
-    border: 1px solid #ddd;
-}
-
-.loading-indicator {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    z-index: 2000;
-    font-size: 12px;
-    display: none;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pivot Irrifrance</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map { 
+            height: 100vh; 
+            width: 100%;
+        }
+        #weather-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            max-width: 220px;
+            font-size: 13px;
+            line-height: 1.4;
+            backdrop-filter: blur(3px);
+            border: 1px solid #ddd;
+        }
+        .pivot-marker {
+            background-color: #8A2BE2;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .pivot-icon {
+            background: transparent;
+            border: none;
+        }
+        .flex-marker {
+            background-color: #FF6B00;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .paf-escam-marker {
+            background-color: #32CD32;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .error-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            text-align: center;
+            max-width: 400px;
+        }
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 2000;
+            font-size: 12px;
+            display: none;
+        }
+        .tile-error-message {
+            position: absolute;
+            bottom: 50px;
+            left: 10px;
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-size: 11px;
+            max-width: 250px;
+            display: none;
+        }
+        .zoom-save-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .zoom-save-indicator.show {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
+    <div id="map"></div>
 
-<div id="map"></div>
-<div id="loading-indicator" class="loading-indicator">
-🔄 Chargement des images satellite...
-</div>
-<div id="weather-panel">Chargement météo...</div>
+    <div id="loading-indicator" class="loading-indicator">
+        🔄 Chargement des images satellite...
+    </div>
 
-<script>
+    <div id="tile-error-message" class="tile-error-message">
+        ⚠️ Zoom trop élevé - Résolution non disponible
+    </div>
 
-// -------------------- UTILITAIRES --------------------
+    <div id="zoom-save-indicator" class="zoom-save-indicator">Position sauvegardée</div>
 
-function calculateDistance(p1,p2){
-const R=6371000;
-const dLat=(p2.lat-p1.lat)*Math.PI/180;
-const dLon=(p2.lng-p1.lng)*Math.PI/180;
-const a=Math.sin(dLat/2)**2+
-Math.cos(p1.lat*Math.PI/180)*Math.cos(p2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
-return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
-}
+    <div id="weather-panel">
+        <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px;">Informations Pivot</div>
+        <div>Chargement météo...</div>
+    </div>
+    
+    <script>
+        // Variables de suivi des tuiles
+        let tilesLoaded = 0;
+        let tilesError = 0;
+        let tileLoadTimeout;
 
-function calculateAngle(center,point){
-const dx=point.lng-center.lng;
-const dy=point.lat-center.lat;
-let angle=Math.atan2(dy,dx)*(180/Math.PI);
-if(angle<0)angle+=360;
-return angle;
-}
+        // Clés de stockage localStorage
+        const ZOOM_STORAGE_KEY = 'pivot_irrifrance_zoom_level';
+        const CENTER_STORAGE_KEY = 'pivot_irrifrance_map_center';
 
-// -------------------- PARAMETRES --------------------
+        // Fonctions utilitaires générales
+        function calculateDistance(point1, point2) {
+            const R = 6371000;
+            const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+            const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
 
-function getQueryParams(){
-const params=new URLSearchParams(window.location.search);
-const values=params.get('p')?.split(',').map(Number);
-if(!values||values.length<12)return null;
+        function calculateMidpoint(point1, point2) {
+            const lat = (point1.lat + point2.lat) / 2;
+            const lng = (point1.lng + point2.lng) / 2;
+            return L.latLng(lat, lng);
+        }
 
-return{
-LatOri:values[0],LonOri:values[1],
-LatZero:values[2],LonZero:values[3],
-LatMaxAngle:values[4],LonMaxAngle:values[5],
-LatPiv:values[6],LonPiv:values[7],
-PivCirc:values[8],sens:values[9],
-lang:values[10],ang:values[11]
-};
-}
+        function calculateAngle(center, point) {
+            const dx = point.lng - center.lng;
+            const dy = point.lat - center.lat;
+            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            if (angle < 0) angle += 360;
+            return angle;
+        }
 
-const coords=getQueryParams();
-if(!coords)throw new Error("Paramètres invalides");
+        // Gestion de l'interface utilisateur
+        function showLoadingIndicator() {
+            const loader = document.getElementById('loading-indicator');
+            loader.style.display = 'block';
+        }
 
-// -------------------- CARTE --------------------
+        function hideLoadingIndicator() {
+            const loader = document.getElementById('loading-indicator');
+            loader.style.display = 'none';
+        }
 
-const map=L.map('map',{maxZoom:19,minZoom:10})
-.setView([coords.LatOri,coords.LonOri],18);
+        function showTileError(message) {
+            const errorMsg = document.getElementById('tile-error-message');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+            setTimeout(() => {errorMsg.style.display = 'none';}, 5000);
+        }
 
-L.tileLayer(
-'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-{maxZoom:19}
-).addTo(map);
+        function showZoomSaveIndicator() {
+            const indicator = document.getElementById('zoom-save-indicator');
+            indicator.textContent = 'Position sauvegardée';
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
 
-// -------------------- POINTS --------------------
+        // Gestion de la sauvegarde du zoom et position
+        function saveMapState() {
+            try {
+                const zoom = map.getZoom();
+                const center = map.getCenter();
+                
+                localStorage.setItem(ZOOM_STORAGE_KEY, zoom.toString());
+                localStorage.setItem(CENTER_STORAGE_KEY, JSON.stringify({
+                    lat: center.lat,
+                    lng: center.lng
+                }));
+                
+                showZoomSaveIndicator();
+            } catch (error) {
+                console.error('Erreur sauvegarde position:', error);
+            }
+        }
 
-const points={
-origine:L.latLng(coords.LatOri,coords.LonOri),
-zero:L.latLng(coords.LatZero,coords.LonZero),
-maxAngle:L.latLng(coords.LatMaxAngle,coords.LonMaxAngle),
-pivot:L.latLng(coords.LatPiv,coords.LonPiv)
-};
+        function getSavedZoomLevel() {
+            try {
+                const savedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
+                return savedZoom ? parseInt(savedZoom) : null;
+            } catch (error) {
+                console.error('Erreur récupération zoom:', error);
+                return null;
+            }
+        }
 
-// -------------------- RAYON ACTION CORRIGÉ --------------------
+        function getSavedCenter() {
+            try {
+                const savedCenter = localStorage.getItem(CENTER_STORAGE_KEY);
+                if (savedCenter) {
+                    const center = JSON.parse(savedCenter);
+                    return L.latLng(center.lat, center.lng);
+                }
+                return null;
+            } catch (error) {
+                console.error('Erreur récupération centre:', error);
+                return null;
+            }
+        }
 
-const originCircleRadius=
-calculateDistance(points.origine,points.pivot);
+        // Calcul du zoom optimal selon l'écran
+        function calculateOptimalZoom() {
+            const screenWidth = window.screen.width;
+            const screenHeight = window.screen.height;
+            const pixelRatio = window.devicePixelRatio || 1;
+            
+            const estimatedDiagonal = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / 
+                                   (pixelRatio >= 2 ? 200 : 100);
+            
+            let baseZoom;
+            
+            if (estimatedDiagonal <= 7) baseZoom = 19;
+            else if (estimatedDiagonal <= 10) baseZoom = 18;
+            else if (estimatedDiagonal <= 13) baseZoom = 17;
+            else if (estimatedDiagonal <= 15) baseZoom = 16;
+            else if (estimatedDiagonal <= 24) baseZoom = 15;
+            else baseZoom = 14;
+            
+            const densityAdjustment = Math.log2(pixelRatio);
+            let optimalZoom = Math.min(19, Math.max(14, baseZoom + Math.round(densityAdjustment)));
+            
+            return optimalZoom;
+        }
 
-const angleZero=calculateAngle(points.origine,points.zero);
-const angleMax=calculateAngle(points.origine,points.maxAngle);
+        // Parsing des paramètres URL
+        function getQueryParams() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const paramString = params.get('p');
+                
+                if (!paramString) {
+                    console.error("Paramètre 'p' manquant");
+                    return null;
+                }
+                
+                const values = paramString.split(',').map(Number);
+                
+                if (values.length === 12) {
+                    return {
+                        LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
+                        LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
+                        PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
+                        flexActive: 0, hasFlexParams: false,
+                        pafEscamActive: 0, hasPafEscamParams: false
+                    };
+                } else if (values.length === 15) {
+                    return {
+                        LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
+                        LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
+                        PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
+                        flexActive: values[12], LatFlex: values[13], LonFlex: values[14], 
+                        hasFlexParams: true,
+                        pafEscamActive: 0, hasPafEscamParams: false
+                    };
+                } else if (values.length === 16) {
+                    return {
+                        LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
+                        LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
+                        PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
+                        flexActive: 0, hasFlexParams: false,
+                        pafEscamActive: values[12], LatPafEscam: values[13], LonPafEscam: values[14],
+                        hasPafEscamParams: true
+                    };
+                } else if (values.length === 18) {
+                    return {
+                        LatOri: values[0], LonOri: values[1], LatZero: values[2], LonZero: values[3],
+                        LatMaxAngle: values[4], LonMaxAngle: values[5], LatPiv: values[6], LonPiv: values[7],
+                        PivCirc: values[8], sens: values[9], lang: values[10], ang: values[11],
+                        flexActive: values[12], LatFlex: values[13], LonFlex: values[14], 
+                        hasFlexParams: true,
+                        pafEscamActive: values[15], LatPafEscam: values[16], LonPafEscam: values[17],
+                        hasPafEscamParams: true
+                    };
+                } else {
+                    console.error("Nombre de paramètres incorrect:", values.length);
+                    return null;
+                }
+            } catch (error) {
+                console.error("Erreur parsing paramètres:", error);
+                return null;
+            }
+        }
 
-let startArcAngle=angleZero;
-let endArcAngle=angleMax;
+        // Récupération des coordonnées
+        const coords = getQueryParams();
+        
+        if (!coords) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-panel';
+            errorDiv.innerHTML = `
+                <h3>Erreur de paramètres</h3>
+                <p>L'URL ne contient pas les paramètres attendus.</p>
+                <p><strong>Format attendu:</strong></p>
+                <p>?p=LatOri,LonOri,LatZero,LonZero,LatMaxAngle,LonMaxAngle,LatPiv,LonPiv,PivCirc,sens,lang,ang</p>
+            `;
+            document.body.appendChild(errorDiv);
+            throw new Error("Paramètres manquants ou incorrects");
+        }
 
-// Correction propre du sens
-if((endArcAngle-startArcAngle+360)%360>180){
-const tmp=startArcAngle;
-startArcAngle=endArcAngle;
-endArcAngle=tmp;
-}
+        // Initialisation de la carte
+        const savedZoom = getSavedZoomLevel();
+        const savedCenter = getSavedCenter();
+        const optimalZoom = calculateOptimalZoom();
+        
+        let initialZoom, initialCenter;
+        
+        if (savedZoom !== null && savedCenter !== null) {
+            initialZoom = Math.min(savedZoom, 19);
+            initialCenter = savedCenter;
+        } else {
+            initialZoom = optimalZoom;
+            initialCenter = [coords.LatOri, coords.LonOri];
+        }
+        
+        const map = L.map('map', { 
+            minZoom: 10, 
+            maxZoom: 19,
+            zoomControl: true,
+            fadeAnimation: true,
+            zoomAnimation: true,
+            markerZoomAnimation: true
+        }).setView(initialCenter, initialZoom);
 
-function drawArc(center,radius,startAngle,endAngle){
-const pts=[];
-const steps=120;
-const startRad=startAngle*Math.PI/180;
-const endRad=endAngle*Math.PI/180;
-let diff=endRad-startRad;
-if(diff<0)diff+=2*Math.PI;
+        // Configuration de la couche satellite Esri
+        const esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '© Esri, Maxar, Earthstar Geographics',
+            maxZoom: 19,
+            minZoom: 0,
+            errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            crossOrigin: true
+        });
 
-for(let i=0;i<=steps;i++){
-const angle=startRad+(diff*(i/steps));
-const dx=(radius*Math.cos(angle))/(111320*Math.cos(center.lat*Math.PI/180));
-const dy=(radius*Math.sin(angle))/110574;
-pts.push(L.latLng(center.lat+dy,center.lng+dx));
-}
-return L.polyline(pts,{
-color:'#FF00FF',
-weight:4,
-dashArray:'10,10'
-}).addTo(map);
-}
+        // Gestionnaires d'événements pour les tuiles
+        esriLayer.on('loading', function() {
+            showLoadingIndicator();
+            tilesLoaded = 0;
+            tilesError = 0;
+        });
 
-drawArc(points.origine,originCircleRadius,startArcAngle,endArcAngle);
+        esriLayer.on('tileerror', function(e) {
+            tilesError++;
+            if (tilesError > 3) {
+                showTileError('Résolution satellite non disponible à ce zoom');
+            }
+            clearTimeout(tileLoadTimeout);
+            tileLoadTimeout = setTimeout(hideLoadingIndicator, 1000);
+        });
 
-// -------------------- SEGMENTS --------------------
+        esriLayer.on('tileload', function() {
+            tilesLoaded++;
+            if (tilesLoaded >= 4) {
+                clearTimeout(tileLoadTimeout);
+                tileLoadTimeout = setTimeout(hideLoadingIndicator, 500);
+            }
+        });
 
-L.polyline([points.origine,points.zero],{
-color:'blue',
-dashArray:'6,6',
-weight:4
-}).addTo(map);
+        esriLayer.addTo(map);
 
-L.polyline([points.origine,points.pivot],{
-color:'#00FF00',
-weight:8
-}).addTo(map);
+        // Gestionnaires d'événements de la carte
+        let saveStateTimeout;
 
-// -------------------- METEO TOUJOURS EXPANDED --------------------
+        map.on('zoomstart', function() {
+            showLoadingIndicator();
+        });
 
-const weatherPanel=document.getElementById('weather-panel');
+        map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
+            if (currentZoom > 19) {
+                map.setZoom(19);
+                showTileError('Zoom maximum atteint (limite technique)');
+                return;
+            }
+            clearTimeout(saveStateTimeout);
+            saveStateTimeout = setTimeout(() => {
+                saveMapState();
+            }, 500);
+            setTimeout(hideLoadingIndicator, 1000);
+        });
 
-async function fetchWeather(lat,lon){
-const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
-try{
-const r=await fetch(url);
-const data=await r.json();
-displayWeather(data);
-}catch{
-weatherPanel.innerHTML="Météo indisponible";
-}
-}
+        map.on('moveend', function() {
+            clearTimeout(saveStateTimeout);
+            saveStateTimeout = setTimeout(() => {
+                saveMapState();
+            }, 1000);
+        });
 
-function displayWeather(data){
-if(!data.current_weather)return;
-const w=data.current_weather;
-const now=new Date();
+        // Définition des points et marqueurs
+        const points = {
+            origine: L.latLng(coords.LatOri, coords.LonOri),
+            zero: L.latLng(coords.LatZero, coords.LonZero),
+            maxAngle: L.latLng(coords.LatMaxAngle, coords.LonMaxAngle),
+            pivot: L.latLng(coords.LatPiv, coords.LonPiv)
+        };
 
-weatherPanel.innerHTML=`
-<div style="font-weight:bold;margin-bottom:6px;">Informations Pivot</div>
-<div><strong>Date:</strong> ${now.toLocaleDateString('fr-FR')}</div>
-<div><strong>Heure:</strong> ${now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div>
-<div><strong>Température:</strong> ${w.temperature.toFixed(1)}°C</div>
-<div><strong>Angle:</strong> ${coords.ang}°</div>
-`;
-}
+        // Gestion du point de flexion si présent
+        if (coords.hasFlexParams && coords.flexActive === 1) {
+            points.flex = L.latLng(coords.LatFlex, coords.LonFlex);
+        }
 
-fetchWeather(coords.LatOri,coords.LonOri);
+        // Gestion du porte-à-faux si présent
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            points.pafEscam = L.latLng(coords.LatPafEscam, coords.LonPafEscam);
+        }
 
-console.log("Application corrigée et stabilisée.");
-</script>
+        // Icône personnalisée pour le point de départ
+        const pivotIconSVG = `data:image/svg+xml;base64,${btoa(`
+            <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="8" cy="8" r="7" fill="#4A90E2" stroke="#FFFFFF" stroke-width="1"/>
+                <circle cx="8" cy="8" r="3" fill="#FFFFFF"/>
+                <path d="M8 3 L8 13 M3 8 L13 8" stroke="#FFFFFF" stroke-width="1"/>
+                <path d="M8 3 L6 5 M8 3 L10 5" stroke="#FFFFFF" stroke-width="1"/>
+            </svg>
+        `)}`;
+
+        const startPointIcon = L.divIcon({
+            className: 'pivot-icon',
+            html: `<img src="${pivotIconSVG}" width="18" height="18" style="filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8));">`,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+
+        // Marqueurs principaux
+        L.marker(points.origine, { 
+            icon: startPointIcon,
+            zIndexOffset: 1000
+        }).addTo(map).bindPopup('Point de départ du pivot');
+
+        const pivotIcon = L.divIcon({
+            className: 'pivot-marker',
+            html: '',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+
+        L.marker(points.pivot, { 
+            icon: pivotIcon,
+            zIndexOffset: 900
+        }).addTo(map).bindPopup('Dernière tour du pivot');
+
+        // Marqueur de flexion si activé
+        if (coords.hasFlexParams && coords.flexActive === 1) {
+            const flexIcon = L.divIcon({
+                className: 'flex-marker',
+                html: '',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+            L.marker(points.flex, { 
+                icon: flexIcon,
+                zIndexOffset: 800
+            }).addTo(map).bindPopup('Point de flexion du pivotflex');
+        }
+
+        // Gestion du porte-à-faux escamotable
+        if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            const pafEscamIcon = L.divIcon({
+                className: 'paf-escam-marker',
+                html: '',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+            
+            L.marker(points.pafEscam, { 
+                icon: pafEscamIcon,
+                zIndexOffset: 700
+            }).addTo(map).bindPopup('Porte-à-faux escamotable');
+            
+            // Segment en vert fluo
+            L.polyline([points.pivot, points.pafEscam], { 
+                color: '#00FF00', // Vert fluo
+                weight: 8,
+                opacity: 1.0,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Porte-à-faux');
+        }
+
+        // Fonctions pour le dessin des formes géométriques
+        function drawArc(center, radius, startAngle, endAngle, options) {
+            const points = [];
+            const steps = 100;
+            
+            const startRad = (startAngle * Math.PI) / 180;
+            const endRad = (endAngle * Math.PI) / 180;
+            
+            let angleDiff = endRad - startRad;
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+            
+            for (let i = 0; i <= steps; i++) {
+                const angle = startRad + (angleDiff * (i / steps));
+                const dx = (radius * Math.cos(angle)) / (111320 * Math.cos(center.lat * Math.PI / 180));
+                const dy = (radius * Math.sin(angle)) / 110574;
+                
+                const point = L.latLng(
+                    center.lat + dy,
+                    center.lng + dx
+                );
+                points.push(point);
+            }
+            
+            return L.polyline(points, options);
+        }
+
+        function drawPolygon(pointList, color) {
+            const borderColor = '#0044aa';
+            const borderWeight = 2;
+            const borderOpacity = 1.0;
+            
+            return L.polygon(pointList, {
+                color: borderColor,
+                fillColor: color,
+                fillOpacity: 0.6,
+                weight: borderWeight,
+                opacity: borderOpacity,
+                lineJoin: 'round'
+            }).addTo(map);
+        }
+
+        function drawFilledArc(center, startPoint, endPoint, color = 'lightblue', opacity = 0.6) {
+            const toPoint = latlng => map.latLngToLayerPoint(latlng);
+            const toLatLng = point => map.layerPointToLatLng(point);
+
+            const centerPoint = toPoint(center);
+            const startPointPx = toPoint(startPoint);
+            const endPointPx = toPoint(endPoint);
+
+            const radiusStart = centerPoint.distanceTo(startPointPx);
+            const radiusEnd = centerPoint.distanceTo(endPointPx);
+
+            const angleStart = Math.atan2(startPointPx.y - centerPoint.y, startPointPx.x - centerPoint.x);
+            const angleEnd = Math.atan2(endPointPx.y - centerPoint.y, endPointPx.x - centerPoint.x);
+
+            let angleDiff = angleEnd - angleStart;
+            if (angleDiff < 0) angleDiff += 2 * Math.PI;
+
+            const arcPoints = [center];
+            const numPoints = 100;
+
+            for (let i = 0; i <= numPoints; i++) {
+                const angle = angleStart + (angleDiff * (i / numPoints));
+                const radius = radiusStart + (radiusEnd - radiusStart) * (i / numPoints);
+                
+                const pointPx = L.point({
+                    x: centerPoint.x + radius * Math.cos(angle),
+                    y: centerPoint.y + radius * Math.sin(angle)
+                });
+                arcPoints.push(toLatLng(pointPx));
+            }
+            
+            const borderColor = '#0044aa';
+            const borderWeight = 2;
+            const borderOpacity = 1.0;
+            
+            return L.polygon(arcPoints, {
+                color: borderColor,
+                fillColor: color,
+                fillOpacity: opacity,
+                weight: borderWeight,
+                opacity: borderOpacity,
+                lineJoin: 'round'
+            }).addTo(map);
+        }
+
+        // NOUVEAU CALCUL DU RAYON D'ACTION (demi-cercle magenta)
+        let originCircleRadius;
+        
+        // Logique de calcul selon les conditions
+        if (!coords.hasFlexParams && !coords.hasPafEscamParams) {
+            // Ni flex ni porte-à-faux activés
+            originCircleRadius = calculateDistance(points.origine, points.pivot);
+        } else if (coords.hasFlexParams && coords.flexActive === 1 && (!coords.hasPafEscamParams || coords.pafEscamActive === 0)) {
+            // Flex activé mais pas le porte-à-faux
+            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot);
+        } else if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            // Flex et porte-à-faux activés
+            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
+        } else if ((!coords.hasFlexParams || coords.flexActive === 0) && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+            // Seulement le porte-à-faux activé
+            originCircleRadius = calculateDistance(points.origine, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
+        } else {
+            // Cas par défaut (sécurité)
+            originCircleRadius = calculateDistance(points.origine, points.pivot);
+        }
+
+        const angleZero = calculateAngle(points.origine, points.zero);
+        const angleMax = calculateAngle(points.origine, points.maxAngle);
+
+        // CORRECTION CRITIQUE : Afficher l'arc violet du côté OPPOSÉ à la zone irriguée
+        let startArcAngle, endArcAngle;
+        let angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
+        
+        // Si l'angle entre zéro et max est <= 180°, la zone irriguée est ce secteur
+        if (angleFromZeroToMax <= 180) {
+            // La zone irriguée est entre angleZero et angleMax
+            // Donc l'arc violet doit être sur le côté opposé
+            startArcAngle = angleZero;
+            endArcAngle = angleMax;
+            // Nous dessinons l'arc complémentaire (l'autre moitié du cercle)
+            startArcAngle = angleMax;
+            endArcAngle = angleZero + 360;
+        } else {
+            // La zone irriguée est le secteur complémentaire (car > 180°)
+            // Donc l'arc violet est entre angleZero et angleMax
+            startArcAngle = angleMax;
+            endArcAngle = angleZero + 360;
+        }
+
+        // Ajustement pour éviter les artefacts de chevauchement
+        const angleOffset = 0.1;
+        startArcAngle -= angleOffset;
+        endArcAngle += angleOffset;
+
+        const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
+            color: '#FF00FF',
+            weight: 4,
+            opacity: 1.0,
+            dashArray: '10, 10',
+            lineCap: 'round'
+        }).addTo(map).bindPopup(`Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`);
+
+        // Segments et polygones principaux
+        if (coords.PivCirc === 0) {
+            L.polyline([points.origine, points.maxAngle], { 
+                color: 'red', 
+                dashArray: '8, 8',
+                weight: 4,
+                opacity: 1.0,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Direction maximale');
+        }
+
+        // Segment origine -> zéro en bleu discontinu dans tous les modes
+        L.polyline([points.origine, points.zero], { 
+            color: 'blue',
+            dashArray: '6, 6',
+            weight: 4,
+            opacity: 1.0,
+            lineCap: 'round'
+        }).addTo(map).bindPopup('Segment Origine à Zéro');
+
+        if (coords.hasFlexParams && coords.flexActive === 1) {
+            // Segments en mode pivotflex - EN VERT FLUO
+            L.polyline([points.origine, points.flex], { 
+                color: '#00FF00', // Vert fluo
+                weight: 8,
+                opacity: 1.0,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Origine à Flex');
+            
+            L.polyline([points.flex, points.pivot], { 
+                color: '#00FF00', // Vert fluo
+                weight: 8,
+                opacity: 1.0,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Flex à Pivot');
+            
+        } else {
+            // CORRECTION: Segment origine -> pivot en vert fluo AVANT les polygones
+            L.polyline([points.origine, points.pivot], { 
+                color: '#00FF00', // Vert fluo
+                weight: 8,
+                opacity: 1.0,
+                lineCap: 'round'
+            }).addTo(map).bindPopup('Segment Origine à Pivot');
+
+            // Polygones standards avec bordure réduite pour ne pas recouvrir le segment
+            if (coords.sens === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+            } else if (coords.sens === 1 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, '#fff941', 0.6);
+            } else if (coords.sens === 2 && coords.PivCirc === 0) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
+                drawFilledArc(points.origine, points.maxAngle, points.pivot, 'lightblue', 0.6);
+            } else if (coords.sens === 1 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, '#fff941', 0.6);
+                drawFilledArc(points.origine, points.zero, points.pivot, 'lightblue', 0.6);
+            } else if (coords.sens === 2 && coords.PivCirc === 1) {
+                drawFilledArc(points.origine, points.pivot, points.zero, 'lightblue', 0.6);
+                drawFilledArc(points.origine, points.zero, points.pivot, '#fff941', 0.6);
+            }
+        }
+
+        // Ajustement final de la vue
+        if (!savedCenter) {
+            const boundsPoints = [points.origine, points.zero, points.pivot, points.maxAngle];
+            if (coords.hasFlexParams && coords.flexActive === 1) {
+                boundsPoints.push(points.flex);
+            }
+            if (coords.hasPafEscamParams && coords.pafEscamActive === 1) {
+                boundsPoints.push(points.pafEscam);
+            }
+            
+            const bounds = L.latLngBounds(boundsPoints);
+            
+            setTimeout(() => {
+                const boundsZoom = map.getBoundsZoom(bounds, false);
+                let finalZoom = Math.min(optimalZoom, boundsZoom);
+                finalZoom = Math.min(finalZoom, 19);
+                
+                map.fitBounds(bounds, { padding: [15, 15], maxZoom: finalZoom });
+                saveMapState();
+            }, 200);
+        }
+
+        // Système météo
+        const weatherPanel = document.getElementById('weather-panel');
+
+        async function fetchWeather(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                const data = await response.json();
+                displayWeather(data);
+            } catch (error) {
+                console.error('Erreur météo:', error);
+                weatherPanel.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px;">Informations Pivot</div>
+                    <div><strong>Date:</strong> ${new Date().toLocaleDateString('fr-FR')}</div>
+                    <div><strong>Heure:</strong> ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div><strong>Température:</strong> Non disponible</div>
+                    <div><strong>Météo:</strong> Service indisponible</div>
+                    <div><strong>Angle:</strong> ${coords.ang}°</div>
+                `;
+            }
+        }
+
+        function displayWeather(data) {
+            if (!data.current_weather) return;
+            
+            const current = data.current_weather;
+            window.weatherData = {
+                temperature: current.temperature,
+                weatherCode: current.weathercode,
+                time: new Date(current.time)
+            };
+            updateWeatherDisplay();
+        }
+
+        function updateWeatherDisplay() {
+            if (!window.weatherData) return;
+
+            const current = window.weatherData;
+            const now = new Date();
+            const date = now.toLocaleDateString('fr-FR');
+            const heure = now.toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+
+            const templates = {
+                0: { temp: 'Température', angle: 'Angle' },
+                1: { temp: 'Temperature', angle: 'Angle' },
+                2: { temp: 'Temperatura', angle: 'Ángulo' },
+                3: { temp: 'Temperatura', angle: 'Ângulo' },
+                4: { temp: 'Temperatur', angle: 'Winkel' },
+                5: { temp: 'Temperatuur', angle: 'Hoek' },
+                6: { temp: 'Temperatura', angle: 'Angolo' }
+            };
+
+            const t = templates[coords.lang] || templates[0];
+            const weatherDesc = getWeatherDescription(current.weatherCode, coords.lang);
+            
+            const displayContent = `
+                <div style="font-weight: bold; margin-bottom: 8px; font-size: 14px;">Informations Pivot</div>
+                <div><strong>Date:</strong> ${date}</div>
+                <div><strong>Heure:</strong> ${heure}</div>
+                <div><strong>${t.temp}:</strong> ${current.temperature.toFixed(1)}°C</div>
+                <div><strong>Météo:</strong> ${weatherDesc}</div>
+                <div><strong>${t.angle}:</strong> ${coords.ang}°</div>
+            `;
+            
+            weatherPanel.innerHTML = displayContent;
+        }
+
+        function getWeatherDescription(code, lang) {
+            const descriptions = {
+                0: ['Dégagé', 'Clear', 'Despejado', 'Limpo', 'Klar', 'Helder', 'Sereno'],
+                1: ['Principalement dégagé', 'Mainly clear', 'Principalmente despejado', 'Principalmente limpo', 'Überwiegend klar', 'Overwegend helder', 'Prevalentemente sereno'],
+                2: ['Partiellement nuageux', 'Partly cloudy', 'Parcialmente nublado', 'Parcialmente nublado', 'Teilweise bewölkt', 'Gedeeltelijk bewolkt', 'Parzialmente nuvoloso'],
+                3: ['Couvert', 'Overcast', 'Cubierto', 'Nublado', 'Bedeckt', 'Bewolkt', 'Nuvoloso'],
+                45: ['Brouillard', 'Fog', 'Niebla', 'Nevoeiro', 'Nebel', 'Mist', 'Nebbia'],
+                48: ['Brouillard givrant', 'Rime fog', 'Niebla helada', 'Nevoeiro gelado', 'Eisnebel', 'Rijpmist', 'Nebbia gelata'],
+                51: ['Bruine légère', 'Light drizzle', 'Llovizna ligera', 'Garoa leve', 'Leichter Nieselregen', 'Lichte motregen', 'Pioggerella leggera'],
+                53: ['Bruine modérée', 'Moderate drizzle', 'Llovizna moderada', 'Garoa moderada', 'Mäßiger Nieselregen', 'Matige motregen', 'Pioggerella moderata'],
+                55: ['Bruine dense', 'Dense drizzle', 'Llovizna densa', 'Garoa densa', 'Dichter Nieselregen', 'Dichte motregen', 'Pioggerella fitta'],
+                61: ['Pluie légère', 'Slight rain', 'Lluvia ligera', 'Chuva leve', 'Leichter Regen', 'Lichte regen', 'Pioggia leggera'],
+                63: ['Pluie modérée', 'Moderate rain', 'Lluvia moderada', 'Chuva moderada', 'Mäßiger Regen', 'Matige regen', 'Pioggia moderata'],
+                65: ['Pluie forte', 'Heavy rain', 'Lluvia intensa', 'Chuva forte', 'Starker Regen', 'Zware regen', 'Pioggia forte'],
+                71: ['Neige légère', 'Slight snow', 'Nieve ligera', 'Neve leve', 'Leichter Schneefall', 'Lichte sneeuw', 'Neve leggera'],
+                73: ['Neige modérée', 'Moderate snow', 'Nieve moderada', 'Neve moderada', 'Mäßiger Schneefall', 'Matige sneeuw', 'Neve moderata'],
+                75: ['Neige forte', 'Heavy snow', 'Nieve intensa', 'Neve forte', 'Starker Schneefall', 'Zware sneeuw', 'Neve forte'],
+                95: ['Orage', 'Thunderstorm', 'Tormenta', 'Trovoada', 'Gewitter', 'Onweer', 'Temporale']
+            };
+
+            return descriptions[code]?.[lang] || descriptions[code]?.[0] || 'Conditions inconnues';
+        }
+
+        // Chargement de la météo
+        setTimeout(() => {
+            fetchWeather(coords.LatOri, coords.LonOri);
+        }, 1000);
+
+        // Initialisation finale
+        setInterval(() => {
+            if (window.weatherData) {
+                window.weatherData.time = new Date();
+                updateWeatherDisplay();
+            }
+        }, 60000);
+
+        console.log('✅ Application Pivot Irrifrance initialisée avec succès');
+    </script>
 </body>
 </html>
