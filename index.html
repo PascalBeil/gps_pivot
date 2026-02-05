@@ -512,32 +512,6 @@
             }).addTo(map).bindPopup('Segment Porte-à-faux');
         }
 
-        // Fonctions pour le dessin des formes géométriques
-        function drawArc(center, radius, startAngle, endAngle, options) {
-            const points = [];
-            const steps = 100;
-            
-            const startRad = (startAngle * Math.PI) / 180;
-            const endRad = (endAngle * Math.PI) / 180;
-            
-            let angleDiff = endRad - startRad;
-            if (angleDiff < 0) angleDiff += 2 * Math.PI;
-            
-            for (let i = 0; i <= steps; i++) {
-                const angle = startRad + (angleDiff * (i / steps));
-                const dx = (radius * Math.cos(angle)) / (111320 * Math.cos(center.lat * Math.PI / 180));
-                const dy = (radius * Math.sin(angle)) / 110574;
-                
-                const point = L.latLng(
-                    center.lat + dy,
-                    center.lng + dx
-                );
-                points.push(point);
-            }
-            
-            return L.polyline(points, options);
-        }
-
         function drawPolygon(pointList, color) {
             const borderColor = '#0044aa';
             const borderWeight = 2;
@@ -598,62 +572,8 @@
             }).addTo(map);
         }
 
-        // NOUVEAU CALCUL DU RAYON D'ACTION (demi-cercle magenta)
-        let originCircleRadius;
-        
-        // Logique de calcul selon les conditions
-        if (!coords.hasFlexParams && !coords.hasPafEscamParams) {
-            // Ni flex ni porte-à-faux activés
-            originCircleRadius = calculateDistance(points.origine, points.pivot);
-        } else if (coords.hasFlexParams && coords.flexActive === 1 && (!coords.hasPafEscamParams || coords.pafEscamActive === 0)) {
-            // Flex activé mais pas le porte-à-faux
-            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot);
-        } else if (coords.hasFlexParams && coords.flexActive === 1 && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            // Flex et porte-à-faux activés
-            originCircleRadius = calculateDistance(points.origine, points.flex) + calculateDistance(points.flex, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
-        } else if ((!coords.hasFlexParams || coords.flexActive === 0) && coords.hasPafEscamParams && coords.pafEscamActive === 1) {
-            // Seulement le porte-à-faux activé
-            originCircleRadius = calculateDistance(points.origine, points.pivot) + calculateDistance(points.pivot, points.pafEscam);
-        } else {
-            // Cas par défaut (sécurité)
-            originCircleRadius = calculateDistance(points.origine, points.pivot);
-        }
-
         const angleZero = calculateAngle(points.origine, points.zero);
         const angleMax = calculateAngle(points.origine, points.maxAngle);
-
-        // CORRECTION CRITIQUE : Afficher l'arc violet du côté OPPOSÉ à la zone irriguée
-        let startArcAngle, endArcAngle;
-        let angleFromZeroToMax = (angleMax - angleZero + 360) % 360;
-        
-        // Si l'angle entre zéro et max est <= 180°, la zone irriguée est ce secteur
-        if (angleFromZeroToMax <= 180) {
-            // La zone irriguée est entre angleZero et angleMax
-            // Donc l'arc violet doit être sur le côté opposé
-            startArcAngle = angleZero;
-            endArcAngle = angleMax;
-            // Nous dessinons l'arc complémentaire (l'autre moitié du cercle)
-            startArcAngle = angleMax;
-            endArcAngle = angleZero + 360;
-        } else {
-            // La zone irriguée est le secteur complémentaire (car > 180°)
-            // Donc l'arc violet est entre angleZero et angleMax
-            startArcAngle = angleMax;
-            endArcAngle = angleZero + 360;
-        }
-
-        // Ajustement pour éviter les artefacts de chevauchement
-        const angleOffset = 0.1;
-        startArcAngle -= angleOffset;
-        endArcAngle += angleOffset;
-
-        const originArc = drawArc(points.origine, originCircleRadius, startArcAngle, endArcAngle, {
-            color: '#FF00FF',
-            weight: 4,
-            opacity: 1.0,
-            dashArray: '10, 10',
-            lineCap: 'round'
-        }).addTo(map).bindPopup(`Rayon d'action - Distance: ${originCircleRadius.toFixed(2)} m`);
 
         // Segments et polygones principaux
         if (coords.PivCirc === 0) {
